@@ -241,7 +241,6 @@ function formatTime(seconds) {
 
 (async () => {
   const video = document.querySelector('video');
-
   if (!video) {
     console.log('video not found');
     if (documentPictureInPicture.window != null) {
