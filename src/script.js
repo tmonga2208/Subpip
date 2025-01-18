@@ -5,8 +5,7 @@ async function requestPictureInPicture(video, videoParentElement, videoCssText, 
   });
 
   [...document.styleSheets].forEach((styleSheet) => {
-    // Copy style sheets over from the initial document
-    // so that the player looks the same.
+    // Copy style sheets over from the initial document so that the player looks the same.
     try {
       const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('');
       const style = document.createElement('style');
@@ -30,9 +29,10 @@ async function requestPictureInPicture(video, videoParentElement, videoCssText, 
   newVid.style.objectFit = "fill";
 
   pipWindow.document.body.append(newVid);
-
+  let subsClone;
   if (subs) {
-    pipWindow.document.body.append(subs);
+    subsClone = subs.cloneNode(true);
+    pipWindow.document.body.append(subsClone);
 
     // Define specific CSS for subtitles
     const subtitleStyle = `
@@ -44,29 +44,146 @@ async function requestPictureInPicture(video, videoParentElement, videoCssText, 
         padding: 0.5em 1em !important;
         border-radius: 5px !important;
         position: absolute !important;
-        bottom: 5% !important; /* Adjust as needed */
+        bottom: 5% !important;
         left: 50% !important;
         transform: translateX(-50%) !important;
         width: auto !important;
+        height: auto !important;
         text-align: center !important;
       }
-        span{
-          font-size: 5vh !important
-          }
+      .player-timedtext-text-container  span {
+        font-size: 5vh !important;
+      }
+      .ytp-caption-window-container {
+        font-weight: bold !important;
+        color: white !important;
+        text-shadow: 0 0 3px black, 0 0 5px black !important;
+      }
+      .ytp-caption-window-container .captions-text {
+        margin: 0 !important;
+      }
     `;
 
     // Create a new <style> element for subtitles
     const styleElement = document.createElement('style');
     styleElement.textContent = subtitleStyle;
     pipWindow.document.head.appendChild(styleElement);
+
+    // Observe changes in the original subs element and update subsClone
+    const observer = new MutationObserver(() => {
+      while (subsClone.firstChild) {
+        subsClone.removeChild(subsClone.firstChild);
+      }
+      subs.childNodes.forEach(node => {
+        subsClone.appendChild(node.cloneNode(true));
+      });
+    });
+    observer.observe(subs, { childList: true, subtree: true });
   }
 
+  // Create custom controls
+  const controls = document.createElement('div');
+  controls.style.position = 'absolute';
+  controls.style.bottom = '0';
+  controls.style.width = '100%';
+  controls.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+  controls.style.display = 'flex';
+  controls.style.alignItems = 'center';
+  controls.style.justifyContent = 'space-between';
+  controls.style.padding = '10px';
+  controls.style.opacity = "0";
+  controls.style.transition = "opacity 0.5s";
+  controls.addEventListener("mouseenter", () => {
+    controls.style.opacity = "1";
+  });
+  controls.addEventListener("mouseleave", () => {
+    controls.style.opacity = "0";
+  });
+
+  // Play/Pause button
+  const playPauseButton = document.createElement('button');
+  playPauseButton.textContent = video.paused ? 'Play' : 'Pause';
+  playPauseButton.style.color = 'white';
+  playPauseButton.style.background = 'none';
+  playPauseButton.style.border = 'none';
+  playPauseButton.style.cursor = 'pointer';
+  playPauseButton.addEventListener('click', () => {
+    if (video.paused) {
+      video.play();
+      playPauseButton.textContent = 'Pause';
+    } else {
+      video.pause();
+      playPauseButton.textContent = 'Play';
+    }
+  });
+
+  // Current time
+  const currentTime = document.createElement('span');
+  currentTime.style.color = 'white';
+  currentTime.textContent = formatTime(video.currentTime);
+
+  // Total time
+  const totalTime = document.createElement('span');
+  totalTime.style.color = 'white';
+  totalTime.textContent = formatTime(video.duration);
+
+  // Volume bar
+  const volumeBar = document.createElement('input');
+  volumeBar.type = 'range';
+  volumeBar.min = '0';
+  volumeBar.max = '1';
+  volumeBar.step = '0.01';
+  volumeBar.value = video.volume;
+  volumeBar.style.width = '100px';
+  volumeBar.addEventListener('input', () => {
+    video.volume = volumeBar.value;
+  });
+
+  // Progress bar
+  const progressBar = document.createElement('input');
+  progressBar.type = 'range';
+  progressBar.min = '0';
+  progressBar.max = video.duration;
+  progressBar.step = '0.1';
+  progressBar.value = video.currentTime;
+  progressBar.style.flex = '1';
+  progressBar.style.margin = '0 10px';
+  progressBar.addEventListener('input', () => {
+    const newTime = (progressBar.value / progressBar.max) * video.duration;
+      console.log('progressBar.value', formatTime(newTime));
+  });
+
+  // Update current time and progress bar as the video plays
+  video.addEventListener('timeupdate', () => {
+    currentTime.textContent = formatTime(video.currentTime);
+    progressBar.value = video.currentTime;
+  });
+
+  controls.appendChild(playPauseButton);
+  controls.appendChild(currentTime);
+  controls.appendChild(progressBar);
+  controls.appendChild(totalTime);
+  controls.appendChild(volumeBar);
+  pipWindow.document.body.appendChild(controls);
+
+  // Adding event listener for spacebar to play/pause video
+  pipWindow.addEventListener('keydown', (event) => {
+    if (event.code === 'Space') {
+      event.preventDefault(); // Prevent default spacebar action (scrolling)
+      if (video.paused) {
+        video.play();
+      } else {
+        video.pause();
+      }
+    }
+  });
+
   pipWindow.addEventListener("pagehide", (event) => {
-    destroyPipWindow(newVid, subs, videoParentElement, videoCssText);
+    destroyPipWindow(newVid, subsClone, videoParentElement, videoCssText);
   });
 
   pipWindow.addEventListener("resize", (e) => {
-    console.log("🚀 ~ pipWindow.addEventListener ~ e:", e)
+    console.log("🚀 ~ pipWindow.addEventListener ~ e:", e);
 
     videoCssText.preventMutTrigger = true;
 
@@ -76,7 +193,7 @@ async function requestPictureInPicture(video, videoParentElement, videoCssText, 
     newVid.style.width = w + "px";
     newVid.style.height = h + "px";
 
-    //minimums to prevent resize of content
+    // Minimums to prevent resize of content
     newVid.style.minWidth = w + "px";
     newVid.style.minHeight = h + "px";
     newVid.style.maxWidth = w + "px";
@@ -85,20 +202,48 @@ async function requestPictureInPicture(video, videoParentElement, videoCssText, 
 
   newVid.setAttribute('__pip__', true);
   new ResizeObserver(maybeUpdatePictureInPictureVideo).observe(newVid);
+
+  // Add event listener for spacebar to play/pause video
+  document.addEventListener('keydown', (event) => {
+    if (event.code === 'Space') {
+      event.preventDefault(); // Prevent default spacebar action (scrolling)
+      if (video.paused) {
+        video.play();
+      } else {
+        video.pause();
+      }
+    } else if (event.code === 'ArrowRight') {
+      event.preventDefault(); // Prevent default right arrow action (scrolling)
+      video.currentTime = Math.min(video.currentTime + 10, video.duration);
+    }
+  });
 }
 
-function destroyPipWindow(video, subs, videoParentElement, videoCssText) {
+function destroyPipWindow(video, subsClone, videoParentElement, videoCssText, subtitleStyleElement) {
   video.style.cssText = videoCssText.prevStyle;
   video.removeAttribute('__pip__');
   videoParentElement.appendChild(video);
-  subs && videoParentElement.appendChild(subs);
+
+  if (subsClone) {
+    subsClone.remove();
+  }
+
+  if (subtitleStyleElement) {
+    subtitleStyleElement.remove();
+  }
+}
+
+function formatTime(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
 }
 
 (async () => {
-  const video = findLargestPlayingVideo();
+  const video = document.querySelector('video');
 
   if (!video) {
-    console.log('video not found')
+    console.log('video not found');
     if (documentPictureInPicture.window != null) {
       documentPictureInPicture.window.close();
     }
@@ -112,6 +257,21 @@ function destroyPipWindow(video, subs, videoParentElement, videoCssText) {
   if (domain.includes("youtube")) {
     subs = document.querySelectorAll("#ytp-caption-window-container")[0];
     miniplayerButton = document.querySelector('.ytp-miniplayer-button');
+
+    if (subs) {
+      setInterval(() => {
+        const lines = subs.querySelectorAll('.captions-text > span');
+        if (lines.length > 2) {
+          lines.forEach((line, index) => {
+            if (index < lines.length - 2) {
+              line.style.display = 'none';
+            } else {
+              line.style.display = 'block';
+            }
+          });
+        }
+      }, 1000); // Check every second
+    }
   }
 
   if (domain.includes("netflix")) {
@@ -119,7 +279,12 @@ function destroyPipWindow(video, subs, videoParentElement, videoCssText) {
     if (subtitleContainer) {
       subs = subtitleContainer.cloneNode(true);
       const observer = new MutationObserver(() => {
-        subs.innerHTML = subtitleContainer.innerHTML;
+        while (subs.firstChild) {
+          subs.removeChild(subs.firstChild);
+        }
+        subtitleContainer.childNodes.forEach(node => {
+          subs.appendChild(node.cloneNode(true));
+        });
       });
       observer.observe(subtitleContainer, { childList: true, subtree: true });
     }
