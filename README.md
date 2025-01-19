@@ -33,7 +33,7 @@ SubPIP is a browser extension that adds subtitles to Picture-in-Picture (PiP) mo
 
 ## Known Issues
 
-- SeekBar Not.
+- SeekBar Not Working.
 - Currently supports only Netflix and YouTube.
 
 ---
