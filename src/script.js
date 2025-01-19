@@ -71,6 +71,15 @@ async function requestPictureInPicture(video, videoParentElement, videoCssText, 
         left: 50% !important;
         transform: translateX(-50%) !important;
         }
+        #subtitle-1{
+        font-weight: bold !important;
+        color: white !important;
+        text-shadow: 0 0 3px black, 0 0 5px black !important;
+         position: absolute !important;
+        bottom: 5% !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        }
     `;
 
     // Create a new <style> element for subtitles
@@ -212,10 +221,9 @@ async function requestPictureInPicture(video, videoParentElement, videoCssText, 
   newVid.setAttribute('__pip__', true);
   new ResizeObserver(maybeUpdatePictureInPictureVideo).observe(newVid);
 
-  // Add event listener for spacebar to play/pause video
+  //Play/pause video
   document.addEventListener('keydown', (event) => {
     if (event.code === 'Space') {
-      event.preventDefault(); // Prevent default spacebar action (scrolling)
       if (video.paused) {
         video.play();
       } else {
@@ -249,23 +257,27 @@ function formatTime(seconds) {
 }
 
 (async () => {
-  const video = document.querySelector('video');
+    const video = document.querySelector('video');
+    const domain = window.location.hostname;
+    let subs, miniplayerButton;
+  
   if (!video) {
     console.log('video not found');
-    if (documentPictureInPicture.window != null) {
-      documentPictureInPicture.window.close();
+    // const iframes = document.querySelector('iframe');
+    // if (iframes) {
+    //   const clonedIframe = iframes.cloneNode(true);
+      if (documentPictureInPicture.window != null) {
+        documentPictureInPicture.window.close();
+      // }
+        // return requestPictureInPicture(clonedIframe);
+        return
     }
-    return;
   }
-
-  const domain = window.location.hostname;
-
-  let subs, miniplayerButton;
 
   if (domain.includes("youtube")) {
     subs = document.querySelectorAll("#ytp-caption-window-container")[0];
     miniplayerButton = document.querySelector('.ytp-miniplayer-button');
-
+  
     if (subs) {
       setInterval(() => {
         const lines = subs.querySelectorAll('.captions-text > span');
@@ -278,11 +290,9 @@ function formatTime(seconds) {
             }
           });
         }
-      }, 1000); // Check every second
+      }, 1000);
     }
-  }
-
-  if (domain.includes("netflix")) {
+  } else if (domain.includes("netflix")) {
     const subtitleContainer = document.querySelectorAll(".player-timedtext")[0];
     if (subtitleContainer) {
       subs = subtitleContainer.cloneNode(true);
@@ -296,11 +306,23 @@ function formatTime(seconds) {
       });
       observer.observe(subtitleContainer, { childList: true, subtree: true });
     }
-  }
-
-       if (domain.includes("hotstar" || "disneyplus")) {
-      const subtitleContainer = document.querySelector(".shaka-text-container");
-      if (subtitleContainer) {
+  } else if (domain.includes("hotstar") || domain.includes("disneyplus")) {
+    const subtitleContainer = document.querySelector(".shaka-text-container");
+    if (subtitleContainer) {
+      subs = subtitleContainer.cloneNode(true);
+      const observer = new MutationObserver(() => {
+        while (subs.firstChild) {
+          subs.removeChild(subs.firstChild);
+        }
+        subtitleContainer.childNodes.forEach(node => {
+          subs.appendChild(node.cloneNode(true));
+        });
+      });
+      observer.observe(subtitleContainer, { childList: true, subtree: true });
+    }
+  } else if (domain.includes("jiocinema")) {
+    const subtitleContainer = document.querySelector("#subtitle-1");
+    if (subtitleContainer) {
       subs = subtitleContainer.cloneNode(true);
       const observer = new MutationObserver(() => {
         while (subs.firstChild) {
@@ -313,6 +335,60 @@ function formatTime(seconds) {
       observer.observe(subtitleContainer, { childList: true, subtree: true });
     }
   }
+    // } else if(domain.includes("crunchyroll")){
+    //   const subtitleContainer = document.querySelector("#velocity-canvas");
+    //   if (subtitleContainer) {
+    //   subs = subtitleContainer.cloneNode(true);
+    //   const observer = new MutationObserver(() => {
+    //     while (subs.firstChild) {
+    //       subs.removeChild(subs.firstChild);
+    //     }
+    //     subtitleContainer.childNodes.forEach(node => {
+    //       subs.appendChild(node.cloneNode(true));
+    //     });
+    //   });
+    //   observer.observe(subtitleContainer, { childList: true, subtree: true });
+    // }
+    // }
+  //   else {
+  //   const divs = document.querySelectorAll("div");
+  //   let changingSpan = null;
+    
+  //   divs.forEach(div => {
+  //     const span = div.querySelector("span");
+  //     if (span) {
+  //       const observer = new MutationObserver((mutations) => {
+  //         mutations.forEach((mutation) => {
+  //           if (mutation.type === 'characterData' || mutation.type === 'childList') {
+  //             changingSpan = span;
+  //             observer.disconnect(); // Stop observing once we find the changing span
+  //           }
+  //         });
+  //       });
+  //       observer.observe(span, { characterData: true, childList: true, subtree: true });
+    
+  //       // Check for changes within a short period to determine if this span changes frequently
+  //       setTimeout(() => {
+  //         observer.disconnect();
+  //       }, 1000); // Adjust the timeout as needed
+  //     }
+  //   });
+    
+  //   if (changingSpan) {
+  //     subs = changingSpan.cloneNode(true);
+  //     pipWindow.document.body.append(subs);
+    
+  //     // Observe changes in the original span element and update subsClone
+  //     const observer = new MutationObserver((mutations) => {
+  //       mutations.forEach((mutation) => {
+  //         if (mutation.type === 'characterData' || mutation.type === 'childList') {
+  //           subs.textContent = changingSpan.textContent;
+  //         }
+  //       });
+  //     });
+  //     observer.observe(changingSpan, { characterData: true, childList: true, subtree: true });
+  //   }
+  // }
 
   let videoParentElement = video.parentElement;
 
