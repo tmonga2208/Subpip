@@ -62,6 +62,15 @@ async function requestPictureInPicture(video, videoParentElement, videoCssText, 
       .ytp-caption-window-container .captions-text {
         margin: 0 !important;
       }
+        .shaka-text-container{
+        font-weight: bold !important;
+        color: white !important;
+        text-shadow: 0 0 3px black, 0 0 5px black !important;
+         position: absolute !important;
+        bottom: 5% !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        }
     `;
 
     // Create a new <style> element for subtitles
@@ -276,6 +285,22 @@ function formatTime(seconds) {
   if (domain.includes("netflix")) {
     const subtitleContainer = document.querySelectorAll(".player-timedtext")[0];
     if (subtitleContainer) {
+      subs = subtitleContainer.cloneNode(true);
+      const observer = new MutationObserver(() => {
+        while (subs.firstChild) {
+          subs.removeChild(subs.firstChild);
+        }
+        subtitleContainer.childNodes.forEach(node => {
+          subs.appendChild(node.cloneNode(true));
+        });
+      });
+      observer.observe(subtitleContainer, { childList: true, subtree: true });
+    }
+  }
+
+       if (domain.includes("hotstar")) {
+      const subtitleContainer = document.querySelector(".shaka-text-container");
+      if (subtitleContainer) {
       subs = subtitleContainer.cloneNode(true);
       const observer = new MutationObserver(() => {
         while (subs.firstChild) {
