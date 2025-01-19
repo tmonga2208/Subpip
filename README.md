@@ -42,5 +42,7 @@ SubPIP is a browser extension that adds subtitles to Picture-in-Picture (PiP) mo
 
 - Add support for more platforms.
 
+## Edit
 
+- Added Hotstar/DisneyPlus Support
 

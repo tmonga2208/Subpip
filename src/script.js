@@ -298,7 +298,7 @@ function formatTime(seconds) {
     }
   }
 
-       if (domain.includes("hotstar")) {
+       if (domain.includes("hotstar" || "disneyplus")) {
       const subtitleContainer = document.querySelector(".shaka-text-container");
       if (subtitleContainer) {
       subs = subtitleContainer.cloneNode(true);
