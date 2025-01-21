@@ -44,15 +44,13 @@ async function requestPictureInPicture(video, videoParentElement, videoCssText, 
         padding: 0.5em 1em !important;
         border-radius: 5px !important;
         position: absolute !important;
-        bottom: 5% !important;
+        bottom: 10% !important;
         left: 50% !important;
         transform: translateX(-50%) !important;
         width: auto !important;
         height: auto !important;
         text-align: center !important;
-      }
-      .player-timedtext-text-container  span {
-        font-size: 5vh !important;
+        font-size: 2vh !important;
       }
       .ytp-caption-window-container {
         font-weight: bold !important;
