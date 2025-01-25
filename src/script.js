@@ -60,6 +60,10 @@ async function requestPictureInPicture(video, videoParentElement, videoCssText, 
       .ytp-caption-window-container .captions-text {
         margin: 0 !important;
       }
+        .caption-window{
+      position: absolute !important;
+        bottom: -20% !important;
+        }
         .shaka-text-container{
         font-weight: bold !important;
         color: white !important;
@@ -255,20 +259,58 @@ function formatTime(seconds) {
 }
 
 (async () => {
-    const video = document.querySelector('video');
+  let video;
     const domain = window.location.hostname;
-    let subs, miniplayerButton;
+  let subs, miniplayerButton;
   
-  if (!video) {
-    console.log('video not found');
-    // const iframes = document.querySelector('iframe');
-    // if (iframes) {
-    //   const clonedIframe = iframes.cloneNode(true);
-      if (documentPictureInPicture.window != null) {
-        documentPictureInPicture.window.close();
-      // }
-        // return requestPictureInPicture(clonedIframe);
-        return
+  
+  if (domain.includes("crunchyroll")) {
+    video = document.querySelector("#player0");
+    const subtitleContainer = document.querySelector("#vilosVttJs");
+      if (subtitleContainer) {
+      subs = subtitleContainer.cloneNode(true);
+      const observer = new MutationObserver(() => {
+        while (subs.firstChild) {
+          subs.removeChild(subs.firstChild);
+        }
+        subtitleContainer.childNodes.forEach(node => {
+          subs.appendChild(node.cloneNode(true));
+        });
+      });
+        observer.observe(subtitleContainer, { childList: true, subtree: true });
+        }
+    if (video) {
+      document.querySelectorAll('video').forEach(videos => {
+        videos.removeAttribute('disablePictureInPicture');
+        videos.removeAttribute('playsinline');
+        console.log("removed");
+        videos.requestPictureInPicture().catch(error => {
+          console.log("error:", error);
+        });
+        if (!video) {
+      console.log('video not found');
+        if (documentPictureInPicture.window != null) {
+          documentPictureInPicture.window.close();
+          return
+      }
+    }
+});
+    }
+  }
+  else{
+    video = document.querySelector('video');
+    if (!video) {
+      try {
+        video = document.querySelector('video');
+        video.requestPictureInPicture();
+      } catch (e) { 
+        console.log('error:', e);
+      }
+      console.log('video not found');
+        if (documentPictureInPicture.window != null) {
+          documentPictureInPicture.window.close();
+          return
+      }
     }
   }
 
@@ -332,22 +374,21 @@ function formatTime(seconds) {
       });
       observer.observe(subtitleContainer, { childList: true, subtree: true });
     }
-  }
-    // } else if(domain.includes("crunchyroll")){
-    //   const subtitleContainer = document.querySelector("#velocity-canvas");
-    //   if (subtitleContainer) {
-    //   subs = subtitleContainer.cloneNode(true);
-    //   const observer = new MutationObserver(() => {
-    //     while (subs.firstChild) {
-    //       subs.removeChild(subs.firstChild);
-    //     }
-    //     subtitleContainer.childNodes.forEach(node => {
-    //       subs.appendChild(node.cloneNode(true));
-    //     });
-    //   });
-    //   observer.observe(subtitleContainer, { childList: true, subtree: true });
-    // }
-    // }
+  } else if(domain.includes("crunchyroll")){
+      const subtitleContainer = document.querySelector("#vilosVttJs");
+      if (subtitleContainer) {
+      subs = subtitleContainer.cloneNode(true);
+      const observer = new MutationObserver(() => {
+        while (subs.firstChild) {
+          subs.removeChild(subs.firstChild);
+        }
+        subtitleContainer.childNodes.forEach(node => {
+          subs.appendChild(node.cloneNode(true));
+        });
+      });
+        observer.observe(subtitleContainer, { childList: true, subtree: true });
+      }
+    }
   //   else {
   //   const divs = document.querySelectorAll("div");
   //   let changingSpan = null;
@@ -401,5 +442,19 @@ function formatTime(seconds) {
   });
 
   observer.observe(video, { attributes: true });
-  await requestPictureInPicture(video, videoParentElement, videoCssText, subs, miniplayerButton);
+       try {
+      await requestPictureInPicture(video, videoParentElement, videoCssText, subs, miniplayerButton);
+    } catch (error) {
+      console.error('Error requesting Picture-in-Picture:', error);
+      // Try video.requestPictureInPicture directly
+      if (video.requestPictureInPicture) {
+        try {
+          await video.requestPictureInPicture();
+        } catch (innerError) {
+          console.error('Error requesting Picture-in-Picture directly on video element:', innerError);
+        }
+      } else {
+        console.error('video.requestPictureInPicture is not supported.');
+      }
+    }
 })();

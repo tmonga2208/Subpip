@@ -1,7 +1,7 @@
 {
   "name": "SubPIP (Picture-in-Picture)",
   "description": "Picture-in-Picture (with subtitle support)",
-  "version": "1.0",
+  "version": "2.0",
   "icons": {
     "128": "assets/logo.png"
   },
