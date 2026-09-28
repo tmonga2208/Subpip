@@ -1,0 +1,8 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><link rel="icon" href="data:,"><title>generic</title></head>
+<body>
+  <div id="wrap"><span id="before">before</span><video id="v" src="test.mp4" width="640" height="360" muted loop><track kind="subtitles" src="subs.vtt" srclang="en" default></video><span id="after">after</span></div>
+  <script>document.getElementById('v').textTracks[0].mode = 'hidden';</script>
+</body>
+</html>

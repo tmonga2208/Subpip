@@ -1,0 +1,10 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:10.000
+First hidden-track cue
+
+00:00:10.000 --> 00:01:00.000
+Second <i>hidden</i> cue
+
+00:01:00.000 --> 00:02:00.000
+Third cue after seeking

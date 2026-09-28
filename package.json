@@ -6,12 +6,17 @@
     "build": "node build.mjs",
     "watch": "node build.mjs --watch",
     "lint": "eslint .",
+    "icons": "node scripts/render-icons.mjs",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "node --test 'tests/unit/**/*.test.js'",
+    "test:e2e": "npm run build && node --test --test-concurrency=1 'tests/e2e/**/*.test.js'",
     "package": "npm run build && cd dist && rm -f ../subpip.zip && zip -qr ../subpip.zip ."
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
     "esbuild": "^0.28.2",
     "eslint": "^9.0.0",
-    "globals": "^16.0.0"
+    "globals": "^16.0.0",
+    "puppeteer-core": "^25.12.0"
   }
 }

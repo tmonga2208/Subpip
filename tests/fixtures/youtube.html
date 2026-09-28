@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><link rel="icon" href="data:,"><title>youtube fixture</title></head>
+<body>
+  <div id="player">
+    <video id="v" src="test.mp4" width="640" height="360" muted loop></video>
+    <div id="ytp-caption-window-container"><div class="caption-window"><span class="captions-text"><span>line A</span></span></div></div>
+  </div>
+  <script>
+    window.setCaption = (lines) => {
+      const target = document.querySelector('#ytp-caption-window-container .captions-text');
+      target.replaceChildren(...lines.map((text) => Object.assign(document.createElement('span'), { textContent: text })));
+    };
+    // Simulates the site discarding and re-creating its caption container
+    window.recreate = (text) => {
+      document.getElementById('ytp-caption-window-container').remove();
+      const container = document.createElement('div');
+      container.id = 'ytp-caption-window-container';
+      const win = Object.assign(document.createElement('div'), { className: 'caption-window' });
+      const captionText = Object.assign(document.createElement('span'), { className: 'captions-text' });
+      captionText.append(Object.assign(document.createElement('span'), { textContent: text }));
+      win.append(captionText);
+      container.append(win);
+      document.getElementById('player').append(container);
+    };
+  </script>
+</body>
+</html>

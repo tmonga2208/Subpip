@@ -19,5 +19,13 @@ export default [
   {
     files: ['scripts/**/*.js'],
     languageOptions: { sourceType: 'commonjs', globals: globals.node }
+  },
+  {
+    files: ['tests/**/*.js'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } }
+  },
+  {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: { globals: globals.node }
   }
 ];
