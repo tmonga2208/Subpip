@@ -68,6 +68,8 @@ export async function openPipWindow({ video, adapter, getSettings, onClose }) {
   const prevPlaybackRate = video.playbackRate;
 
   pipDoc.body.style.overflow = 'hidden';
+  pipDoc.body.style.margin = '0';
+  pipDoc.body.style.background = '#000';
   video.style.objectFit = 'fill';
   pipDoc.body.append(video);
 
@@ -86,13 +88,14 @@ export async function openPipWindow({ video, adapter, getSettings, onClose }) {
     }
   };
 
-  pipDoc.body.appendChild(createControls({ video, pipDoc, session, seekTo, settings, isPremium, captions }));
+  const controls = createControls({ video, pipDoc, session, seekTo, captions });
+  pipDoc.body.appendChild(controls.host);
 
   if (isPremium && settings.playbackSpeed) {
     video.playbackRate = settings.playbackSpeed;
   }
 
-  pipWindow.addEventListener('keydown', (event) => handlePipKeydown(event, video, seekTo));
+  pipWindow.addEventListener('keydown', (event) => handlePipKeydown(event, { video, seekTo, controls }));
 
   // Keep the video filling the window as it is resized
   pipWindow.addEventListener('resize', () => {

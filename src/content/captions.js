@@ -15,6 +15,12 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
   let captionEl = null;
   let rerender = () => { };
 
+  // CC toggle state, re-applied whenever the caption element is replaced
+  let captionsVisible = true;
+  const present = () => {
+    if (captionEl) captionEl.style.visibility = captionsVisible ? '' : 'hidden';
+  };
+
   // Translation with flicker prevention: show the last translation until the
   // new one arrives, and never retry a line that already failed.
   let lastTranslation = '';
@@ -61,6 +67,7 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
     captionEl.style.pointerEvents = 'none';
     captionEl.style.display = 'none';
     pipDoc.body.appendChild(captionEl);
+    present();
 
     let currentText = '';
     rerender = () => {
@@ -102,6 +109,7 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
     // re-create this element, so re-find it whenever it gets detached.
     captionEl = pipDoc.createElement('div');
     pipDoc.body.appendChild(captionEl);
+    present();
 
     let source = null;
     const sourceObserver = new MutationObserver(() => rerender());
@@ -132,6 +140,7 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
       const fresh = source.cloneNode(false);
       captionEl.replaceWith(fresh);
       captionEl = fresh;
+      present();
       sourceObserver.disconnect();
       sourceObserver.observe(source, { childList: true, subtree: true, characterData: true });
       rerender();
@@ -166,6 +175,10 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
       translationOn = on;
       lastTranslation = '';
       rerender();
+    },
+    setVisible(on) {
+      captionsVisible = on;
+      present();
     },
     // Re-render after settings change (e.g. target language)
     refresh() {

@@ -1,7 +1,14 @@
-// PiP window controls: play/pause, seek bar, volume, fit, translation, speed
+// PiP window controls: a Cinema-style bottom bar in a shadow root so the site
+// stylesheets copied into the PiP window cannot restyle it. Everything is
+// built with DOM calls - YouTube enforces Trusted Types (no HTML strings).
+
+import { createIcon } from '../shared/icons.js';
+import { CONTROLS_CSS } from './controls.css.js';
+
+const HIDE_DELAY_MS = 2500;
 
 export function formatTime(seconds) {
-  if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
+  if (isNaN(seconds) || !isFinite(seconds)) return '--:--';
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = Math.floor(seconds % 60);
@@ -9,248 +16,245 @@ export function formatTime(seconds) {
   return hours > 0 ? `${hours}:${pad(minutes)}:${pad(secs)}` : `${minutes}:${pad(secs)}`;
 }
 
-// Create speed control dropdown (no emoji, clean UI)
-export function createSpeedControls(video, settings, isPremium) {
-  const speedContainer = document.createElement('div');
-  speedContainer.style.cssText = 'display: flex; align-items: center; gap: 4px; margin-left: 8px; pointer-events: auto;';
-
-  const label = document.createElement('span');
-  label.textContent = 'Speed';
-  label.style.cssText = 'color: rgba(255,255,255,0.8); font-size: 11px; pointer-events: none;';
-
-  const select = document.createElement('select');
-  select.style.cssText = `
-    padding: 4px 6px;
-    background: rgba(255,255,255,0.15);
-    color: white;
-    border: 1px solid rgba(255,255,255,0.3);
-    border-radius: 4px;
-    font-size: 11px;
-    cursor: ${isPremium ? 'pointer' : 'not-allowed'};
-    opacity: ${isPremium ? '1' : '0.6'};
-    pointer-events: auto;
-    z-index: 10001;
-  `;
-  [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3].forEach(speed => {
-    const opt = document.createElement('option');
-    opt.value = speed;
-    opt.textContent = speed + 'x';
-    if (speed === (settings?.playbackSpeed || 1)) opt.selected = true;
-    select.appendChild(opt);
-  });
-  select.title = isPremium ? 'Playback speed' : 'Premium feature';
-  if (isPremium) {
-    select.onchange = (e) => {
-      e.stopPropagation();
-      video.playbackRate = parseFloat(select.value);
-    };
+// createElement with props: class, text, attributes; children may be strings
+function make(doc, tag, props = {}, children = []) {
+  const node = doc.createElement(tag);
+  for (const [key, value] of Object.entries(props)) {
+    if (key === 'class') node.className = value;
+    else if (key === 'text') node.textContent = value;
+    else node.setAttribute(key, value);
   }
-
-  speedContainer.appendChild(label);
-  speedContainer.appendChild(select);
-  return speedContainer;
+  node.append(...children);
+  return node;
 }
 
-const BUTTON_STYLE = `
-    color: white;
-    background: rgba(255,255,255,0.15);
-    border: 1px solid rgba(255,255,255,0.3);
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    padding: 4px 10px;
-    pointer-events: auto;
-  `;
-
-export function createControls({ video, pipDoc, session, seekTo, settings, isPremium, captions }) {
+export function createControls({ video, pipDoc, session, seekTo, captions }) {
   const { listen, onCleanup } = session;
-
-  const controls = document.createElement('div');
-  controls.style.cssText = `
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px;
-    opacity: 0;
-    transition: opacity 0.3s;
-    z-index: 10000;
-    pointer-events: auto;
-    box-sizing: border-box;
-  `;
-
-  // Show controls on any mouse movement in the PiP window, hide when idle
-  let hideControlsTimer = null;
-  let pointerOnControls = false;
-  const showControls = () => {
-    controls.style.opacity = '1';
-    clearTimeout(hideControlsTimer);
-    hideControlsTimer = setTimeout(() => {
-      if (!pointerOnControls) controls.style.opacity = '0';
-    }, 2500);
+  const h = (tag, props, ...children) => make(pipDoc, tag, props, children);
+  const setIcon = (button, name) => button.replaceChildren(createIcon(pipDoc, name));
+  const setLabel = (button, label) => {
+    button.setAttribute('aria-label', label);
+    button.title = label;
   };
-  onCleanup(() => clearTimeout(hideControlsTimer));
-  listen(pipDoc, 'mousemove', showControls);
-  listen(pipDoc.documentElement, 'mouseleave', () => { controls.style.opacity = '0'; });
-  controls.addEventListener('mouseenter', () => { pointerOnControls = true; showControls(); });
-  controls.addEventListener('mouseleave', () => { pointerOnControls = false; showControls(); });
-
-  // Left section (play/pause, time)
-  const leftSection = document.createElement('div');
-  leftSection.style.cssText = 'display: flex; align-items: center; gap: 10px;';
-
-  const playPauseButton = document.createElement('button');
-  playPauseButton.textContent = video.paused ? 'Play' : 'Pause';
-  playPauseButton.style.cssText = BUTTON_STYLE;
-  playPauseButton.onclick = (e) => {
-    e.stopPropagation();
-    if (video.paused) video.play();
-    else video.pause();
+  const iconButton = (cls, label, iconName) => {
+    const button = h('button', { class: `btn ${cls}`, type: 'button' });
+    setLabel(button, label);
+    setIcon(button, iconName);
+    return button;
   };
-  listen(video, 'play', () => playPauseButton.textContent = 'Pause');
-  listen(video, 'pause', () => playPauseButton.textContent = 'Play');
 
-  const currentTime = document.createElement('span');
-  currentTime.style.cssText = 'color: white; font-size: 12px;';
+  const host = pipDoc.createElement('subpip-controls');
+  const shadow = host.attachShadow({ mode: 'open' });
+  shadow.append(h('style', { text: CONTROLS_CSS }));
 
-  leftSection.appendChild(playPauseButton);
-  leftSection.appendChild(currentTime);
+  const seekInput = h('input', { class: 'seek-input', type: 'range', min: '0', max: '0', step: '0.1', value: '0', 'aria-label': 'Seek' });
+  const tip = h('div', { class: 'tip', hidden: '' });
+  const playBtn = iconButton('play', 'Play (Space)', 'play');
+  const backBtn = iconButton('skip back', 'Back 10 seconds (←)', 'back10');
+  const fwdBtn = iconButton('skip fwd', 'Forward 10 seconds (→)', 'forward10');
+  const muteBtn = iconButton('mute', 'Mute (M)', 'volume');
+  const volInput = h('input', { class: 'vol-input', type: 'range', min: '0', max: '1', step: '0.01', 'aria-label': 'Volume' });
+  const cur = h('span', { class: 'cur', text: '0:00' });
+  const dur = h('span', { class: 'dur', text: '--:--' });
+  const ccBtn = iconButton('cc', 'Captions (C)', 'cc');
+  ccBtn.setAttribute('aria-pressed', 'true');
 
-  // Center section (progress bar)
-  const centerSection = document.createElement('div');
-  centerSection.style.cssText = 'flex: 1; margin: 0 15px; pointer-events: auto;';
+  const row = h('div', { class: 'row' },
+    playBtn, backBtn, fwdBtn,
+    h('div', { class: 'vol' }, muteBtn, volInput),
+    h('span', { class: 'time' }, cur, ' / ', dur),
+    h('span', { class: 'spacer' }),
+    ccBtn
+  );
+  const bar = h('div', { class: 'bar' }, h('div', { class: 'seek' }, seekInput, tip), row);
+  const root = h('div', { class: 'root' }, h('div', { class: 'fade' }), bar);
+  shadow.append(root);
 
-  const progressBar = document.createElement('input');
-  progressBar.type = 'range';
-  progressBar.min = '0';
-  progressBar.step = '0.1';
-  progressBar.style.cssText = 'width: 100%; accent-color: #e94560; pointer-events: auto;';
+  // Play / pause
+  const syncPlay = () => {
+    setIcon(playBtn, video.paused ? 'play' : 'pause');
+    setLabel(playBtn, video.paused ? 'Play (Space)' : 'Pause (Space)');
+  };
+  playBtn.addEventListener('click', () => (video.paused ? video.play() : video.pause()));
+  listen(video, 'play', syncPlay);
+  listen(video, 'pause', syncPlay);
+  syncPlay();
 
-  // While dragging, only preview the time; seek once on release. Otherwise
-  // timeupdate keeps yanking the thumb back and every tick triggers a seek.
-  let seeking = false;
-  progressBar.addEventListener('input', () => {
-    seeking = true;
-    currentTime.textContent = formatTime(parseFloat(progressBar.value));
+  backBtn.addEventListener('click', () => seekTo(video.currentTime - 10));
+  fwdBtn.addEventListener('click', () => seekTo(video.currentTime + 10));
+
+  // Volume
+  const syncVolume = () => {
+    const muted = video.muted || video.volume === 0;
+    setIcon(muteBtn, muted ? 'volume-muted' : 'volume');
+    setLabel(muteBtn, muted ? 'Unmute (M)' : 'Mute (M)');
+    volInput.value = muted ? 0 : video.volume;
+  };
+  muteBtn.addEventListener('click', () => {
+    video.muted = !video.muted;
+    if (!video.muted && video.volume === 0) video.volume = 0.5;
   });
-  progressBar.addEventListener('change', () => {
-    seekTo(parseFloat(progressBar.value));
-    seeking = false;
+  volInput.addEventListener('input', () => {
+    const volume = parseFloat(volInput.value);
+    video.volume = volume;
+    video.muted = volume === 0;
   });
-  centerSection.appendChild(progressBar);
+  listen(video, 'volumechange', syncVolume);
+  syncVolume();
 
-  // Right section (duration, volume, fit, translation, speed)
-  const rightSection = document.createElement('div');
-  rightSection.style.cssText = 'display: flex; align-items: center; gap: 10px;';
-
-  const totalTime = document.createElement('span');
-  totalTime.style.cssText = 'color: white; font-size: 12px;';
-
-  // Live streams have no finite duration - hide the seek bar for them
-  const updateDuration = () => {
+  // Seek bar: preview while dragging, seek once on release
+  let dragging = false;
+  const setProgress = (time) => {
+    const max = parseFloat(seekInput.max) || 0;
+    seekInput.style.setProperty('--p', max ? `${(time / max) * 100}%` : '0%');
+  };
+  const syncDuration = () => {
     const duration = video.duration;
-    const seekable = isFinite(duration) && duration > 0;
-    progressBar.max = seekable ? duration : 0;
-    progressBar.disabled = !seekable;
-    progressBar.style.visibility = seekable ? 'visible' : 'hidden';
-    totalTime.textContent = seekable ? formatTime(duration) : 'Live';
+    const known = isFinite(duration) && duration > 0;
+    seekInput.max = known ? duration : 0;
+    seekInput.disabled = !known;
+    root.classList.toggle('no-seek', !known);
+    dur.textContent = duration === Infinity ? 'Live' : formatTime(known ? duration : NaN);
   };
-  const updateTime = () => {
-    if (seeking) return;
-    currentTime.textContent = formatTime(video.currentTime);
-    progressBar.value = video.currentTime;
+  const syncTime = () => {
+    if (dragging) return;
+    cur.textContent = formatTime(video.currentTime || 0);
+    seekInput.value = video.currentTime || 0;
+    setProgress(video.currentTime || 0);
   };
-  listen(video, 'durationchange', updateDuration);
-  listen(video, 'loadedmetadata', updateDuration);
-  listen(video, 'timeupdate', updateTime);
-  updateDuration();
-  updateTime();
-
-  // Volume control
-  const volumeContainer = document.createElement('div');
-  volumeContainer.style.cssText = 'display: flex; align-items: center; gap: 6px; pointer-events: auto;';
-
-  const volLabel = document.createElement('span');
-  volLabel.textContent = 'Vol';
-  volLabel.style.cssText = 'color: rgba(255,255,255,0.8); font-size: 11px; min-width: 24px; pointer-events: none;';
-
-  const volumeBar = document.createElement('input');
-  volumeBar.type = 'range';
-  volumeBar.min = '0';
-  volumeBar.max = '1';
-  volumeBar.step = '0.01';
-  volumeBar.value = video.volume;
-  volumeBar.style.cssText = 'width: 56px; accent-color: #e94560; pointer-events: auto;';
-  volumeBar.oninput = () => {
-    video.volume = volumeBar.value;
-    video.muted = volumeBar.value == 0;
-  };
-  listen(video, 'volumechange', () => {
-    volumeBar.value = video.volume;
+  seekInput.addEventListener('input', () => {
+    dragging = true;
+    const time = parseFloat(seekInput.value);
+    cur.textContent = formatTime(time);
+    setProgress(time);
   });
+  seekInput.addEventListener('change', () => {
+    seekTo(parseFloat(seekInput.value));
+    dragging = false;
+  });
+  seekInput.addEventListener('pointermove', (event) => {
+    const max = parseFloat(seekInput.max);
+    if (!max) return;
+    const rect = seekInput.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+    tip.textContent = formatTime(ratio * max);
+    tip.style.left = `${ratio * 100}%`;
+    tip.hidden = false;
+  });
+  seekInput.addEventListener('pointerleave', () => { tip.hidden = true; });
+  listen(video, 'durationchange', syncDuration);
+  listen(video, 'loadedmetadata', syncDuration);
+  listen(video, 'timeupdate', syncTime);
+  listen(video, 'seeked', syncTime);
+  syncDuration();
+  syncTime();
 
-  volumeContainer.appendChild(volLabel);
-  volumeContainer.appendChild(volumeBar);
-
-  // Fit to screen (contain / fill)
-  const fitBtn = document.createElement('button');
-  fitBtn.textContent = 'Fit';
-  fitBtn.title = 'Toggle fit to screen (contain/fill)';
-  fitBtn.style.cssText = BUTTON_STYLE + 'font-size: 11px; padding: 4px 8px;';
-  let fitMode = 'fill';
-  fitBtn.onclick = (e) => {
-    e.stopPropagation();
-    fitMode = fitMode === 'fill' ? 'contain' : 'fill';
-    video.style.objectFit = fitMode;
-    fitBtn.textContent = fitMode === 'fill' ? 'Fill' : 'Fit';
+  // Captions on/off
+  let captionsOn = true;
+  const setCaptions = (on) => {
+    captionsOn = on;
+    captions.setVisible(on);
+    setIcon(ccBtn, on ? 'cc' : 'cc-off');
+    ccBtn.setAttribute('aria-pressed', String(on));
   };
+  ccBtn.addEventListener('click', () => setCaptions(!captionsOn));
 
-  // Translation toggle (Premium)
-  const transLabel = document.createElement('label');
-  transLabel.style.cssText = 'display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 11px; color: rgba(255,255,255,0.9); pointer-events: auto;';
-  const transCheck = document.createElement('input');
-  transCheck.type = 'checkbox';
-  transCheck.checked = captions.translationOn;
-  transCheck.disabled = !isPremium;
-  transCheck.title = isPremium ? 'Show translated subtitles' : 'Premium';
-  transCheck.style.accentColor = '#e94560';
-  transLabel.appendChild(transCheck);
-  transLabel.appendChild(document.createTextNode('Trans.'));
-  transCheck.onchange = () => captions.setTranslationOn(transCheck.checked);
+  // Show on mouse move; hide (with the cursor) after idle. Bottom captions
+  // lift by the bar's height while it is shown.
+  let menu = null;
+  let visible = false;
+  let pointerInside = false;
+  let hideTimer = null;
+  const menuOpen = () => !!menu && menu.isOpen();
+  const setVisible = (on) => {
+    visible = on;
+    root.classList.toggle('visible', on);
+    pipDoc.body.style.cursor = on ? '' : 'none';
+    const shift = on ? Math.ceil(bar.getBoundingClientRect().height) + 6 : 0;
+    pipDoc.documentElement.style.setProperty('--subpip-caption-shift', `${shift}px`);
+  };
+  const scheduleHide = () => {
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      if (!pointerInside && !menuOpen()) setVisible(false);
+    }, HIDE_DELAY_MS);
+  };
+  const show = () => {
+    setVisible(true);
+    scheduleHide();
+  };
+  const trackPointer = (element) => {
+    element.addEventListener('pointerenter', () => { pointerInside = true; });
+    element.addEventListener('pointerleave', () => { pointerInside = false; scheduleHide(); });
+  };
+  trackPointer(bar);
+  onCleanup(() => clearTimeout(hideTimer));
+  listen(pipDoc, 'mousemove', show);
+  listen(pipDoc.documentElement, 'mouseleave', () => {
+    if (menuOpen()) return;
+    clearTimeout(hideTimer);
+    setVisible(false);
+  });
+  root.addEventListener('focusin', show);
+  pipDoc.documentElement.style.setProperty('--subpip-caption-shift', '0px');
+  show();
 
-  rightSection.appendChild(totalTime);
-  rightSection.appendChild(volumeContainer);
-  rightSection.appendChild(fitBtn);
-  rightSection.appendChild(transLabel);
-  rightSection.appendChild(createSpeedControls(video, settings, isPremium));
-
-  controls.appendChild(leftSection);
-  controls.appendChild(centerSection);
-  controls.appendChild(rightSection);
-  return controls;
+  return {
+    host,
+    bar,
+    show,
+    isVisible: () => visible,
+    toggleCaptions: () => setCaptions(!captionsOn),
+    captionsOn: () => captionsOn,
+    closeMenu: () => menu && menu.close(),
+    // Settings menu: button goes at the end of the row, panel above the bar
+    mountMenu(menuParts) {
+      menu = menuParts;
+      row.append(menuParts.button);
+      root.insertBefore(menuParts.panel, bar);
+      trackPointer(menuParts.panel);
+    }
+  };
 }
 
 // Keyboard shortcuts inside the PiP window
-export function handlePipKeydown(event, video, seekTo) {
-  if (event.target.tagName === 'INPUT' || event.target.tagName === 'SELECT') return;
-  if (event.code === 'Space') {
-    event.preventDefault();
-    if (video.paused) video.play();
-    else video.pause();
-  } else if (event.code === 'ArrowRight') {
-    event.preventDefault();
-    seekTo(video.currentTime + 10);
-  } else if (event.code === 'ArrowLeft') {
-    event.preventDefault();
-    seekTo(video.currentTime - 10);
-  } else if (event.code === 'ArrowUp') {
-    event.preventDefault();
-    video.volume = Math.min(video.volume + 0.1, 1);
-  } else if (event.code === 'ArrowDown') {
-    event.preventDefault();
-    video.volume = Math.max(video.volume - 0.1, 0);
+export function handlePipKeydown(event, { video, seekTo, controls }) {
+  const origin = event.composedPath()[0];
+  const tag = origin && origin.tagName;
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  // A focused button already acts on Space/Enter; don't double-toggle
+  if (tag === 'BUTTON' && (event.code === 'Space' || event.code === 'Enter')) return;
+
+  switch (event.code) {
+    case 'Space':
+      if (video.paused) video.play();
+      else video.pause();
+      break;
+    case 'ArrowRight':
+      seekTo(video.currentTime + 10);
+      break;
+    case 'ArrowLeft':
+      seekTo(video.currentTime - 10);
+      break;
+    case 'ArrowUp':
+      video.muted = false;
+      video.volume = Math.min(1, video.volume + 0.1);
+      break;
+    case 'ArrowDown':
+      video.volume = Math.max(0, video.volume - 0.1);
+      break;
+    case 'KeyM':
+      video.muted = !video.muted;
+      break;
+    case 'KeyC':
+      controls.toggleCaptions();
+      break;
+    case 'Escape':
+      controls.closeMenu();
+      break;
+    default:
+      return;
   }
+  event.preventDefault();
+  controls.show();
 }
