@@ -1,18 +1,23 @@
 {
+  "manifest_version": 3,
   "name": "SubPIP (Picture-in-Picture)",
-  "description": "Picture-in-Picture (with subtitle support)",
-  "version": "2.0",
+  "description": "Picture-in-Picture with subtitles, caption customization, translation & premium features",
+  "version": "3.2",
   "icons": {
+    "16": "assets/logo.png",
+    "48": "assets/logo.png",
     "128": "assets/logo.png"
-  },
-  "background": {
-    "service_worker": "background.js"
   },
   "action": {
     "default_icon": {
-      "19": "assets/logo.png",
-      "38": "assets/logo.png"
-    }
+      "16": "assets/logo.png",
+      "48": "assets/logo.png",
+      "128": "assets/logo.png"
+    },
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
   },
   "commands": {
     "_execute_action": {
@@ -26,10 +31,17 @@
   },
   "permissions": [
     "scripting",
-    "storage"
+    "storage",
+    "activeTab"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "https://asia-south1-subpip-premium.cloudfunctions.net/*",
+    "https://api.mymemory.translated.net/*",
+    "https://identitytoolkit.googleapis.com/*",
+    "https://securetoken.googleapis.com/*",
+    "https://firestore.googleapis.com/*"
   ],
-  "manifest_version": 3
+  "optional_host_permissions": [
+    "<all_urls>"
+  ]
 }

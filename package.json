@@ -1,0 +1,17 @@
+{
+  "name": "subpip",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "lint": "eslint .",
+    "package": "npm run build && cd dist && rm -f ../subpip.zip && zip -qr ../subpip.zip ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^9.0.0",
+    "globals": "^16.0.0"
+  }
+}

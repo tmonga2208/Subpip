@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>SubPIP</h1>
+      <span class="version">v2.4</span>
+    </header>
+
+    <!-- Quick Activate Button -->
+    <button id="activate-pip-btn" class="activate-btn">Activate Picture-in-Picture</button>
+
+    <!-- Auth Section -->
+    <div id="auth-section" class="section">
+      <!-- Not Logged In -->
+      <div id="auth-logged-out">
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="login">Login</button>
+          <button class="auth-tab" data-tab="signup">Sign Up</button>
+        </div>
+
+        <!-- Login Form -->
+        <div id="login-tab" class="auth-form">
+          <input type="email" id="login-email" placeholder="Email" autocomplete="email">
+          <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
+          <button id="login-btn" class="auth-btn">Login</button>
+        </div>
+
+        <!-- Signup Form -->
+        <div id="signup-tab" class="auth-form hidden">
+          <input type="email" id="signup-email" placeholder="Email" autocomplete="email">
+          <input type="password" id="signup-password" placeholder="Password (min 6 chars)" autocomplete="new-password">
+          <button id="signup-btn" class="auth-btn">Create Account</button>
+        </div>
+
+        <div class="auth-divider"><span>or</span></div>
+
+        <!-- License Key Input (for users who already have key) -->
+        <div class="license-input">
+          <input type="text" id="license-key-standalone" placeholder="Have a license key? Enter here...">
+          <button id="activate-key-btn" class="btn-small">Activate</button>
+        </div>
+      </div>
+
+      <!-- Logged In -->
+      <div id="auth-logged-in" class="hidden">
+        <div class="user-info">
+          <span class="user-email" id="user-email"></span>
+          <div id="premium-badge" class="tier-badge premium hidden">Premium</div>
+          <div id="free-badge" class="tier-badge free">Free</div>
+        </div>
+
+        <!-- License Activation (for logged in users without premium) -->
+        <div id="license-section" class="license-section">
+          <input type="text" id="license-key" placeholder="Enter license key...">
+          <button id="activate-license-btn">Activate</button>
+        </div>
+
+        <button id="get-premium-btn" class="get-premium-btn">Get Premium</button>
+
+        <!-- Payment Verification Section -->
+        <div id="verify-payment-section" class="verify-payment-section">
+          <p class="verify-info">Already paid? Click to check:</p>
+          <button id="check-payment-btn" class="check-payment-btn">Check My Payment</button>
+        </div>
+
+        <button id="logout-btn" class="logout-btn">Logout</button>
+      </div>
+
+      <div id="auth-loading" class="auth-loading hidden">
+        <span>Loading...</span>
+      </div>
+
+      <div id="auth-error" class="auth-error hidden"></div>
+    </div>
+
+    <!-- Caption Settings -->
+    <div class="section">
+      <h2>Caption Settings</h2>
+
+      <div class="setting-row">
+        <label>Font Size</label>
+        <input type="range" id="font-size" min="12" max="40" value="18">
+        <span id="font-size-val">18px</span>
+      </div>
+
+      <div class="setting-row">
+        <label>Text Color</label>
+        <input type="color" id="text-color" value="#ffffff">
+      </div>
+
+      <div class="setting-row">
+        <label>Background</label>
+        <input type="color" id="bg-color" value="#000000">
+        <input type="range" id="bg-opacity" min="0" max="100" value="75">
+        <span id="bg-opacity-val">75%</span>
+      </div>
+
+      <div class="setting-row">
+        <label>Font Style</label>
+        <select id="font-family">
+          <option value="sans-serif">Sans-serif</option>
+          <option value="serif">Serif</option>
+          <option value="monospace">Monospace</option>
+          <option value="'Arial', sans-serif">Arial</option>
+          <option value="'Verdana', sans-serif">Verdana</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <label>Position</label>
+        <select id="caption-position">
+          <option value="bottom">Bottom</option>
+          <option value="top">Top</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <label title="Open PiP automatically when you switch away from a tab with a playing video">Auto PiP on tab switch</label>
+        <label class="toggle">
+          <input type="checkbox" id="auto-pip-toggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Premium Features -->
+    <div class="section premium-features" id="premium-features-section">
+      <h2>Premium Features</h2>
+
+      <!-- Playback Speed -->
+      <div class="setting-row premium-locked" id="speed-setting">
+        <label>Playback Speed</label>
+        <div class="speed-buttons">
+          <button class="speed-btn" data-speed="0.5">0.5x</button>
+          <button class="speed-btn active" data-speed="1">1x</button>
+          <button class="speed-btn" data-speed="1.5">1.5x</button>
+          <button class="speed-btn" data-speed="2">2x</button>
+          <button class="speed-btn" data-speed="3">3x</button>
+        </div>
+      </div>
+
+      <!-- External subtitle URL (e.g. OpenSubtitles VTT link) -->
+      <div class="setting-row premium-locked" id="external-subtitle-setting">
+        <label>Subtitle URL</label>
+        <input type="url" id="external-subtitle-url" placeholder="https://...vtt or .srt (Premium)" class="external-subtitle-input">
+      </div>
+
+      <!-- Translation -->
+      <div class="setting-row premium-locked" id="translation-setting">
+        <label>Real-time Translation</label>
+        <div class="translation-controls">
+          <label class="toggle">
+            <input type="checkbox" id="translation-toggle">
+            <span class="slider"></span>
+          </label>
+          <select id="target-language" disabled>
+            <option value="en">English</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="it">Italian</option>
+            <option value="pt">Portuguese</option>
+            <option value="zh">Chinese</option>
+            <option value="ja">Japanese</option>
+            <option value="ko">Korean</option>
+            <option value="hi">Hindi</option>
+            <option value="ar">Arabic</option>
+            <option value="ru">Russian</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="premium-overlay" id="premium-overlay">
+        <span>Premium Required</span>
+      </div>
+    </div>
+
+    <button id="save-btn" class="save-btn">Save Settings</button>
+    <div id="status-msg" class="status-msg hidden"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+
+</html>

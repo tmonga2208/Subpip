@@ -1,0 +1,29 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users collection - users can read their own document and edit
+    // non-entitlement fields. Premium fields are only set by Cloud Functions.
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      allow create: if request.auth != null && request.auth.uid == userId
+        && request.resource.data.get('isPremium', false) == false
+        && request.resource.data.get('licenseKey', null) == null
+        && request.resource.data.get('deviceId', null) == null;
+
+      allow update: if request.auth != null && request.auth.uid == userId
+        && !request.resource.data.diff(resource.data).affectedKeys()
+             .hasAny(['isPremium', 'licenseKey', 'deviceId']);
+
+      allow delete: if false;
+    }
+
+    // Licenses collection - server only (Cloud Functions use the Admin SDK,
+    // which bypasses these rules).
+    match /licenses/{licenseId} {
+      allow read, write: if false;
+    }
+  }
+}

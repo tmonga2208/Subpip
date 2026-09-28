@@ -1,0 +1,13 @@
+functions/node_modules
+# Local data / build artifacts - never commit
+.DS_Store
+.env
+*.csv
+*.zip
+
+# Build output / dependencies
+node_modules/
+dist/
+
+# Brainstorming mockups
+.superpowers/
