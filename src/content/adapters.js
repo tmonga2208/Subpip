@@ -18,31 +18,37 @@ function netflixSeek(video, time) {
 //   subtitleSelector - live caption container to mirror into the PiP window
 //   maxCaptionLines  - hide older caption lines beyond this count
 //   seek(video, t)   - custom seek; return false to fall back to currentTime
+//   label            - site name shown in the popup ("Captions: YouTube")
 export const SITE_ADAPTERS = [
   {
     name: 'youtube',
+    label: 'YouTube',
     match: (host) => host.includes('youtube'),
     subtitleSelector: '#ytp-caption-window-container',
     maxCaptionLines: 2
   },
   {
     name: 'netflix',
+    label: 'Netflix',
     match: (host) => host.includes('netflix'),
     subtitleSelector: '.player-timedtext',
     seek: netflixSeek
   },
   {
     name: 'hotstar',
+    label: 'Disney+ Hotstar',
     match: (host) => host.includes('hotstar') || host.includes('disneyplus'),
     subtitleSelector: '.shaka-text-container'
   },
   {
     name: 'jiocinema',
+    label: 'JioCinema',
     match: (host) => host.includes('jiocinema'),
     subtitleSelector: '#subtitle-1'
   },
   {
     name: 'crunchyroll',
+    label: 'Crunchyroll',
     match: (host) => host.includes('crunchyroll'),
     videoSelector: '#player0',
     subtitleSelector: '#vilosVttJs'
