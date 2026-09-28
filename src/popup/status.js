@@ -10,10 +10,12 @@ const RESTRICTED = [
 
 export async function getTargetTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab && tab.url && !tab.url.startsWith(chrome.runtime.getURL(''))) return tab;
-  // Popup opened in its own window: use the most recent active tab of a
-  // normal window. Document PiP windows also count as "normal" but expose no
-  // URL, so skip URL-less tabs.
+  // The toolbar popup acts on its own window's tab, even when its URL is
+  // hidden (then it simply shows as "can't run")
+  if (tab && !(tab.url || '').startsWith(chrome.runtime.getURL(''))) return tab;
+  // Only when popup.html runs in its own window: use the most recent active
+  // tab of a normal window. Document PiP windows also count as "normal" but
+  // expose no URL, so skip URL-less tabs.
   const tabs = (await chrome.tabs.query({ active: true, windowType: 'normal' })).filter((t) => t.url);
   return tabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0))[0] || null;
 }

@@ -23,6 +23,8 @@ export function createSettingsStore(storage = chrome.storage.sync) {
       const { subpipSettings } = await storage.get(['subpipSettings']);
       settings = withDefaults(subpipSettings);
       listeners.forEach((fn) => fn(settings));
+      // Drop the isPremium/uid copies older versions kept inside settings
+      if (subpipSettings && ('isPremium' in subpipSettings || 'uid' in subpipSettings)) await write();
       return settings;
     },
     get: () => settings,

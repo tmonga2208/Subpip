@@ -54,22 +54,25 @@ export function initOptions({ doc, store, auth, router }) {
   // Auto PiP needs SubPIP on every site: ask for that access only when it is
   // turned on (the request must happen inside this click)
   $('autopip-on').addEventListener('change', async () => {
-    const toggle = $('autopip-on');
     const error = $('autopip-error');
     error.hidden = true;
-    if (toggle.checked) {
+    if ($('autopip-on').checked) {
+      // Save the choice first: the popup can re-render (or close) while
+      // Chrome's prompt is open. The background only registers the scripts
+      // once the permission is actually granted.
+      store.update({ autoPip: true });
       autoPipAllowed = await chrome.permissions.request(ALL_SITES);
       if (!autoPipAllowed) {
-        toggle.checked = false;
+        store.update({ autoPip: false });
         error.textContent = 'SubPIP needs access to all sites for Auto PiP.';
         error.hidden = false;
-        return;
       }
+      render();
     } else {
       await chrome.permissions.remove(ALL_SITES);
       autoPipAllowed = false;
+      store.update({ autoPip: false });
     }
-    store.update({ autoPip: toggle.checked });
   });
 
   function render() {

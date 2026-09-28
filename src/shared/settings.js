@@ -71,7 +71,8 @@ export function withDefaults(settings) {
 export async function readStoredSettings() {
   const { subpipSettings, subpipAuth } = await chrome.storage.sync.get(['subpipSettings', 'subpipAuth']);
   const settings = withDefaults(subpipSettings);
-  settings.isPremium = !!(subpipSettings?.isPremium || subpipAuth?.isPremium);
+  // Premium comes from sign-in only (old versions also saved a copy in settings)
+  settings.isPremium = !!subpipAuth?.isPremium;
   if (subpipAuth?.uid) settings.uid = subpipAuth.uid;
   return settings;
 }

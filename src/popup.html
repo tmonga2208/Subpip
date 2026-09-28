@@ -111,13 +111,13 @@
         </div>
         <div id="signed-in" hidden>
           <div class="account-card"><div class="account-email" id="account-email"></div><span class="badge" id="account-plan">Free</span></div>
+          <p class="success" id="license-success" role="status" hidden></p>
           <div id="free-actions">
             <form id="license-form" novalidate>
               <label class="field"><span class="field-label">License key</span>
                 <span class="input-row"><input type="text" id="license-key" placeholder="SUBPIP-XXXXXXXX-XXXX" autocomplete="off" spellcheck="false"><button class="secondary" type="submit" id="license-submit">Activate</button></span>
               </label>
               <p class="error" id="license-error" role="alert" hidden></p>
-              <p class="success" id="license-success" role="status" hidden></p>
             </form>
             <button class="link" type="button" id="check-payment">Already paid? Check payment</button>
             <button class="primary spaced" type="button" data-action="get-premium">Get Premium · ₹1000 lifetime</button>

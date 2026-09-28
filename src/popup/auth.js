@@ -12,17 +12,23 @@ export function createAuth(manager = new LicenseManager()) {
   const emit = () => listeners.forEach((fn) => fn());
 
   async function refreshStatus() {
-    premium = false;
     notice = '';
     if (user) {
       const status = await manager.getUserStatus(user.uid);
-      if (status.success && status.data.isPremium) {
+      // Offline or Firebase down: keep the last known status, don't downgrade
+      if (!status.success) {
+        emit();
+        return;
+      }
+      premium = false;
+      if (status.data.isPremium) {
         const session = await manager.validateSession(user.uid);
         premium = session.valid;
         if (!session.valid) notice = session.error;
       }
       await chrome.storage.sync.set({ subpipAuth: { uid: user.uid, email: user.email, isPremium: premium } });
     } else {
+      premium = false;
       await chrome.storage.sync.remove('subpipAuth');
     }
     emit();
@@ -46,6 +52,10 @@ export function createAuth(manager = new LicenseManager()) {
     async init() {
       await manager.init();
       user = manager.isLoggedIn() ? manager.getCurrentUser() : null;
+      // Show the last known plan at once; the network check below confirms it
+      const { subpipAuth } = await chrome.storage.sync.get(['subpipAuth']);
+      premium = !!(user && subpipAuth && subpipAuth.uid === user.uid && subpipAuth.isPremium);
+      emit();
       await refreshStatus();
     },
     signIn: (email, password) => start('signIn', email, password),

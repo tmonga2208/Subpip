@@ -47,7 +47,10 @@ export function json(status, body) {
 
 // Answers the Firebase calls the popup makes. Returns true when it handled
 // the request; everything else goes to the network untouched.
-export function firebaseStub({ uid = 'u1', email = 'tester@example.com', premium = false, signIn = 'ok' } = {}) {
+// status: 'ok' | 'slow' (answers after 2s) | 'fail' (500); premiumAfterActivate
+// flips the user to Premium once activateLicense has been called.
+export function firebaseStub({ uid = 'u1', email = 'tester@example.com', premium = false, signIn = 'ok', status = 'ok', premiumAfterActivate = false } = {}) {
+  let isPremium = premium;
   return (request) => {
     const url = request.url();
     if (url.includes('accounts:signInWithPassword') || url.includes('accounts:signUp')) {
@@ -61,10 +64,15 @@ export function firebaseStub({ uid = 'u1', email = 'tester@example.com', premium
       return true;
     }
     if (url.includes(`/documents/users/${uid}`)) {
-      request.respond(json(200, { fields: { email: { stringValue: email }, isPremium: { booleanValue: premium } } }));
+      const answer = () => request.respond(status === 'fail'
+        ? json(500, { error: { message: 'UNAVAILABLE' } })
+        : json(200, { fields: { email: { stringValue: email }, isPremium: { booleanValue: isPremium } } }));
+      if (status === 'slow') setTimeout(answer, 2000);
+      else answer();
       return true;
     }
     if (url.includes('cloudfunctions.net/activateLicense')) {
+      if (premiumAfterActivate) isPremium = true;
       request.respond(json(200, { result: { success: true } }));
       return true;
     }
@@ -93,11 +101,13 @@ export function useExtension() {
     (u, e) => chrome.storage.local.set({ firebaseAuth: { idToken: 't', refreshToken: 'r', user: { uid: u, email: e }, timestamp: Date.now() } }),
     uid, email
   );
+  ctx.setAuthCache = (auth) => ctx.worker.evaluate((value) => chrome.storage.sync.set({ subpipAuth: value }), auth);
   ctx.tabIdFor = (url) => ctx.worker.evaluate(async (u) => (await chrome.tabs.query({ url: u }))[0].id, url);
 
   // Opens popup.html in its own popup window. The popup then targets the
   // active tab of the normal window (see status.js getTargetTab).
-  ctx.openPopup = async ({ stub } = {}) => {
+  // ready: false returns as soon as the page has loaded, before sign-in settles
+  ctx.openPopup = async ({ stub, ready = true } = {}) => {
     const known = new Set(ctx.browser.targets());
     await ctx.worker.evaluate(() => chrome.windows.create({ url: 'about:blank', type: 'popup', width: 360, height: 640 }));
     const target = await ctx.browser.waitForTarget((t) => t.type() === 'page' && !known.has(t));
@@ -112,7 +122,8 @@ export function useExtension() {
       if (!(stub && stub(request))) request.continue();
     });
     await popup.goto(`chrome-extension://${ctx.extensionId}/popup.html`);
-    await popup.waitForSelector('body[data-ready="true"]', { timeout: 10000 });
+    if (ready) await popup.waitForSelector('body[data-ready="true"]', { timeout: 10000 });
+    else await popup.waitForSelector('#plan-badge');
     popup.errors = errors;
     return popup;
   };
