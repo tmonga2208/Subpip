@@ -96,6 +96,7 @@ export async function openPipWindow({ video, adapter, getSettings, onClose }) {
 
   const controls = createControls({ video, pipDoc, session, seekTo, captions });
   pipDoc.body.appendChild(controls.host);
+  controls.show();
 
   const applyOverride = (patch) => {
     Object.assign(overrides, patch);

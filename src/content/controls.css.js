@@ -10,7 +10,10 @@ export const CONTROLS_CSS = `
   font: 12px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   color: #f2f2f2;
 }
-.root { position: absolute; inset: 0; opacity: 0; transition: opacity 0.2s; }
+.root {
+  position: absolute; inset: 0; opacity: 0; transition: opacity 0.2s;
+  font: 12px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; color: #f2f2f2;
+}
 .root.visible { opacity: 1; }
 .root:not(.visible) .bar, .root:not(.visible) .menu { pointer-events: none; }
 .fade {

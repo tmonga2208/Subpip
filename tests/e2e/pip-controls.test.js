@@ -201,3 +201,74 @@ test('tiny windows do not overflow the button row', async () => {
   assert.equal(row.timeShown, false);
   await done(page);
 });
+
+// ---- Final review fixes ----
+
+test('mouse presses do not move focus onto control buttons (Space stays play/pause)', async () => {
+  const page = await open();
+  const prevented = await shadowEval(page, (shadow, pip) => ['.btn.cc', '.btn.back', '.btn.fwd', '.btn.mute', '.btn.gear'].map((sel) => {
+    const event = new pip.MouseEvent('mousedown', { bubbles: true, composed: true, cancelable: true });
+    shadow.querySelector(sel).dispatchEvent(event);
+    return event.defaultPrevented;
+  }));
+  assert.deepEqual(prevented, [true, true, true, true, true]);
+  await done(page);
+});
+
+test('opening the menu with the mouse leaves focus alone, so Space still pauses', async () => {
+  const page = await open();
+  const state = await shadowEval(page, async (shadow, pip) => {
+    shadow.querySelector('.btn.gear').dispatchEvent(new pip.MouseEvent('click', { bubbles: true, composed: true, detail: 1 }));
+    const focused = shadow.activeElement ? shadow.activeElement.className : null;
+    const video = pip.document.querySelector('video');
+    const before = video.paused;
+    pip.dispatchEvent(new pip.KeyboardEvent('keydown', { code: 'Space', key: ' ' }));
+    await new Promise((r) => setTimeout(r, 200));
+    return { focused, toggled: video.paused !== before };
+  });
+  assert.deepEqual(state, { focused: null, toggled: true });
+  await done(page);
+});
+
+test('shortcuts keep working after using a slider', async () => {
+  const page = await open();
+  const result = await shadowEval(page, async (shadow, pip) => {
+    const video = pip.document.querySelector('video');
+    const seek = shadow.querySelector('.seek-input');
+    seek.focus();
+    const before = video.paused;
+    const space = new pip.KeyboardEvent('keydown', { code: 'Space', key: ' ', bubbles: true, composed: true, cancelable: true });
+    seek.dispatchEvent(space);
+    await new Promise((r) => setTimeout(r, 200));
+    video.currentTime = 30;
+    await new Promise((r) => video.addEventListener('seeked', r, { once: true }));
+    const right = new pip.KeyboardEvent('keydown', { code: 'ArrowRight', key: 'ArrowRight', bubbles: true, composed: true, cancelable: true });
+    seek.dispatchEvent(right);
+    await new Promise((r) => video.addEventListener('seeked', r, { once: true }));
+    return { toggled: video.paused !== before, moved: Math.round(video.currentTime - 30), arrowPrevented: right.defaultPrevented };
+  });
+  assert.deepEqual(result, { toggled: true, moved: 10, arrowPrevented: true });
+  await done(page);
+});
+
+test('broad site CSS cannot displace the control host', async () => {
+  const page = await open('hostile.html');
+  const layout = await shadowEval(page, (shadow, pip) => {
+    const host = pip.document.querySelector('subpip-controls');
+    const bar = shadow.querySelector('.bar').getBoundingClientRect();
+    return {
+      position: pip.getComputedStyle(host).position,
+      barInside: bar.left >= 0 && bar.right <= pip.innerWidth && bar.width > 100,
+      timeFont: pip.getComputedStyle(shadow.querySelector('.time')).fontSize
+    };
+  });
+  assert.deepEqual(layout, { position: 'fixed', barInside: true, timeFont: '12px' });
+  await done(page);
+});
+
+test('captions are lifted above the bar as soon as PiP opens', async () => {
+  const page = await open();
+  const shift = await pipEval(page, (pip) => parseInt(pip.document.documentElement.style.getPropertyValue('--subpip-caption-shift'), 10));
+  assert.ok(shift > 30, `initial shift ${shift}px`);
+  await done(page);
+});

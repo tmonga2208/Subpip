@@ -6,6 +6,11 @@ import { createIcon } from '../shared/icons.js';
 import { CONTROLS_CSS } from './controls.css.js';
 
 const HIDE_DELAY_MS = 2500;
+const HOST_LAYOUT = {
+  display: 'block', position: 'fixed', top: '0', right: '0', bottom: '0', left: '0',
+  width: 'auto', height: 'auto', margin: '0', padding: '0', border: '0',
+  transform: 'none', 'z-index': '2147483647', 'pointer-events': 'none'
+};
 
 export function formatTime(seconds) {
   if (isNaN(seconds) || !isFinite(seconds)) return '--:--';
@@ -44,6 +49,9 @@ export function createControls({ video, pipDoc, session, seekTo, captions }) {
   };
 
   const host = pipDoc.createElement('subpip-controls');
+  // Inline !important beats page stylesheets copied into the PiP window
+  // (e.g. `body > * { position: relative }` would otherwise collapse us)
+  for (const [prop, value] of Object.entries(HOST_LAYOUT)) host.style.setProperty(prop, value, 'important');
   const shadow = host.attachShadow({ mode: 'open' });
   shadow.append(h('style', { text: CONTROLS_CSS }));
 
@@ -69,6 +77,10 @@ export function createControls({ video, pipDoc, session, seekTo, captions }) {
   const bar = h('div', { class: 'bar' }, h('div', { class: 'seek' }, seekInput, tip), row);
   const root = h('div', { class: 'root' }, h('div', { class: 'fade' }), bar);
   shadow.append(root);
+  // Keep focus off buttons on mouse press, so Space keeps meaning play/pause
+  root.addEventListener('mousedown', (event) => {
+    if (event.target.closest('.btn, .menu-item')) event.preventDefault();
+  });
 
   // Play / pause
   const syncPlay = () => {
@@ -197,7 +209,6 @@ export function createControls({ video, pipDoc, session, seekTo, captions }) {
   });
   root.addEventListener('focusin', show);
   pipDoc.documentElement.style.setProperty('--subpip-caption-shift', '0px');
-  show();
 
   return {
     host,
@@ -221,7 +232,9 @@ export function createControls({ video, pipDoc, session, seekTo, captions }) {
 export function handlePipKeydown(event, { video, seekTo, controls }) {
   const origin = event.composedPath()[0];
   const tag = origin && origin.tagName;
-  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  // Our seek/volume sliders keep the shortcuts; real text fields don't
+  const isSlider = tag === 'INPUT' && origin.type === 'range';
+  if ((tag === 'INPUT' && !isSlider) || tag === 'SELECT' || tag === 'TEXTAREA') return;
   // A focused button already acts on Space/Enter; don't double-toggle
   if (tag === 'BUTTON' && (event.code === 'Space' || event.code === 'Enter')) return;
 

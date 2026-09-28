@@ -29,6 +29,8 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
   panel.hidden = true;
 
   let view = 'main';
+  // Only move focus into the menu for keyboard users (click detail 0)
+  let keyboardMode = false;
 
   const sizeLabel = () => {
     const px = getSessionSettings().fontSize;
@@ -55,6 +57,7 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
     if (chevron) row.append(createIcon(pipDoc, 'chevron-right'));
     row.addEventListener('click', (event) => {
       event.stopPropagation();
+      keyboardMode = event.detail === 0;
       onSelect();
     });
     return row;
@@ -137,7 +140,7 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
   function render() {
     panel.replaceChildren(...VIEWS[view]());
     const first = panel.querySelector('.menu-item');
-    if (first && !panel.hidden) first.focus({ preventScroll: true });
+    if (first && !panel.hidden && keyboardMode) first.focus({ preventScroll: true });
   }
 
   const open = () => {
@@ -154,6 +157,7 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
 
   button.addEventListener('click', (event) => {
     event.stopPropagation();
+    keyboardMode = event.detail === 0;
     if (panel.hidden) open();
     else close();
   });
