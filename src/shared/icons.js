@@ -22,7 +22,8 @@ const ICONS = {
   lock: [['rect', { x: '5', y: '11', width: '14', height: '10', rx: '2', ...STROKE }], ['path', { d: 'M8 11V8a4 4 0 0 1 8 0v3', ...STROKE }]],
   fill: [['path', { d: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5', ...STROKE }]],
   close: [['path', { d: 'M6 6l12 12M18 6L6 18', ...STROKE }]],
-  spinner: [['path', { d: 'M12 3a9 9 0 1 0 9 9', ...STROKE }]]
+  spinner: [['path', { d: 'M12 3a9 9 0 1 0 9 9', ...STROKE }]],
+  person: [['circle', { cx: '12', cy: '8', r: '4', ...STROKE }], ['path', { d: 'M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6', ...STROKE }]]
 };
 
 export const ICON_NAMES = Object.keys(ICONS);

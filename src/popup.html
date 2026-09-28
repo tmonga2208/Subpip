@@ -1,192 +1,144 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
   <meta charset="UTF-8">
+  <title>SubPIP</title>
   <link rel="stylesheet" href="popup.css">
 </head>
-
 <body>
-  <div class="container">
-    <header>
-      <h1>SubPIP</h1>
-      <span class="version">v2.4</span>
+  <div class="app">
+    <header class="bar" id="topbar">
+      <img class="logo" src="assets/icon-32.png" alt="" width="20" height="20">
+      <span class="brand">SubPIP</span>
+      <span class="badge" id="plan-badge">Free</span>
+      <button class="icon-btn avatar" id="account-btn" type="button" aria-label="Account &amp; license" title="Account &amp; license">
+        <span id="account-initial" hidden></span>
+        <span id="account-icon" data-icon="person"></span>
+      </button>
+    </header>
+    <header class="bar" id="pagebar" hidden>
+      <button class="icon-btn" id="back-btn" type="button" aria-label="Back" title="Back (Esc)"><span data-icon="chevron-left"></span></button>
+      <h1 class="page-title" id="page-title"></h1>
     </header>
 
-    <!-- Quick Activate Button -->
-    <button id="activate-pip-btn" class="activate-btn">Activate Picture-in-Picture</button>
+    <main class="views">
+      <section class="view" data-view="home">
+        <div class="status" id="status" data-state="loading">
+          <span class="dot"></span>
+          <div class="status-text">
+            <div class="status-title" id="status-title">Checking this page…</div>
+            <div class="status-sub" id="status-sub"></div>
+          </div>
+          <kbd class="kbd">Alt+P</kbd>
+        </div>
+        <button class="primary" id="pip-btn" type="button" disabled>Open Picture-in-Picture</button>
 
-    <!-- Auth Section -->
-    <div id="auth-section" class="section">
-      <!-- Not Logged In -->
-      <div id="auth-logged-out">
-        <div class="auth-tabs">
-          <button class="auth-tab active" data-tab="login">Login</button>
-          <button class="auth-tab" data-tab="signup">Sign Up</button>
+        <h2 class="section-label">Captions</h2>
+        <div class="preview" id="home-preview"><span class="preview-caption">This is how captions look</span></div>
+        <div class="chips" role="group" aria-label="Caption style">
+          <button class="chip" type="button" data-preset="classic">Classic</button>
+          <button class="chip" type="button" data-preset="large">Large</button>
+          <button class="chip" type="button" data-preset="outline">Outline</button>
+          <button class="chip" type="button" data-preset="custom">Custom <span data-icon="chevron-right"></span></button>
         </div>
 
-        <!-- Login Form -->
-        <div id="login-tab" class="auth-form">
-          <input type="email" id="login-email" placeholder="Email" autocomplete="email">
-          <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
-          <button id="login-btn" class="auth-btn">Login</button>
+        <h2 class="section-label">Options</h2>
+        <div class="rows">
+          <button class="row" type="button" data-go="translate" data-premium><span class="row-label">Translate captions</span><span class="row-value" id="translate-value"></span><span data-icon="chevron-right"></span></button>
+          <button class="row" type="button" data-go="speed" data-premium><span class="row-label">Playback speed</span><span class="row-value" id="speed-value"></span><span data-icon="chevron-right"></span></button>
+          <button class="row" type="button" data-go="autopip"><span class="row-label">Auto PiP on tab switch</span><span class="row-value" id="autopip-value"></span><span data-icon="chevron-right"></span></button>
+          <button class="row" type="button" data-go="account"><span class="row-label">Account &amp; license</span><span class="row-value" id="account-value"></span><span data-icon="chevron-right"></span></button>
         </div>
+      </section>
 
-        <!-- Signup Form -->
-        <div id="signup-tab" class="auth-form hidden">
-          <input type="email" id="signup-email" placeholder="Email" autocomplete="email">
-          <input type="password" id="signup-password" placeholder="Password (min 6 chars)" autocomplete="new-password">
-          <button id="signup-btn" class="auth-btn">Create Account</button>
-        </div>
-
-        <div class="auth-divider"><span>or</span></div>
-
-        <!-- License Key Input (for users who already have key) -->
-        <div class="license-input">
-          <input type="text" id="license-key-standalone" placeholder="Have a license key? Enter here...">
-          <button id="activate-key-btn" class="btn-small">Activate</button>
-        </div>
-      </div>
-
-      <!-- Logged In -->
-      <div id="auth-logged-in" class="hidden">
-        <div class="user-info">
-          <span class="user-email" id="user-email"></span>
-          <div id="premium-badge" class="tier-badge premium hidden">Premium</div>
-          <div id="free-badge" class="tier-badge free">Free</div>
-        </div>
-
-        <!-- License Activation (for logged in users without premium) -->
-        <div id="license-section" class="license-section">
-          <input type="text" id="license-key" placeholder="Enter license key...">
-          <button id="activate-license-btn">Activate</button>
-        </div>
-
-        <button id="get-premium-btn" class="get-premium-btn">Get Premium</button>
-
-        <!-- Payment Verification Section -->
-        <div id="verify-payment-section" class="verify-payment-section">
-          <p class="verify-info">Already paid? Click to check:</p>
-          <button id="check-payment-btn" class="check-payment-btn">Check My Payment</button>
-        </div>
-
-        <button id="logout-btn" class="logout-btn">Logout</button>
-      </div>
-
-      <div id="auth-loading" class="auth-loading hidden">
-        <span>Loading...</span>
-      </div>
-
-      <div id="auth-error" class="auth-error hidden"></div>
-    </div>
-
-    <!-- Caption Settings -->
-    <div class="section">
-      <h2>Caption Settings</h2>
-
-      <div class="setting-row">
-        <label>Font Size</label>
-        <input type="range" id="font-size" min="12" max="40" value="18">
-        <span id="font-size-val">18px</span>
-      </div>
-
-      <div class="setting-row">
-        <label>Text Color</label>
-        <input type="color" id="text-color" value="#ffffff">
-      </div>
-
-      <div class="setting-row">
-        <label>Background</label>
-        <input type="color" id="bg-color" value="#000000">
-        <input type="range" id="bg-opacity" min="0" max="100" value="75">
-        <span id="bg-opacity-val">75%</span>
-      </div>
-
-      <div class="setting-row">
-        <label>Font Style</label>
-        <select id="font-family">
-          <option value="sans-serif">Sans-serif</option>
-          <option value="serif">Serif</option>
-          <option value="monospace">Monospace</option>
-          <option value="'Arial', sans-serif">Arial</option>
-          <option value="'Verdana', sans-serif">Verdana</option>
-        </select>
-      </div>
-
-      <div class="setting-row">
-        <label>Position</label>
-        <select id="caption-position">
-          <option value="bottom">Bottom</option>
-          <option value="top">Top</option>
-        </select>
-      </div>
-
-      <div class="setting-row">
-        <label title="Open PiP automatically when you switch away from a tab with a playing video">Auto PiP on tab switch</label>
-        <label class="toggle">
-          <input type="checkbox" id="auto-pip-toggle">
-          <span class="slider"></span>
-        </label>
-      </div>
-    </div>
-
-    <!-- Premium Features -->
-    <div class="section premium-features" id="premium-features-section">
-      <h2>Premium Features</h2>
-
-      <!-- Playback Speed -->
-      <div class="setting-row premium-locked" id="speed-setting">
-        <label>Playback Speed</label>
-        <div class="speed-buttons">
-          <button class="speed-btn" data-speed="0.5">0.5x</button>
-          <button class="speed-btn active" data-speed="1">1x</button>
-          <button class="speed-btn" data-speed="1.5">1.5x</button>
-          <button class="speed-btn" data-speed="2">2x</button>
-          <button class="speed-btn" data-speed="3">3x</button>
-        </div>
-      </div>
-
-      <!-- External subtitle URL (e.g. OpenSubtitles VTT link) -->
-      <div class="setting-row premium-locked" id="external-subtitle-setting">
-        <label>Subtitle URL</label>
-        <input type="url" id="external-subtitle-url" placeholder="https://...vtt or .srt (Premium)" class="external-subtitle-input">
-      </div>
-
-      <!-- Translation -->
-      <div class="setting-row premium-locked" id="translation-setting">
-        <label>Real-time Translation</label>
-        <div class="translation-controls">
-          <label class="toggle">
-            <input type="checkbox" id="translation-toggle">
-            <span class="slider"></span>
-          </label>
-          <select id="target-language" disabled>
-            <option value="en">English</option>
-            <option value="es">Spanish</option>
-            <option value="fr">French</option>
-            <option value="de">German</option>
-            <option value="it">Italian</option>
-            <option value="pt">Portuguese</option>
-            <option value="zh">Chinese</option>
-            <option value="ja">Japanese</option>
-            <option value="ko">Korean</option>
-            <option value="hi">Hindi</option>
-            <option value="ar">Arabic</option>
-            <option value="ru">Russian</option>
+      <section class="view" data-view="custom" data-title="Custom style" hidden>
+        <div class="preview sticky" id="custom-preview"><span class="preview-caption">This is how captions look</span></div>
+        <label class="field"><span class="field-label">Size <output id="size-out"></output></span><input type="range" id="size" min="12" max="40" step="1"></label>
+        <div class="field"><span class="field-label">Text color</span><div class="swatches" id="text-swatches" role="radiogroup" aria-label="Text color"></div></div>
+        <div class="field"><span class="field-label">Background</span><div class="swatches" id="bg-swatches" role="radiogroup" aria-label="Background color"></div></div>
+        <label class="field"><span class="field-label">Background opacity <output id="opacity-out"></output></span><input type="range" id="opacity" min="0" max="100" step="5"></label>
+        <label class="field"><span class="field-label">Font</span>
+          <select id="font">
+            <option value="sans-serif">Sans</option>
+            <option value="serif">Serif</option>
+            <option value="monospace">Mono</option>
+            <option value="'Arial', sans-serif">Arial</option>
+            <option value="'Verdana', sans-serif">Verdana</option>
           </select>
+        </label>
+        <div class="field"><span class="field-label">Position</span>
+          <div class="segmented" role="radiogroup" aria-label="Position">
+            <button type="button" role="radio" data-position="bottom">Bottom</button>
+            <button type="button" role="radio" data-position="top">Top</button>
+          </div>
         </div>
-      </div>
+        <label class="field toggle-field"><span class="field-label">Outline</span><input type="checkbox" class="switch" id="outline"></label>
+        <label class="field"><span class="field-label">Subtitle file URL <span class="tag" id="subs-tag" hidden>Premium</span></span>
+          <input type="url" id="subs-url" placeholder="https://…/subtitles.vtt">
+          <span class="hint">VTT or SRT link</span>
+        </label>
+      </section>
 
-      <div class="premium-overlay" id="premium-overlay">
-        <span>Premium Required</span>
-      </div>
-    </div>
+      <section class="view" data-view="translate" data-title="Translate captions" hidden>
+        <label class="field toggle-field"><span class="field-label">Translate captions</span><input type="checkbox" class="switch" id="translate-on"></label>
+        <div class="radio-list" id="language-list" role="radiogroup" aria-label="Language"></div>
+      </section>
 
-    <button id="save-btn" class="save-btn">Save Settings</button>
-    <div id="status-msg" class="status-msg hidden"></div>
+      <section class="view" data-view="speed" data-title="Playback speed" hidden>
+        <p class="hint">Used when Picture-in-Picture opens.</p>
+        <div class="radio-list" id="speed-list" role="radiogroup" aria-label="Default playback speed"></div>
+      </section>
+
+      <section class="view" data-view="autopip" data-title="Auto PiP" hidden>
+        <p class="paragraph">Opens Picture-in-Picture automatically when you switch away from a tab playing video. Chrome will ask once for access to all sites so SubPIP can be ready on every page.</p>
+        <label class="field toggle-field"><span class="field-label">Auto PiP on tab switch</span><input type="checkbox" class="switch" id="autopip-on"></label>
+        <p class="error" id="autopip-error" role="alert" hidden></p>
+      </section>
+
+      <section class="view" data-view="account" data-title="Account &amp; license" hidden>
+        <div id="signed-out">
+          <div class="segmented" role="tablist" aria-label="Account">
+            <button type="button" role="tab" data-mode="signin" aria-selected="true">Sign in</button>
+            <button type="button" role="tab" data-mode="signup" aria-selected="false">Create account</button>
+          </div>
+          <form id="auth-form" novalidate>
+            <label class="field"><span class="field-label">Email</span><input type="email" id="auth-email" autocomplete="email"></label>
+            <label class="field"><span class="field-label">Password</span><input type="password" id="auth-password" autocomplete="current-password"></label>
+            <p class="error" id="auth-error" role="alert" hidden></p>
+            <button class="primary spaced" type="submit" id="auth-submit">Sign in</button>
+          </form>
+          <p class="hint">Have a license key? Sign in first to activate it.</p>
+        </div>
+        <div id="signed-in" hidden>
+          <div class="account-card"><div class="account-email" id="account-email"></div><span class="badge" id="account-plan">Free</span></div>
+          <div id="free-actions">
+            <form id="license-form" novalidate>
+              <label class="field"><span class="field-label">License key</span>
+                <span class="input-row"><input type="text" id="license-key" placeholder="SUBPIP-XXXXXXXX-XXXX" autocomplete="off" spellcheck="false"><button class="secondary" type="submit" id="license-submit">Activate</button></span>
+              </label>
+              <p class="error" id="license-error" role="alert" hidden></p>
+              <p class="success" id="license-success" role="status" hidden></p>
+            </form>
+            <button class="link" type="button" id="check-payment">Already paid? Check payment</button>
+            <button class="primary spaced" type="button" data-action="get-premium">Get Premium · ₹1000 lifetime</button>
+          </div>
+          <button class="link danger" type="button" id="sign-out">Sign out</button>
+        </div>
+      </section>
+
+      <section class="view" data-view="upgrade" data-title="SubPIP Premium" hidden>
+        <p class="lead">Unlock the extras with a one-time payment.</p>
+        <ul class="features">
+          <li><span data-icon="check"></span>Real-time caption translation</li>
+          <li><span data-icon="check"></span>Playback speed control (0.5×–3×)</li>
+          <li><span data-icon="check"></span>Load subtitle files (VTT / SRT)</li>
+        </ul>
+        <div class="price">₹1000 <span>lifetime</span></div>
+        <button class="primary" type="button" data-action="get-premium">Get Premium</button>
+        <button class="link" type="button" id="upgrade-check-payment">Already paid? Check payment</button>
+      </section>
+    </main>
   </div>
-
   <script src="popup.js"></script>
 </body>
-
 </html>

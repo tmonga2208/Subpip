@@ -22,7 +22,8 @@ export default [
   },
   {
     files: ['tests/**/*.js'],
-    languageOptions: { globals: { ...globals.node, ...globals.browser } }
+    // Callbacks passed to page/worker evaluate run in the browser or extension
+    languageOptions: { globals: { ...globals.node, ...globals.browser, ...globals.webextensions } }
   },
   {
     files: ['scripts/**/*.mjs'],

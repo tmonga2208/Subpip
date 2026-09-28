@@ -30,6 +30,24 @@ export async function launchBrowser() {
   return browser;
 }
 
+// Opens a fixture page and waits for its video (if any) to have metadata
+export async function openFixture(browser, port, pagePath, host = '127.0.0.1') {
+  const page = await browser.newPage();
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text());
+  });
+  await page.goto(`http://${host}:${port}/${pagePath}`);
+  await page.evaluate(() => new Promise((resolve) => {
+    const video = document.querySelector('video');
+    if (!video || video.readyState >= 1) resolve();
+    else video.addEventListener('loadedmetadata', resolve, { once: true });
+  }));
+  page.errors = errors;
+  return page;
+}
+
 // Registers before/after hooks for a test file and returns a context
 export function useBrowser() {
   const ctx = {};
@@ -41,21 +59,6 @@ export function useBrowser() {
     await ctx.browser?.close();
     await ctx.server?.close();
   });
-  ctx.newPage = async (pagePath, host = '127.0.0.1') => {
-    const page = await ctx.browser.newPage();
-    const errors = [];
-    page.on('pageerror', (error) => errors.push(error.message));
-    page.on('console', (message) => {
-      if (message.type() === 'error') errors.push(message.text());
-    });
-    await page.goto(`http://${host}:${ctx.server.port}/${pagePath}`);
-    await page.evaluate(() => new Promise((resolve) => {
-      const video = document.querySelector('video');
-      if (!video || video.readyState >= 1) resolve();
-      else video.addEventListener('loadedmetadata', resolve, { once: true });
-    }));
-    page.errors = errors;
-    return page;
-  };
+  ctx.newPage = (pagePath, host) => openFixture(ctx.browser, ctx.server.port, pagePath, host);
   return ctx;
 }

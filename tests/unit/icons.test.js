@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { ICON_NAMES, iconMarkup, createIcon } from '../../src/shared/icons.js';
 
 const REQUIRED = ['play', 'pause', 'back10', 'forward10', 'volume', 'volume-muted', 'cc', 'cc-off', 'gear',
-  'check', 'chevron-right', 'chevron-left', 'lock', 'fill', 'close', 'spinner'];
+  'check', 'chevron-right', 'chevron-left', 'lock', 'fill', 'close', 'spinner', 'person'];
 
 test('has every icon the spec lists', () => {
   for (const name of REQUIRED) assert.ok(ICON_NAMES.includes(name), `missing ${name}`);
