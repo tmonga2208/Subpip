@@ -88,3 +88,13 @@ test('a returning buyer sees their saved license', async () => {
   await page.evaluate(() => localStorage.clear());
   await page.close();
 });
+
+test('the copy button is readable (ghost buttons have no light default background)', async () => {
+  const page = await ctx.open('premium.html', { intercept: both(razorpayStub(), confirmStub()) });
+  await pay(page);
+  await page.waitForFunction(() => document.getElementById('successSection').classList.contains('show'));
+  const look = await page.$eval('.copy-btn', (b) => ({ background: getComputedStyle(b).backgroundColor, color: getComputedStyle(b).color }));
+  assert.deepEqual(look, { background: 'rgba(0, 0, 0, 0)', color: 'rgb(242, 242, 242)' });
+  await page.evaluate(() => localStorage.clear());
+  await page.close();
+});
