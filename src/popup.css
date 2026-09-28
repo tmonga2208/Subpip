@@ -80,13 +80,14 @@ button, input, select { font: inherit; color: inherit; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Caption preview + preset chips */
-.preview { position: relative; height: 72px; margin-bottom: 8px; overflow: hidden; border-radius: var(--radius-lg); background: linear-gradient(160deg, #3b4a5c, #1f2a36 45%, #0e1319); }
-.preview.sticky { position: sticky; top: -12px; z-index: 1; }
-.preview-caption {
-  position: absolute; bottom: 10px; left: 50%; max-width: 92%; padding: 2px 8px; overflow: hidden; transform: translateX(-50%);
-  border-radius: 4px; font-weight: bold; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap;
+/* Grows with the caption so big sizes wrap instead of being cut off */
+.preview {
+  display: flex; align-items: flex-end; justify-content: center; min-height: 72px; margin-bottom: 8px; padding: 10px;
+  overflow: hidden; border-radius: var(--radius-lg); background: linear-gradient(160deg, #3b4a5c, #1f2a36 45%, #0e1319);
 }
-.preview[data-position="top"] .preview-caption { top: 10px; bottom: auto; }
+.preview.sticky { position: sticky; top: -12px; z-index: 1; }
+.preview-caption { max-width: 100%; padding: 2px 8px; border-radius: 4px; font-weight: bold; line-height: 1.25; text-align: center; overflow-wrap: anywhere; }
+.preview[data-position="top"] { align-items: flex-start; }
 .chips { display: flex; gap: 6px; }
 .chip { flex: 1; display: flex; align-items: center; justify-content: center; gap: 2px; padding: 7px 0; border: 1px solid var(--border); border-radius: var(--radius-sm); background: transparent; color: #c8c9cd; font-size: 11px; cursor: pointer; }
 .chip:hover { border-color: #3a3b40; }
@@ -129,7 +130,11 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .swatches { display: flex; align-items: center; gap: 6px; }
 .swatch { width: 24px; height: 24px; padding: 0; border: 2px solid var(--border); border-radius: 50%; cursor: pointer; }
 .swatch[aria-checked="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--surface); }
-.swatch-custom { width: 24px; height: 24px; padding: 0; border: 2px dashed var(--border); border-radius: 50%; background: none; cursor: pointer; appearance: none; }
+/* Rainbow ring marks the free color picker apart from the fixed swatches */
+.swatch-custom {
+  width: 24px; height: 24px; padding: 0; border: 2px solid transparent; border-radius: 50%; cursor: pointer; appearance: none;
+  background: conic-gradient(#ff4d5e, #ffe14d, #9dff7a, #7cf0ff, #6f7dff, #ff9ad5, #ff4d5e) border-box;
+}
 .swatch-custom::-webkit-color-swatch-wrapper { padding: 2px; }
 .swatch-custom::-webkit-color-swatch { border: 0; border-radius: 50%; }
 .segmented { display: flex; padding: 2px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--card); }

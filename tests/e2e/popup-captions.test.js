@@ -119,3 +119,20 @@ test('old settings show as Custom and lose their stale isPremium on save', async
   assert.equal('isPremium' in (await ctx.storage()).subpipSettings, false);
   await popup.close();
 });
+
+test('the preview wraps big captions instead of cutting them off', async () => {
+  await ctx.setSettings({ fontSize: 40, captionPreset: 'custom' });
+  const popup = await ctx.openPopup();
+  const fit = await popup.evaluate(() => {
+    const preview = document.getElementById('home-preview');
+    const caption = preview.querySelector('.preview-caption');
+    const box = preview.getBoundingClientRect();
+    const cap = caption.getBoundingClientRect();
+    return {
+      truncated: caption.scrollWidth > caption.clientWidth,
+      inside: cap.top >= box.top && cap.bottom <= box.bottom && cap.left >= box.left && cap.right <= box.right
+    };
+  });
+  assert.deepEqual(fit, { truncated: false, inside: true });
+  await popup.close();
+});
