@@ -4,6 +4,8 @@ import { iconMarkup } from '../shared/icons.js';
 import { createRouter } from './router.js';
 import { createAuth } from './auth.js';
 import { initAccount } from './account.js';
+import { createSettingsStore } from './settings-store.js';
+import { initCaptions } from './captions.js';
 
 // Extension page, so icon markup strings are fine here (unlike page scripts)
 function renderIcons(root) {
@@ -16,10 +18,17 @@ function renderIcons(root) {
 document.addEventListener('DOMContentLoaded', async () => {
   renderIcons(document);
   const router = createRouter(document);
+  const store = createSettingsStore();
   const auth = createAuth();
   initAccount({ doc: document, auth });
+  initCaptions({ doc: document, store, router, auth });
   document.getElementById('account-btn').addEventListener('click', () => router.go('account'));
+  // Save anything still waiting on the slider debounce when the popup closes
+  window.addEventListener('pagehide', () => { store.flush(); });
 
-  await auth.init().catch((error) => console.warn('[SubPIP] Could not restore sign-in:', error));
+  await Promise.all([
+    store.load(),
+    auth.init().catch((error) => console.warn('[SubPIP] Could not restore sign-in:', error))
+  ]);
   document.body.dataset.ready = 'true';
 });

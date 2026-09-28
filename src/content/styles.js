@@ -1,20 +1,25 @@
 // Caption styles applied inside the PiP window
 
 // Convert hex to rgba
-function hexToRgba(hex, opacity) {
+export function hexToRgba(hex, opacity) {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   return `rgba(${r}, ${g}, ${b}, ${opacity / 100})`;
 }
 
+// Soft glow by default; a hard four-way outline when captionOutline is on
+export function captionTextShadow(settings) {
+  return settings.captionOutline
+    ? '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 4px #000'
+    : '0 0 3px black, 0 0 5px black';
+}
+
 // Generate dynamic subtitle styles based on settings
 export function generateSubtitleStyles(settings) {
   const bgRgba = hexToRgba(settings.bgColor, settings.bgOpacity);
   const position = settings.captionPosition === 'top' ? 'top: 5%' : 'bottom: 0';
-  const textShadow = settings.captionOutline
-    ? '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 4px #000'
-    : '0 0 3px black, 0 0 5px black';
+  const textShadow = captionTextShadow(settings);
   // Lets the PiP controls lift bottom captions above the control bar
   const shift = settings.captionPosition === 'top'
     ? ''
