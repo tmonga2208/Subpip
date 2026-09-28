@@ -11,6 +11,7 @@ import { startServer } from './server.js';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const FIXTURES_DIR = path.join(ROOT, 'tests/fixtures');
 export const DIST_DIR = path.join(ROOT, 'dist');
+export const WEB_DIR = path.join(ROOT, 'web');
 
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
