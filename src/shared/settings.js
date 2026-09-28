@@ -28,6 +28,9 @@ export const CAPTION_SIZES = [
   { label: 'XL', px: 32 }
 ];
 
+// Playback speeds offered in the popup and the PiP menu
+export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
+
 export const LANGUAGES = [
   { code: 'en', name: 'English' },
   { code: 'es', name: 'Spanish' },

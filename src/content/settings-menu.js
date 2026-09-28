@@ -3,9 +3,8 @@
 // Built with DOM calls only (Trusted Types pages).
 
 import { createIcon } from '../shared/icons.js';
-import { CAPTION_SIZES, LANGUAGES } from '../shared/settings.js';
+import { CAPTION_SIZES, LANGUAGES, SPEEDS } from '../shared/settings.js';
 
-const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 const UPGRADE_NOTE = 'Premium feature. Open the SubPIP popup to upgrade.';
 
 export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessionSettings, applyOverride, captions }) {

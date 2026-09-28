@@ -45,3 +45,8 @@ test('caption sizes and languages', () => {
   assert.deepEqual(CAPTION_SIZES, [{ label: 'S', px: 14 }, { label: 'M', px: 18 }, { label: 'L', px: 24 }, { label: 'XL', px: 32 }]);
   assert.deepEqual(LANGUAGES.map((l) => l.code), ['en', 'es', 'fr', 'de', 'it', 'pt', 'zh', 'ja', 'ko', 'hi', 'ar', 'ru']);
 });
+
+test('shared playback speeds', async () => {
+  const { SPEEDS } = await import('../../src/shared/settings.js');
+  assert.deepEqual(SPEEDS, [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3]);
+});

@@ -7,6 +7,7 @@ import { initAccount } from './account.js';
 import { createSettingsStore } from './settings-store.js';
 import { initCaptions } from './captions.js';
 import { initHome } from './home.js';
+import { initOptions } from './options.js';
 
 // Extension page, so icon markup strings are fine here (unlike page scripts)
 function renderIcons(root) {
@@ -21,10 +22,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const router = createRouter(document);
   const store = createSettingsStore();
   const auth = createAuth();
-  initAccount({ doc: document, auth });
+  const account = initAccount({ doc: document, auth });
   initCaptions({ doc: document, store, router, auth });
   const home = initHome({ doc: document, store, auth });
+  initOptions({ doc: document, store, auth, router });
+
   document.getElementById('account-btn').addEventListener('click', () => router.go('account'));
+  document.getElementById('upgrade-check-payment').addEventListener('click', () => {
+    router.go('account');
+    if (auth.user()) account.checkPayment();
+  });
   // Save anything still waiting on the slider debounce when the popup closes
   window.addEventListener('pagehide', () => { store.flush(); });
 
