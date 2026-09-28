@@ -1,125 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Privacy Policy - SubPIP</title>
-    <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy · SubPIP</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-    <header class="header">
-        <div class="container">
-            <nav class="nav">
-                <div class="logo">
-                    <a href="index.html" style="text-decoration: none; color: inherit;">
-                        <h1>SubPIP <img src="logo.png" alt="SubPIP logo" /></h1>
-                    </a>
-                </div>
-                <ul class="nav-links">
-                    <li><a href="index.html">Home</a></li>
-                    <li><a href="premium.html">Get Premium</a></li>
-                    <li><a href="privacy.html">Privacy Policy</a></li>
-                </ul>
-                <div class="nav-actions">
-                    <a href="premium.html" class="button button-primary">Get Premium</a>
-                </div>
-            </nav>
-        </div>
-    </header>
+  <header class="site-header">
+    <div class="container nav">
+      <a class="brand" href="index.html"><img src="logo.svg" alt="" width="28" height="28">SubPIP</a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+      <a class="btn btn-primary btn-sm" href="https://chromewebstore.google.com/detail/subpip-picture-in-picture/cajeijlommigmipnnhemgopednbpmnjg">Add to Chrome</a>
+    </div>
+  </header>
 
-    <main>
-        <section class="container" style="padding: 2rem 1rem; max-width: 800px;">
-            <h1 style="margin-bottom: 0.5rem;">Privacy Policy</h1>
-            <p style="color: hsl(var(--muted-foreground)); margin-bottom: 2rem;">Last updated: <span id="privacyDate"></span></p>
+  <main class="container">
+    <article class="prose">
+      <h1>Privacy Policy</h1>
+      <p class="updated">Last updated: <span id="privacyDate"></span></p>
+      <section>
+      <h2>1. Introduction</h2>
+      <p>SubPIP ("we", "our", or "the extension") is a browser extension that provides Picture-in-Picture video with subtitles, caption customization, and optional translation. This Privacy Policy explains what data we collect, how we use it, and your choices. We do not sell your personal data.</p>
+      </section>
 
-            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                <section>
-                    <h2 style="font-size: 1.25rem; margin-bottom: 0.5rem;">1. Introduction</h2>
-                    <p>SubPIP ("we", "our", or "the extension") is a browser extension that provides Picture-in-Picture video with subtitles, caption customization, and optional translation. This Privacy Policy explains what data we collect, how we use it, and your choices. We do not sell your personal data.</p>
-                </section>
+      <section>
+      <h2>2. Data We Collect</h2>
+      <p><strong>Extension (local):</strong></p>
+      <ul>
+      <li><strong>Settings</strong> – Caption preferences (font size, color, position, playback speed, translation language). Stored locally in your browser (Chrome sync storage) and not sent to our servers.</li>
+      <li><strong>Translation cache</strong> – Subtitle text and its translation may be cached locally (IndexedDB) to avoid repeated API calls. This data stays on your device.</li>
+      </ul>
+      <p><strong>If you use Premium (login / license):</strong></p>
+      <ul>
+      <li><strong>Account data</strong> – Email and authentication state are handled by Firebase Authentication. We store your premium status and a device identifier to enforce license terms (e.g., one device per license).</li>
+      <li><strong>License keys</strong> – Stored in Firebase/Firestore and associated with your account for activation and verification.</li>
+      </ul>
+      </section>
 
-                <section>
-                    <h2 style="font-size: 1.25rem; margin-bottom: 0.5rem;">2. Data We Collect</h2>
-                    <p><strong>Extension (local):</strong></p>
-                    <ul style="margin: 0.5rem 0 0 1.5rem;">
-                        <li><strong>Settings</strong> – Caption preferences (font size, color, position, playback speed, translation language). Stored locally in your browser (Chrome sync storage) and not sent to our servers.</li>
-                        <li><strong>Translation cache</strong> – Subtitle text and its translation may be cached locally (IndexedDB) to avoid repeated API calls. This data stays on your device.</li>
-                    </ul>
-                    <p style="margin-top: 1rem;"><strong>If you use Premium (login / license):</strong></p>
-                    <ul style="margin: 0.5rem 0 0 1.5rem;">
-                        <li><strong>Account data</strong> – Email and authentication state are handled by Firebase Authentication. We store your premium status and a device identifier to enforce license terms (e.g., one device per license).</li>
-                        <li><strong>License keys</strong> – Stored in Firebase/Firestore and associated with your account for activation and verification.</li>
-                    </ul>
-                </section>
+      <section>
+      <h2>3. How We Use Data</h2>
+      <ul>
+      <li>To provide Picture-in-Picture, subtitles, and playback controls on the sites you use.</li>
+      <li>To offer real-time caption translation: subtitle text is sent to a translation service (see Third-Party Services) only when you enable translation. Results may be cached locally.</li>
+      <li>To manage your Premium account, verify your license, and enforce one license per device where applicable.</li>
+      </ul>
+      </section>
 
-                <section>
-                    <h2 style="font-size: 1.25rem; margin-bottom: 0.5rem;">3. How We Use Data</h2>
-                    <ul style="margin-left: 1.5rem;">
-                        <li>To provide Picture-in-Picture, subtitles, and playback controls on the sites you use.</li>
-                        <li>To offer real-time caption translation: subtitle text is sent to a translation service (see Third-Party Services) only when you enable translation. Results may be cached locally.</li>
-                        <li>To manage your Premium account, verify your license, and enforce one license per device where applicable.</li>
-                    </ul>
-                </section>
+      <section>
+      <h2>4. Third-Party Services</h2>
+      <p>We use the following services; each has its own privacy policy:</p>
+      <ul>
+      <li><strong>Google Firebase</strong> – Authentication and Firestore (account and license data). <a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Google Privacy Policy</a>.</li>
+      <li><strong>Translation API (e.g. MyMemory)</strong> – When you enable translation, subtitle text is sent to the translation provider to return translated text. We do not control their retention policies.</li>
+      <li><strong>Razorpay</strong> – Used on our website for Premium payments. Payment data is processed by Razorpay; we do not store full payment details. <a href="https://razorpay.com/privacy/" target="_blank" rel="noopener">Razorpay Privacy Policy</a>.</li>
+      </ul>
+      </section>
 
-                <section>
-                    <h2 style="font-size: 1.25rem; margin-bottom: 0.5rem;">4. Third-Party Services</h2>
-                    <p>We use the following services; each has its own privacy policy:</p>
-                    <ul style="margin: 0.5rem 0 0 1.5rem;">
-                        <li><strong>Google Firebase</strong> – Authentication and Firestore (account and license data). <a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Google Privacy Policy</a>.</li>
-                        <li><strong>Translation API (e.g. MyMemory)</strong> – When you enable translation, subtitle text is sent to the translation provider to return translated text. We do not control their retention policies.</li>
-                        <li><strong>Razorpay</strong> – Used on our website for Premium payments. Payment data is processed by Razorpay; we do not store full payment details. <a href="https://razorpay.com/privacy/" target="_blank" rel="noopener">Razorpay Privacy Policy</a>.</li>
-                    </ul>
-                </section>
+      <section>
+      <h2>5. Browser Permissions</h2>
+      <p>We request only the permissions needed for the extension to work:</p>
+      <ul>
+      <li><strong>activeTab</strong> – To run Picture-in-Picture in the tab you are currently viewing when you click the extension or use the shortcut.</li>
+      <li><strong>tabs</strong> – To know which tab is active and to support auto-PiP when you switch tabs (so a playing video can go to PiP). We do not collect or store your tab URLs or browsing history.</li>
+      <li><strong>windows</strong> – To support auto-PiP when you switch to another browser window.</li>
+      <li><strong>scripting</strong> – To inject the code that enables PiP and subtitles on the current page.</li>
+      <li><strong>storage</strong> – To save your settings and (if you log in) premium status locally.</li>
+      <li><strong>host permissions (all_urls)</strong> – So the extension can run on video sites (e.g. YouTube, Netflix, Disney+) where you choose to use PiP. We do not read or transmit your browsing history.</li>
+      </ul>
+      </section>
 
-                <section>
-                    <h2 style="font-size: 1.25rem; margin-bottom: 0.5rem;">5. Browser Permissions</h2>
-                    <p>We request only the permissions needed for the extension to work:</p>
-                    <ul style="margin: 0.5rem 0 0 1.5rem;">
-                        <li><strong>activeTab</strong> – To run Picture-in-Picture in the tab you are currently viewing when you click the extension or use the shortcut.</li>
-                        <li><strong>tabs</strong> – To know which tab is active and to support auto-PiP when you switch tabs (so a playing video can go to PiP). We do not collect or store your tab URLs or browsing history.</li>
-                        <li><strong>windows</strong> – To support auto-PiP when you switch to another browser window.</li>
-                        <li><strong>scripting</strong> – To inject the code that enables PiP and subtitles on the current page.</li>
-                        <li><strong>storage</strong> – To save your settings and (if you log in) premium status locally.</li>
-                        <li><strong>host permissions (all_urls)</strong> – So the extension can run on video sites (e.g. YouTube, Netflix, Disney+) where you choose to use PiP. We do not read or transmit your browsing history.</li>
-                    </ul>
-                </section>
+      <section>
+      <h2>6. Data Storage and Retention</h2>
+      <p>Settings and local caches are stored in your browser. If you uninstall the extension, this local data can be removed by the browser. Account and license data in Firebase are retained as long as your account exists; you can request deletion by contacting us.</p>
+      </section>
 
-                <section>
-                    <h2 style="font-size: 1.25rem; margin-bottom: 0.5rem;">6. Data Storage and Retention</h2>
-                    <p>Settings and local caches are stored in your browser. If you uninstall the extension, this local data can be removed by the browser. Account and license data in Firebase are retained as long as your account exists; you can request deletion by contacting us.</p>
-                </section>
+      <section>
+      <h2>7. Your Rights</h2>
+      <p>You can disable the extension or revoke permissions at any time. You can clear extension data (e.g. via Chrome settings). If you have an account, you can log out; to request account or data deletion, contact us using the details below.</p>
+      </section>
 
-                <section>
-                    <h2 style="font-size: 1.25rem; margin-bottom: 0.5rem;">7. Your Rights</h2>
-                    <p>You can disable the extension or revoke permissions at any time. You can clear extension data (e.g. via Chrome settings). If you have an account, you can log out; to request account or data deletion, contact us using the details below.</p>
-                </section>
+      <section>
+      <h2>8. Changes</h2>
+      <p>We may update this Privacy Policy from time to time. The "Last updated" date at the top will be revised when we do. Continued use of the extension after changes constitutes acceptance of the updated policy.</p>
+      </section>
 
-                <section>
-                    <h2 style="font-size: 1.25rem; margin-bottom: 0.5rem;">8. Changes</h2>
-                    <p>We may update this Privacy Policy from time to time. The "Last updated" date at the top will be revised when we do. Continued use of the extension after changes constitutes acceptance of the updated policy.</p>
-                </section>
+      <section>
+      <h2>9. Contact</h2>
+      <p>For privacy-related questions or requests, contact us at: <a href="https://tmonga2208.vercel.app/">tmonga2208.vercel.app</a> (or the contact method listed there).</p>
+      </section>
+    </article>
+  </main>
 
-                <section>
-                    <h2 style="font-size: 1.25rem; margin-bottom: 0.5rem;">9. Contact</h2>
-                    <p>For privacy-related questions or requests, contact us at: <a href="https://tmonga2208.vercel.app/">tmonga2208.vercel.app</a> (or the contact method listed there).</p>
-                </section>
-            </div>
-        </section>
-    </main>
-
-    <footer class="footer">
-        <div class="container">
-            <p id="year"></p>
-            <p><a href="privacy.html">Privacy Policy</a> &middot; <a href="index.html">Home</a> &middot; <a href="premium.html">Get Premium</a></p>
-        </div>
-    </footer>
-
-    <script>
-        document.getElementById("privacyDate").textContent = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-        document.getElementById("year").textContent = "© " + new Date().getFullYear() + " SubPIP. All rights reserved.";
-    </script>
+  <footer class="site-footer">
+    <div class="container footer-row">
+      <a class="brand" href="index.html"><img src="logo.svg" alt="" width="28" height="28">SubPIP</a>
+      <ul class="footer-links">
+        <li><a href="privacy.html">Privacy Policy</a></li>
+        <li><a href="mailto:tarunmonga2208@gmail.com">Contact</a></li>
+        <li>© <span data-year></span> SubPIP</li>
+      </ul>
+    </div>
+  </footer>
+  <script src="script.js"></script>
+  <script>
+    document.getElementById('privacyDate').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  </script>
 </body>
-
 </html>

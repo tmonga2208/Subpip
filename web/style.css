@@ -171,3 +171,14 @@ kbd { padding: 1px 6px; border: 1px solid var(--border); border-radius: 4px; bac
 .license-key { margin: 8px 0 12px; font: 600 18px var(--mono); overflow-wrap: anywhere; }
 .instructions h2 { margin-bottom: 8px; font-size: 16px; }
 .instructions ol { display: grid; gap: 6px; padding-left: 20px; color: var(--text-2); }
+
+/* Long-form text (privacy policy) */
+.prose { max-width: 760px; margin: 0 auto; padding: 56px 0 72px; }
+.prose h1 { font-size: 36px; line-height: 1.15; }
+.prose .updated { margin: 8px 0 32px; color: var(--text-2); }
+.prose section + section { margin-top: 28px; }
+.prose h2 { margin-bottom: 8px; font-size: 20px; }
+.prose p, .prose li { color: #c8c9cd; }
+.prose ul { display: grid; gap: 6px; margin: 8px 0 0 22px; }
+.prose p + p, .prose p + ul, .prose ul + p { margin-top: 10px; }
+.prose a { color: var(--accent-text); }
