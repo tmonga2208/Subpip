@@ -142,3 +142,32 @@ kbd { padding: 1px 6px; border: 1px solid var(--border); border-radius: 4px; bac
 .footer-links { display: flex; flex-wrap: wrap; gap: 20px; list-style: none; }
 .footer-links a { text-decoration: none; }
 .footer-links a:hover { color: var(--text); }
+
+/* Checkout */
+.checkout-wrap { padding: 56px 0 72px; }
+.checkout { max-width: 440px; margin: 0 auto; }
+.checkout .back-link { display: inline-block; margin-bottom: 16px; color: var(--text-2); font-size: 14px; text-decoration: none; }
+.checkout .back-link:hover { color: var(--text); }
+.checkout-card { padding: 28px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--card); }
+.checkout h1 { font-size: 26px; line-height: 1.2; }
+.checkout .price { margin: 10px 0 20px; font-size: 28px; font-weight: 700; }
+.checkout .price span { color: var(--text-2); font-size: 15px; font-weight: 400; }
+.field-label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 600; }
+.email-input { width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); outline: none; }
+.email-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+.pay-btn { margin-top: 12px; }
+.secure-badge { margin-top: 12px; color: var(--text-2); font-size: 13px; text-align: center; }
+.loading, .error-msg { display: none; margin-top: 12px; font-size: 14px; }
+.loading.show, .error-msg.show { display: block; }
+.loading { color: var(--text-2); }
+.error-msg { color: var(--danger-text); }
+.payment-container.hide { display: none; }
+.success-container { display: none; }
+.success-container.show { display: block; }
+.success-icon { display: grid; place-items: center; width: 44px; height: 44px; margin-bottom: 14px; border-radius: 50%; background: rgba(62, 207, 142, 0.15); color: var(--success); }
+.success-icon svg { width: 22px; height: 22px; }
+.license-box { margin: 20px 0; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.license-label { color: var(--text-2); font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.license-key { margin: 8px 0 12px; font: 600 18px var(--mono); overflow-wrap: anywhere; }
+.instructions h2 { margin-bottom: 8px; font-size: 16px; }
+.instructions ol { display: grid; gap: 6px; padding-left: 20px; color: var(--text-2); }

@@ -38,3 +38,43 @@ export function useWebsite() {
   };
   return ctx;
 }
+
+const FAKE_RAZORPAY = `
+window.Razorpay = function (options) { this.options = options; this.handlers = {}; };
+window.Razorpay.prototype.on = function (event, fn) { this.handlers[event] = fn; };
+window.Razorpay.prototype.open = function () {
+  window.__rzpOpened = true;
+  const mode = window.__rzpMode || 'success';
+  setTimeout(() => {
+    if (mode === 'success') this.options.handler({ razorpay_payment_id: 'pay_TEST123' });
+    else this.handlers['payment.failed']({ error: { description: 'Card declined' } });
+  }, 50);
+};`;
+
+// Razorpay checkout script: a fake that "pays" instantly, or a blocked load
+export function razorpayStub({ blocked = false } = {}) {
+  return (request) => {
+    if (!request.url().startsWith('https://checkout.razorpay.com/')) return false;
+    if (blocked) request.abort('blockedbyclient');
+    else request.respond({ status: 200, contentType: 'text/javascript', body: FAKE_RAZORPAY });
+    return true;
+  };
+}
+
+// The confirmPayment Cloud Function
+export function confirmStub({ ok = true } = {}) {
+  return (request) => {
+    if (!request.url().includes('cloudfunctions.net/confirmPayment')) return false;
+    if (request.method() === 'OPTIONS') {
+      request.respond({ status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'content-type', 'Access-Control-Allow-Methods': 'POST' } });
+      return true;
+    }
+    const body = ok
+      ? { result: { licenseKey: 'SUBPIP-TESTKEY1-ABCD', email: 'buyer@example.com' } }
+      : { error: { message: 'Payment not completed', status: 'FAILED_PRECONDITION' } };
+    request.respond({ status: ok ? 200 : 400, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(body) });
+    return true;
+  };
+}
+
+export const both = (...stubs) => (request) => stubs.some((stub) => stub(request));
