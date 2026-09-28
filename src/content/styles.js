@@ -12,6 +12,13 @@ function hexToRgba(hex, opacity) {
 export function generateSubtitleStyles(settings) {
   const bgRgba = hexToRgba(settings.bgColor, settings.bgOpacity);
   const position = settings.captionPosition === 'top' ? 'top: 5%' : 'bottom: 0';
+  const textShadow = settings.captionOutline
+    ? '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 4px #000'
+    : '0 0 3px black, 0 0 5px black';
+  // Lets the PiP controls lift bottom captions above the control bar
+  const shift = settings.captionPosition === 'top'
+    ? ''
+    : 'translate: 0 calc(-1 * var(--subpip-caption-shift, 0px)) !important; transition: translate 0.2s !important;';
 
   return `
   .subpip-caption-container {
@@ -19,12 +26,13 @@ export function generateSubtitleStyles(settings) {
     font-family: ${settings.fontFamily} !important;
     font-weight: bold !important;
     color: ${settings.textColor} !important;
-    text-shadow: 0 0 3px black, 0 0 5px black !important;
+    text-shadow: ${textShadow} !important;
     background: ${bgRgba} !important;
     padding: 0.5em 1em !important;
     border-radius: 5px !important;
     position: absolute !important;
     ${position} !important;
+    ${shift}
     left: 50% !important;
     transform: translateX(-50%) !important;
     width: auto !important;
@@ -40,7 +48,7 @@ export function generateSubtitleStyles(settings) {
     font-family: ${settings.fontFamily} !important;
     font-weight: bold !important;
     color: ${settings.textColor} !important;
-    text-shadow: 0 0 3px black, 0 0 5px black !important;
+    text-shadow: ${textShadow} !important;
     background: ${bgRgba} !important;
     text-align: center !important;
   }
@@ -49,6 +57,7 @@ export function generateSubtitleStyles(settings) {
     border-radius: 5px !important;
     position: absolute !important;
     ${position} !important;
+    ${shift}
     left: 50% !important;
     transform: translateX(-50%) !important;
     width: auto !important;
@@ -60,7 +69,7 @@ export function generateSubtitleStyles(settings) {
     font-family: ${settings.fontFamily} !important;
     font-weight: bold !important;
     color: ${settings.textColor} !important;
-    text-shadow: 0 0 3px black, 0 0 5px black !important;
+    text-shadow: ${textShadow} !important;
   }
   .ytp-caption-window-container .captions-text {
     margin: 0 !important;
@@ -68,6 +77,7 @@ export function generateSubtitleStyles(settings) {
   .caption-window {
     position: absolute !important;
     ${position} !important;
+    ${shift}
   }
   .shaka-text-container,
   .shaka-text-container * {
@@ -75,11 +85,12 @@ export function generateSubtitleStyles(settings) {
     font-family: ${settings.fontFamily} !important;
     font-weight: bold !important;
     color: ${settings.textColor} !important;
-    text-shadow: 0 0 3px black, 0 0 5px black !important;
+    text-shadow: ${textShadow} !important;
   }
   .shaka-text-container {
     position: absolute !important;
     ${position} !important;
+    ${shift}
     left: 50% !important;
     transform: translateX(-50%) !important;
   }
@@ -89,11 +100,12 @@ export function generateSubtitleStyles(settings) {
     font-family: ${settings.fontFamily} !important;
     font-weight: bold !important;
     color: ${settings.textColor} !important;
-    text-shadow: 0 0 3px black, 0 0 5px black !important;
+    text-shadow: ${textShadow} !important;
   }
   #subtitle-1 {
     position: absolute !important;
     ${position} !important;
+    ${shift}
     left: 50% !important;
     transform: translateX(-50%) !important;
   }
