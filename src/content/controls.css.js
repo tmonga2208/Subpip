@@ -58,6 +58,29 @@ export const CONTROLS_CSS = `
 }
 .time { margin-left: 6px; color: #b8bac0; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .spacer { flex: 1; min-width: 0; }
+.menu {
+  position: absolute; right: 10px; bottom: 60px; width: 220px;
+  max-width: calc(100% - 20px); max-height: calc(100% - 76px); overflow: auto;
+  box-sizing: border-box; padding: 6px; border: 1px solid #25262a; border-radius: 12px;
+  background: #111214; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); pointer-events: auto;
+}
+.menu[hidden] { display: none; }
+.menu-item {
+  all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 8px; font-size: 12px; color: #f2f2f2; cursor: pointer;
+}
+.menu-item:hover { background: rgba(255, 255, 255, 0.07); }
+.menu-item:focus-visible { outline: 2px solid #ff4d5e; outline-offset: -2px; }
+.menu-item svg { display: block; width: 14px; height: 14px; flex: none; }
+.menu-item .value { margin-left: auto; color: #8b8d93; }
+.menu-item .check { color: #ff4d5e; visibility: hidden; }
+.menu-item[aria-checked="true"] .check { visibility: visible; }
+.menu-item.head { font-weight: 600; }
+.tag {
+  margin-left: auto; padding: 2px 6px; border-radius: 99px; font-size: 10px; font-weight: 600;
+  background: rgba(255, 77, 94, 0.15); color: #ff7a86;
+}
+.menu-note { padding: 8px 10px; font-size: 12px; line-height: 1.4; color: #8b8d93; }
 @media (max-width: 360px) {
   .skip, .time { display: none; }
 }

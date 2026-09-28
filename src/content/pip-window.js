@@ -4,6 +4,7 @@
 import { generateSubtitleStyles } from './styles.js';
 import { setupCaptions } from './captions.js';
 import { createControls, handlePipKeydown } from './controls.js';
+import { createSettingsMenu } from './settings-menu.js';
 
 // Everything registered during a PiP session is undone when it closes
 function createSession() {
@@ -51,6 +52,11 @@ export async function openPipWindow({ video, adapter, getSettings, onClose }) {
   const settings = getSettings();
   const isPremium = !!settings.isPremium;
 
+  // PiP-menu choices (caption size, translation language) for this window
+  // only; they sit on top of the saved settings and are never stored.
+  const overrides = {};
+  const sessionSettings = () => ({ ...getSettings(), ...overrides });
+
   // Must be the first await: it consumes the page's user activation
   const pipWindow = await documentPictureInPicture.requestWindow({
     width: video.clientWidth || 640,
@@ -70,15 +76,15 @@ export async function openPipWindow({ video, adapter, getSettings, onClose }) {
   pipDoc.body.style.overflow = 'hidden';
   pipDoc.body.style.margin = '0';
   pipDoc.body.style.background = '#000';
-  video.style.objectFit = 'fill';
+  video.style.objectFit = 'contain';
   pipDoc.body.append(video);
 
   const subtitleStyle = document.createElement('style');
   subtitleStyle.id = 'subpip-settings-style';
-  subtitleStyle.textContent = generateSubtitleStyles(settings);
+  subtitleStyle.textContent = generateSubtitleStyles(sessionSettings());
   pipDoc.head.appendChild(subtitleStyle);
 
-  const captions = await setupCaptions({ video, adapter, pipDoc, session, getSettings, isPremium });
+  const captions = await setupCaptions({ video, adapter, pipDoc, session, getSettings: sessionSettings, isPremium });
 
   const seekTo = (time) => {
     const duration = video.duration;
@@ -90,6 +96,18 @@ export async function openPipWindow({ video, adapter, getSettings, onClose }) {
 
   const controls = createControls({ video, pipDoc, session, seekTo, captions });
   pipDoc.body.appendChild(controls.host);
+
+  const applyOverride = (patch) => {
+    Object.assign(overrides, patch);
+    subtitleStyle.textContent = generateSubtitleStyles(sessionSettings());
+    captions.refresh();
+  };
+  controls.mountMenu(createSettingsMenu({
+    video, pipDoc, session, isPremium,
+    getSessionSettings: sessionSettings,
+    applyOverride,
+    captions
+  }));
 
   if (isPremium && settings.playbackSpeed) {
     video.playbackRate = settings.playbackSpeed;
@@ -115,7 +133,7 @@ export async function openPipWindow({ video, adapter, getSettings, onClose }) {
 
   return {
     onSettingsChanged() {
-      subtitleStyle.textContent = generateSubtitleStyles(getSettings());
+      subtitleStyle.textContent = generateSubtitleStyles(sessionSettings());
       captions.refresh();
     }
   };

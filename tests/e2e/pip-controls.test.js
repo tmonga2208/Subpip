@@ -23,7 +23,7 @@ test('controls render inside a shadow root', async () => {
     buttons: [...shadow.querySelectorAll('.row .btn')].map((b) => b.getAttribute('aria-label'))
   }));
   assert.equal(info.hasShadow, true);
-  assert.deepEqual(info.buttons, ['Play (Space)', 'Back 10 seconds (←)', 'Forward 10 seconds (→)', 'Unmute (M)', 'Captions (C)']);
+  assert.deepEqual(info.buttons, ['Play (Space)', 'Back 10 seconds (←)', 'Forward 10 seconds (→)', 'Unmute (M)', 'Captions (C)', 'Settings']);
   await done(page);
 });
 
@@ -45,7 +45,7 @@ test('controls render on a Trusted Types page without errors', async () => {
   // new Function is blocked here too, so query directly
   const count = await page.evaluate(() => window.documentPictureInPicture.window.document
     .querySelector('subpip-controls').shadowRoot.querySelectorAll('.row .btn').length);
-  assert.equal(count, 5);
+  assert.equal(count, 6);
   assert.deepEqual(page.errors, []);
   await done(page);
 });

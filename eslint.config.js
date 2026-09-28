@@ -2,7 +2,7 @@ import js from '@eslint/js';
 import globals from 'globals';
 
 export default [
-  { ignores: ['dist/', 'functions/', 'web/', 'node_modules/'] },
+  { ignores: ['dist/', 'functions/', 'web/', 'node_modules/', '.superpowers/'] },
   js.configs.recommended,
   { rules: { 'no-unused-vars': ['error', { caughtErrors: 'none' }] } },
   {
