@@ -148,7 +148,8 @@ kbd { padding: 1px 6px; border: 1px solid var(--border); border-radius: 4px; bac
 .checkout { max-width: 440px; margin: 0 auto; }
 .checkout .back-link { display: inline-block; margin-bottom: 16px; color: var(--text-2); font-size: 14px; text-decoration: none; }
 .checkout .back-link:hover { color: var(--text); }
-.checkout-card { padding: 28px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--card); }
+/* overflow-wrap: long buyer emails must not push the card off a phone screen */
+.checkout-card { padding: 28px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--card); overflow-wrap: anywhere; }
 .checkout h1 { font-size: 26px; line-height: 1.2; }
 .checkout .price { margin: 10px 0 20px; font-size: 28px; font-weight: 700; }
 .checkout .price span { color: var(--text-2); font-size: 15px; font-weight: 400; }
@@ -159,6 +160,8 @@ kbd { padding: 1px 6px; border: 1px solid var(--border); border-radius: 4px; bac
 .secure-badge { margin-top: 12px; color: var(--text-2); font-size: 13px; text-align: center; }
 .loading, .error-msg { display: none; margin-top: 12px; font-size: 14px; }
 .loading.show, .error-msg.show { display: block; }
+/* Errors stay until replaced: the payment-ID message must not vanish after 5s */
+.error-msg:not(:empty) { display: block; }
 .loading { color: var(--text-2); }
 .error-msg { color: var(--danger-text); }
 .payment-container.hide { display: none; }
