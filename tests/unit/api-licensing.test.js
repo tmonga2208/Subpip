@@ -117,3 +117,11 @@ test('translateText is premium-only and needs sign-in', async () => {
   await rejects(translateText({ text: 'hi', targetLang: 'es' }, {}, deps(db)), 'unauthenticated');
   await rejects(translateText({ text: 'hi', targetLang: 'es' }, signedIn('free'), deps(db)), 'permission-denied');
 });
+
+test('refunded licenses cannot be activated or claimed', async () => {
+  const db = fakeFirestore({ 'licenses/pay_A1': { key: 'SUBPIP-AAAAAAAA-1111', verified: true, usedBy: null, revoked: true, email: 'buyer@example.com' } });
+  assert.deepEqual(await activateLicense({ key: 'SUBPIP-AAAAAAAA-1111' }, signedIn('u1'), deps(db)), { success: false, error: 'This license was refunded' });
+  const claim = await claimLicenseByEmail({}, signedIn('u1', { email: 'buyer@example.com', email_verified: true }), deps(db));
+  assert.equal(claim.success, false);
+  assert.equal(db.read('users/u1'), undefined);
+});

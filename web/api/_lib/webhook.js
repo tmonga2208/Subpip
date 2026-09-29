@@ -4,7 +4,7 @@
 
 import crypto from 'node:crypto';
 import { isAcceptedPayment } from './pricing.js';
-import { issueLicense } from './licensing.js';
+import { issueLicense, revokeLicenseForRefund } from './licensing.js';
 
 async function readRawBody(req) {
   const chunks = [];
@@ -28,6 +28,10 @@ export async function handleWebhook(req, res, deps) {
     if (!validSignature(rawBody, signature, deps.webhookSecret)) return res.status(401).send('Unauthorized');
 
     const body = JSON.parse(rawBody.toString('utf8'));
+    if (body.event === 'refund.processed') {
+      const revoked = await revokeLicenseForRefund(deps, body.payload.refund.entity);
+      return res.status(200).json({ success: true, revoked });
+    }
     if (body.event !== 'payment.captured') return res.status(200).send('Event ignored');
 
     const payment = body.payload.payment.entity;

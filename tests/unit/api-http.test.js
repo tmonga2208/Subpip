@@ -141,3 +141,27 @@ test('/api/health reports config presence without values', async () => {
   assert.equal(down.statusCode, 503);
   for (const [k, v] of Object.entries(saved)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
 });
+
+const refunded = (paymentId) => ({ event: 'refund.processed', payload: { refund: { entity: { id: 'rfnd_1', payment_id: paymentId } } } });
+
+test('refund.processed revokes the license and the buyer\'s Premium', async () => {
+  const db = fakeFirestore({
+    'licenses/pay_R1': { key: 'SUBPIP-REFUNDED-0001', paymentId: 'pay_R1', verified: true, usedBy: 'u1' },
+    'users/u1': { isPremium: true, licenseKey: 'SUBPIP-REFUNDED-0001' }
+  });
+  const res = fakeRes();
+  await handleWebhook(webhookReq(refunded('pay_R1'), 'whsec'), res, { db, FieldValue, razorpay: fakeRazorpay(), webhookSecret: 'whsec' });
+  assert.equal(res.statusCode, 200);
+  assert.equal(db.read('licenses/pay_R1').revoked, true);
+  assert.deepEqual(db.read('users/u1'), { isPremium: false, licenseKey: null });
+});
+
+test('a refund leaves an account alone if it now uses a different license', async () => {
+  const db = fakeFirestore({
+    'licenses/pay_R2': { key: 'SUBPIP-OLDKEY01-0001', paymentId: 'pay_R2', verified: true, usedBy: 'u2' },
+    'users/u2': { isPremium: true, licenseKey: 'SUBPIP-NEWKEY01-0001' }
+  });
+  await handleWebhook(webhookReq(refunded('pay_R2'), 'whsec'), fakeRes(), { db, FieldValue, razorpay: fakeRazorpay(), webhookSecret: 'whsec' });
+  assert.equal(db.read('licenses/pay_R2').revoked, true);
+  assert.equal(db.read('users/u2').isPremium, true);
+});

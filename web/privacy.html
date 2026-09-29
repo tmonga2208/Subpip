@@ -40,7 +40,7 @@
         <p><strong>If you sign in or buy Premium:</strong></p>
         <ul>
           <li><strong>Account</strong> – your email address and sign-in state, handled by Firebase Authentication.</li>
-          <li><strong>Premium status</strong> – whether your account is Premium, your license key and a device identifier used to enforce one license per device. Stored in Firebase Firestore.</li>
+          <li><strong>Premium status</strong> – whether your account is Premium and your license key. Stored in Firebase Firestore.</li>
           <li><strong>Purchase record</strong> – when you pay, we store the Razorpay payment ID, the email used for the purchase, the amount and currency, and the license key issued. We never receive or store your card or bank details.</li>
         </ul>
       </section>
@@ -49,8 +49,8 @@
         <h2>3. How we use it</h2>
         <ul>
           <li>To show videos in Picture-in-Picture with subtitles and playback controls on the sites where you use SubPIP.</li>
-          <li>To translate captions, only when you turn translation on: the caption text is sent to a translation service (see section 4). Free users' captions go to MyMemory directly from your browser; Premium users' captions go to MyMemory through our server, which first checks that your account is Premium.</li>
-          <li>To create, verify and activate your Premium license, and to let you recover it with "Check payment" if you lose your key.</li>
+          <li>To translate captions, only when you turn translation on. Free users' captions go to MyMemory directly from your browser. Premium users' captions go to our server, which checks that your account is Premium and translates them with DeepL; the server keeps a shared cache of translated caption lines (the text and its translation, not who asked for it) so repeated lines are not sent again. If the server can't translate a line, your browser uses MyMemory instead.</li>
+          <li>To create, verify and activate your Premium license, to email it to you after purchase (and again if you use "Lost your license key?"), and to let you recover it with "Check payment".</li>
           <li>To show the right price: our website reads your browser's time zone to show ₹1000 in India or $15 elsewhere. The time zone is used only in your browser and is not sent to us.</li>
         </ul>
       </section>
@@ -62,6 +62,8 @@
           <li><strong>Google Firebase</strong> – sign-in (Authentication) and account and license data (Firestore). <a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Firebase privacy</a>.</li>
           <li><strong>Vercel</strong> – hosts our website and the server functions that confirm payments, activate licenses and forward Premium translation requests. Vercel may keep short-lived request logs. <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener">Vercel privacy</a>.</li>
           <li><strong>MyMemory (Translated)</strong> – translates caption text when translation is on. We do not control how long they keep it. <a href="https://mymemory.translated.net/doc/privacy.php" target="_blank" rel="noopener">MyMemory privacy</a>.</li>
+          <li><strong>DeepL</strong> – translates Premium users' caption text. <a href="https://www.deepl.com/privacy" target="_blank" rel="noopener">DeepL privacy</a>.</li>
+          <li><strong>Google (Gmail)</strong> – sends your license email and receipt. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google privacy</a>.</li>
           <li><strong>Razorpay</strong> – processes Premium payments on our website, in rupees (INR) or US dollars (USD). Your payment details go to Razorpay, not to us. <a href="https://razorpay.com/privacy/" target="_blank" rel="noopener">Razorpay privacy</a>.</li>
         </ul>
       </section>
@@ -104,8 +106,10 @@
     <div class="container footer-row">
       <a class="brand" href="index.html"><img src="logo.svg" alt="" width="28" height="28">SubPIP</a>
       <ul class="footer-links">
-        <li><a href="privacy.html">Privacy Policy</a></li>
-        <li><a href="mailto:tarunmonga2208@gmail.com">Contact</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a href="terms.html">Terms</a></li>
+        <li><a href="refund.html">Refunds</a></li>
+        <li><a href="contact.html">Contact</a></li>
         <li>© <span data-year></span> SubPIP</li>
       </ul>
     </div>

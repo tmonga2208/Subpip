@@ -179,6 +179,7 @@ export async function activateLicense(data, ctx, deps) {
   const snap = await deps.db.collection('licenses').where('key', '==', key).limit(1).get();
   if (snap.empty) return { success: false, error: 'Invalid license key' };
   const licenseDoc = snap.docs[0];
+  if (licenseDoc.data().revoked) return { success: false, error: 'This license was refunded' };
   if (!(await ensureLicenseVerified(deps, licenseDoc))) return { success: false, error: 'License payment not verified' };
   return bindLicenseToUser(deps, licenseDoc.ref, uid);
 }
@@ -195,7 +196,7 @@ export async function claimLicenseByEmail(data, ctx, deps) {
     deps.db.collection('licenses').where('purchaserEmail', '==', email).get()
   ]);
   const candidates = [...byEmail.docs, ...byLegacyEmail.docs]
-    .filter((doc) => !doc.data().usedBy || doc.data().usedBy === uid)
+    .filter((doc) => !doc.data().revoked && (!doc.data().usedBy || doc.data().usedBy === uid))
     .sort((a, b) => (b.data().usedBy === uid) - (a.data().usedBy === uid));
 
   for (const licenseDoc of candidates) {
@@ -217,4 +218,18 @@ export async function translateText(data, ctx, deps) {
 
   const { translation, provider } = await translateForUser(deps, uid, text, targetLang);
   return { success: true, translation, provider, sourceText: text, targetLang };
+}
+
+// A refund (7-day policy) revokes the license and the Premium it granted
+export async function revokeLicenseForRefund(deps, refund) {
+  const licenseDoc = await findLicenseByPaymentId(deps, refund.payment_id);
+  if (!licenseDoc) return false;
+  await deps.db.runTransaction(async (tx) => {
+    const license = (await tx.get(licenseDoc.ref)).data();
+    const userRef = license.usedBy ? deps.db.collection('users').doc(license.usedBy) : null;
+    const user = userRef ? await tx.get(userRef) : null;
+    tx.update(licenseDoc.ref, { revoked: true, revokedAt: deps.FieldValue.serverTimestamp(), refundId: refund.id || null });
+    if (user && user.exists && user.data().licenseKey === license.key) tx.update(userRef, { isPremium: false, licenseKey: null });
+  });
+  return true;
 }

@@ -36,6 +36,10 @@ test('the policy describes what the extension does today', async () => {
   // Services that receive data
   for (const service of ['Firebase', 'Vercel', 'MyMemory', 'Razorpay']) assert.match(text, new RegExp(service), service);
   assert.doesNotMatch(text, /Google Cloud Translation/);
+  assert.match(text, /DeepL/);
+  assert.match(text, /Gmail/);
+  assert.doesNotMatch(text, /device identifier/i);
+  assert.match(text, /cache/i);
   // Regional pricing reads the time zone locally
   assert.match(text, /time zone/i);
   await page.close();

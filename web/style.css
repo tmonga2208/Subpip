@@ -192,3 +192,6 @@ kbd { padding: 1px 6px; border: 1px solid var(--border); border-radius: 4px; bac
 .lost-key form { margin-top: 12px; }
 .lost-key .btn { margin-top: 10px; }
 .lost-key-msg { margin-top: 10px; font-size: 14px; }
+
+.agree { margin-top: 8px; color: var(--text-2); font-size: 13px; text-align: center; }
+.agree a { color: var(--text-2); }
