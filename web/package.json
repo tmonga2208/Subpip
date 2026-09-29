@@ -6,6 +6,7 @@
     "node": "24.x"
   },
   "dependencies": {
+    "@vercel/functions": "^3.9.9",
     "firebase-admin": "^13.10.0",
     "nodemailer": "^10.0.12",
     "razorpay": "^2.9.6"

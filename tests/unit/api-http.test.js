@@ -142,7 +142,7 @@ test('/api/health reports config presence without values', async () => {
   for (const [k, v] of Object.entries(saved)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
 });
 
-const refunded = (paymentId) => ({ event: 'refund.processed', payload: { refund: { entity: { id: 'rfnd_1', payment_id: paymentId } } } });
+const refunded = (paymentId) => ({ event: 'refund.processed', payload: { refund: { entity: { id: 'rfnd_1', payment_id: paymentId } }, payment: { entity: { id: paymentId, refund_status: 'full' } } } });
 
 test('refund.processed revokes the license and the buyer\'s Premium', async () => {
   const db = fakeFirestore({

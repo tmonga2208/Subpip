@@ -71,6 +71,8 @@ Full technical documentation is available in [documentation.md](file:///Users/ta
 | `GMAIL_USER`, `GMAIL_APP_PASSWORD` | Gmail account and app password for license emails and alerts |
 | `ALERT_EMAIL` | Optional; where owner alerts go (defaults to `GMAIL_USER`) |
 
+In Razorpay, set **Payment capture → Automatic** (Settings → Payment capture). The webhook issues licenses on `payment.captured`, so buyers who close the checkout early still get theirs.
+
 `GET /api/health` reports which settings are present (never their values) and returns 503 if a required one is missing; point an uptime monitor at it.
 
 

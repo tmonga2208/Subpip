@@ -7,7 +7,8 @@ import { HttpsError } from './http.js';
 import { isAcceptedPayment } from './pricing.js';
 import { sendLicenseEmail } from './emails.js';
 import { validPaymentSignature } from './orders.js';
-import { alertOwner } from './alerts.js';
+import { alertOwner, day } from './alerts.js';
+import { log } from './log.js';
 import { translateForUser, MAX_TEXT_LENGTH } from './translate.js';
 
 export function generateLicenseKey() {
@@ -20,13 +21,32 @@ export function generateLicenseKey() {
 
 // Re-fetch the payment from Razorpay: it must be real, captured, and (for new
 // purchases) at least the price in its currency
-async function fetchCapturedPayment({ razorpay }, paymentId, { requireFullPrice }) {
+async function fetchCapturedPayment(deps, paymentId, { requireFullPrice }) {
+  const { razorpay } = deps;
   let payment = await razorpay.payments.fetch(paymentId);
   if (payment.status === 'authorized') {
-    payment = await razorpay.payments.capture(paymentId, payment.amount, payment.currency);
+    try {
+      payment = await razorpay.payments.capture(paymentId, payment.amount, payment.currency);
+    } catch (error) {
+      // Auto-capture may have won the race: carry on if it is captured now
+      payment = await razorpay.payments.fetch(paymentId);
+      if (payment.status !== 'captured') throw error;
+    }
   }
-  if (payment.status !== 'captured' || !isAcceptedPayment(payment, { requireFullPrice })) return null;
+  if (payment.status !== 'captured') return null;
+  if (!isAcceptedPayment(payment, { requireFullPrice })) {
+    // Charged but below the price (e.g. a Razorpay offer): the buyer paid and
+    // gets no license, so the owner must know
+    if (requireFullPrice) await alertPaymentRejected(deps, payment);
+    return null;
+  }
   return payment;
+}
+
+export async function alertPaymentRejected(deps, payment) {
+  await alertOwner(deps, 'payment-rejected',
+    `Payment ${payment.id} was captured (${payment.amount} ${payment.currency}) but is below the Premium price, so no license was issued. Refund it or issue a license manually.`,
+    { paymentId: payment.id, amount: payment.amount, currency: payment.currency });
 }
 
 // New license docs are keyed by payment id; older ones had other ids
@@ -42,7 +62,7 @@ async function findLicenseByPaymentId({ db }, paymentId) {
 export async function createLicenseForPayment(deps, payment) {
   const { db, FieldValue } = deps;
   const existing = await findLicenseByPaymentId(deps, payment.id);
-  if (existing) return { key: existing.data().key, created: false, email: existing.data().email || null };
+  if (existing) return { key: existing.data().key, created: false, email: existing.data().email || null, ref: existing.ref };
 
   const email = (payment.email || payment.notes?.email || '').toLowerCase().trim();
   const licenseKey = generateLicenseKey();
@@ -61,34 +81,67 @@ export async function createLicenseForPayment(deps, payment) {
       verified: true
     });
   } catch (error) {
-    if (error.code === 6) return { key: (await ref.get()).data().key, created: false, email: email || null }; // ALREADY_EXISTS
+    if (error.code === 6) return { key: (await ref.get()).data().key, created: false, email: email || null, ref }; // ALREADY_EXISTS
     throw error;
   }
-  return { key: licenseKey, created: true, email: email || null };
+  return { key: licenseKey, created: true, email: email || null, ref };
 }
 
-// Create the license (idempotent) and email it, only from the call that created it
+// Create the license (idempotent) and make sure it gets emailed exactly once.
+// Whichever call claims the send does it; if that call dies before sending,
+// the claim expires and a later call (webhook retry, confirmPayment) sends it.
+const EMAIL_CLAIM_MS = 5 * 60 * 1000;
+
 export async function issueLicense(deps, payment) {
-  const { key, created, email } = await createLicenseForPayment(deps, payment);
-  if (created) await sendLicenseEmail(deps, { to: email, keys: [key], payment });
+  const { key, email, ref } = await createLicenseForPayment(deps, payment);
+  await emailLicenseOnce(deps, { ref, key, email, payment });
   return key;
+}
+
+async function emailLicenseOnce(deps, { ref, key, email, payment }) {
+  if (!email) return;
+  if (!deps.mailer) {
+    log('error', 'license-email-skipped', { reason: 'mailer-not-configured', paymentId: payment.id });
+    return;
+  }
+  const nowMs = deps.now().getTime();
+  const claimed = await deps.db.runTransaction(async (tx) => {
+    const data = (await tx.get(ref)).data();
+    if (!data || data.emailedAt) return false;
+    if (data.emailClaimedAt && nowMs - data.emailClaimedAt < EMAIL_CLAIM_MS) return false;
+    tx.update(ref, { emailClaimedAt: nowMs });
+    return true;
+  });
+  if (!claimed) return;
+  if (await sendLicenseEmail(deps, { to: email, keys: [key], payment })) await ref.update({ emailedAt: nowMs });
 }
 
 export const RESEND_MESSAGE = "If a purchase exists for that email, we've sent the license to it.";
 const RESEND_INTERVAL_MS = 10 * 60 * 1000;
+const RESEND_PER_ADDRESS_PER_DAY = 3;
+// Keeps the lost-key form from spending the Gmail allowance that purchase
+// emails and alerts depend on
+const RESEND_GLOBAL_PER_DAY = 100;
 
-// "Lost your key?": emails a buyer's keys, only to the purchase email, at
-// most once per 10 minutes per address; the reply never reveals a purchase
+// "Lost your key?": emails a buyer's keys, only to the purchase email, rate
+// limited; the reply never reveals a purchase (the email is sent after it)
 export async function resendLicense(data, ctx, deps) {
   const email = typeof data.email === 'string' ? data.email.trim().toLowerCase() : '';
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) throw new HttpsError('invalid-argument', 'Enter a valid email address');
 
+  const today = day(deps.now());
   const limitRef = deps.db.collection('resend').doc(crypto.createHash('sha256').update(email).digest('hex'));
+  const globalRef = deps.db.collection('resend_daily').doc(today);
   const nowMs = deps.now().getTime();
   const allowed = await deps.db.runTransaction(async (tx) => {
-    const snap = await tx.get(limitRef);
-    if (snap.exists && nowMs - snap.data().lastSentAt < RESEND_INTERVAL_MS) return false;
-    tx.set(limitRef, { lastSentAt: nowMs });
+    const [limit, global] = await Promise.all([tx.get(limitRef), tx.get(globalRef)]);
+    const address = limit.exists ? limit.data() : {};
+    const sentToday = address.day === today ? address.count : 0;
+    const globalToday = global.exists ? global.data().count : 0;
+    if (address.lastSentAt && nowMs - address.lastSentAt < RESEND_INTERVAL_MS) return false;
+    if (sentToday >= RESEND_PER_ADDRESS_PER_DAY || globalToday >= RESEND_GLOBAL_PER_DAY) return false;
+    tx.set(limitRef, { lastSentAt: nowMs, day: today, count: sentToday + 1 });
+    tx.set(globalRef, { count: globalToday + 1 });
     return true;
   });
   if (!allowed) return { message: RESEND_MESSAGE };
@@ -101,7 +154,13 @@ export async function resendLicense(data, ctx, deps) {
     .map((doc) => doc.data())
     .filter((license) => license.verified === true && !license.revoked)
     .map((license) => license.key);
-  if (keys.length) await sendLicenseEmail(deps, { to: email, keys });
+  if (keys.length) {
+    const sending = sendLicenseEmail(deps, { to: email, keys });
+    // Reply now and finish sending in the background, so response time
+    // doesn't depend on whether a purchase exists
+    if (deps.defer) deps.defer(sending);
+    else await sending;
+  }
   return { message: RESEND_MESSAGE };
 }
 
@@ -221,15 +280,19 @@ export async function translateText(data, ctx, deps) {
 }
 
 // A refund (7-day policy) revokes the license and the Premium it granted
-export async function revokeLicenseForRefund(deps, refund) {
+export async function revokeLicenseForRefund(deps, refund, paymentEntity) {
   const licenseDoc = await findLicenseByPaymentId(deps, refund.payment_id);
   if (!licenseDoc) return false;
-  await deps.db.runTransaction(async (tx) => {
+  return deps.db.runTransaction(async (tx) => {
     const license = (await tx.get(licenseDoc.ref)).data();
+    // Only a full refund cancels Premium; partial (goodwill) refunds don't
+    const fullRefund = paymentEntity?.refund_status === 'full'
+      || (typeof refund.amount === 'number' && typeof license.amount === 'number' && refund.amount >= license.amount);
+    if (!fullRefund) return false;
     const userRef = license.usedBy ? deps.db.collection('users').doc(license.usedBy) : null;
     const user = userRef ? await tx.get(userRef) : null;
     tx.update(licenseDoc.ref, { revoked: true, revokedAt: deps.FieldValue.serverTimestamp(), refundId: refund.id || null });
     if (user && user.exists && user.data().licenseKey === license.key) tx.update(userRef, { isPremium: false, licenseKey: null });
+    return true;
   });
-  return true;
 }

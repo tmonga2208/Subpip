@@ -10,6 +10,7 @@ import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import Razorpay from 'razorpay';
+import { waitUntil } from '@vercel/functions';
 import { createMailer } from './mailer.js';
 
 export const RAZORPAY_KEY_ID = 'rzp_live_S9zPibMgaqE7VV';
@@ -43,6 +44,8 @@ export function liveDeps(env = process.env) {
     mailer: createMailer({ user: env.GMAIL_USER, pass: env.GMAIL_APP_PASSWORD }),
     alertTo: env.ALERT_EMAIL || env.GMAIL_USER || '',
     fetch: globalThis.fetch,
-    now: () => new Date()
+    now: () => new Date(),
+    // Finish work after the response is sent (Vercel keeps the function alive)
+    defer: (promise) => waitUntil(promise)
   };
 }
