@@ -81,3 +81,13 @@ export function confirmStub({ ok = true } = {}) {
 }
 
 export const both = (...stubs) => (request) => stubs.some((stub) => stub(request));
+
+// The resendLicense endpoint; records the email it was asked for
+export function resendStub(seen = []) {
+  return (request) => {
+    if (!request.url().includes('/api/resendLicense')) return false;
+    seen.push(JSON.parse(request.postData() || '{}').data?.email);
+    request.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ result: { message: "If a purchase exists for that email, we've sent the license to it." } }) });
+    return true;
+  };
+}

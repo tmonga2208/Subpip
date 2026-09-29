@@ -38,6 +38,15 @@
         <input type="email" id="emailInput" class="email-input" placeholder="you@example.com" autocomplete="email">
         <button class="btn btn-primary btn-block pay-btn" id="payBtn" type="button" onclick="initiatePayment()">Pay ₹1000</button>
         <p class="secure-badge">Secured by Razorpay</p>
+        <details class="lost-key">
+          <summary>Lost your license key?</summary>
+          <form id="lostKeyForm" novalidate>
+            <label class="field-label" for="lostKeyEmail">Email you bought with</label>
+            <input type="email" id="lostKeyEmail" class="email-input" placeholder="you@example.com" autocomplete="email">
+            <button class="btn btn-ghost btn-block" type="submit">Email my license</button>
+            <p class="muted lost-key-msg" id="lostKeyMsg" role="status"></p>
+          </form>
+        </details>
         <p class="loading" id="loading" role="status">Creating your license…</p>
         <p class="error-msg" id="errorMsg" role="alert"></p>
       </div>
@@ -256,6 +265,24 @@
                         showSuccess(data.licenseKey, data.email || '');
                     }
                 } catch (e) { }
+            }
+        });
+    
+        // "Lost your key?": the server emails keys only to the purchase address
+        document.getElementById('lostKeyForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const message = document.getElementById('lostKeyMsg');
+            const email = document.getElementById('lostKeyEmail').value.trim();
+            try {
+                const response = await fetch(`${FUNCTIONS_BASE_URL}/resendLicense`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ data: { email } })
+                });
+                const body = await response.json();
+                message.textContent = body.error ? body.error.message : body.result.message;
+            } catch {
+                message.textContent = 'Could not reach SubPIP. Please try again.';
             }
         });
     </script>

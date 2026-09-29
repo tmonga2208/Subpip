@@ -83,10 +83,13 @@ const captured = (entity) => ({ event: 'payment.captured', payload: { payment: {
 test('a correctly signed payment.captured webhook creates the license', async () => {
   const db = fakeFirestore();
   const res = fakeRes();
+  const { fakeMailer, fixedClock } = await import('../helpers/fake-firestore.js');
+  const mailer = fakeMailer();
   await handleWebhook(webhookReq(captured({ id: 'pay_W1', currency: 'USD', amount: 1500, email: 'w@example.com' }), 'whsec'), res,
-    { db, FieldValue, razorpay: fakeRazorpay(), webhookSecret: 'whsec' });
+    { db, FieldValue, razorpay: fakeRazorpay(), webhookSecret: 'whsec', mailer, now: fixedClock('2026-09-29T10:00:00Z') });
   assert.equal(res.statusCode, 200);
   assert.ok(db.read('licenses/pay_W1').key);
+  assert.equal(mailer.sent.length, 1);
 });
 
 test('a webhook with a bad signature is refused and creates nothing', async () => {

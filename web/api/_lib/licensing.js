@@ -5,6 +5,7 @@
 import crypto from 'node:crypto';
 import { HttpsError } from './http.js';
 import { isAcceptedPayment } from './pricing.js';
+import { sendLicenseEmail } from './emails.js';
 
 export function generateLicenseKey() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -38,7 +39,7 @@ async function findLicenseByPaymentId({ db }, paymentId) {
 export async function createLicenseForPayment(deps, payment) {
   const { db, FieldValue } = deps;
   const existing = await findLicenseByPaymentId(deps, payment.id);
-  if (existing) return existing.data().key;
+  if (existing) return { key: existing.data().key, created: false, email: existing.data().email || null };
 
   const email = (payment.email || payment.notes?.email || '').toLowerCase().trim();
   const licenseKey = generateLicenseKey();
@@ -57,10 +58,48 @@ export async function createLicenseForPayment(deps, payment) {
       verified: true
     });
   } catch (error) {
-    if (error.code === 6) return (await ref.get()).data().key; // ALREADY_EXISTS
+    if (error.code === 6) return { key: (await ref.get()).data().key, created: false, email: email || null }; // ALREADY_EXISTS
     throw error;
   }
-  return licenseKey;
+  return { key: licenseKey, created: true, email: email || null };
+}
+
+// Create the license (idempotent) and email it, only from the call that created it
+export async function issueLicense(deps, payment) {
+  const { key, created, email } = await createLicenseForPayment(deps, payment);
+  if (created) await sendLicenseEmail(deps, { to: email, keys: [key], payment });
+  return key;
+}
+
+export const RESEND_MESSAGE = "If a purchase exists for that email, we've sent the license to it.";
+const RESEND_INTERVAL_MS = 10 * 60 * 1000;
+
+// "Lost your key?": emails a buyer's keys, only to the purchase email, at
+// most once per 10 minutes per address; the reply never reveals a purchase
+export async function resendLicense(data, ctx, deps) {
+  const email = typeof data.email === 'string' ? data.email.trim().toLowerCase() : '';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) throw new HttpsError('invalid-argument', 'Enter a valid email address');
+
+  const limitRef = deps.db.collection('resend').doc(crypto.createHash('sha256').update(email).digest('hex'));
+  const nowMs = deps.now().getTime();
+  const allowed = await deps.db.runTransaction(async (tx) => {
+    const snap = await tx.get(limitRef);
+    if (snap.exists && nowMs - snap.data().lastSentAt < RESEND_INTERVAL_MS) return false;
+    tx.set(limitRef, { lastSentAt: nowMs });
+    return true;
+  });
+  if (!allowed) return { message: RESEND_MESSAGE };
+
+  const [byEmail, byLegacyEmail] = await Promise.all([
+    deps.db.collection('licenses').where('email', '==', email).get(),
+    deps.db.collection('licenses').where('purchaserEmail', '==', email).get()
+  ]);
+  const keys = [...byEmail.docs, ...byLegacyEmail.docs]
+    .map((doc) => doc.data())
+    .filter((license) => license.verified === true && !license.revoked)
+    .map((license) => license.key);
+  if (keys.length) await sendLicenseEmail(deps, { to: email, keys });
+  return { message: RESEND_MESSAGE };
 }
 
 // Licenses from the old client-side flow have `isValid` instead of `verified`:
@@ -113,7 +152,7 @@ export async function confirmPayment(data, ctx, deps) {
   }
   if (!payment) throw new HttpsError('failed-precondition', 'Payment not completed');
 
-  const licenseKey = await createLicenseForPayment(deps, payment);
+  const licenseKey = await issueLicense(deps, payment);
   return { licenseKey, email: payment.email || null };
 }
 

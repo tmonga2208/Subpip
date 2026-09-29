@@ -185,3 +185,10 @@ kbd { padding: 1px 6px; border: 1px solid var(--border); border-radius: 4px; bac
 .prose ul { display: grid; gap: 6px; margin: 8px 0 0 22px; }
 .prose p + p, .prose p + ul, .prose ul + p { margin-top: 10px; }
 .prose a { color: var(--accent-text); }
+
+.lost-key { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+.lost-key summary { color: var(--text-2); font-size: 14px; cursor: pointer; }
+.lost-key summary:hover { color: var(--text); }
+.lost-key form { margin-top: 12px; }
+.lost-key .btn { margin-top: 10px; }
+.lost-key-msg { margin-top: 10px; font-size: 14px; }

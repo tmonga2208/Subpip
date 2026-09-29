@@ -4,7 +4,7 @@
 
 import crypto from 'node:crypto';
 import { isAcceptedPayment } from './pricing.js';
-import { createLicenseForPayment } from './licensing.js';
+import { issueLicense } from './licensing.js';
 
 async function readRawBody(req) {
   const chunks = [];
@@ -33,7 +33,7 @@ export async function handleWebhook(req, res, deps) {
     const payment = body.payload.payment.entity;
     if (!isAcceptedPayment(payment)) return res.status(200).send('Ignored: amount mismatch');
 
-    await createLicenseForPayment(deps, payment);
+    await issueLicense(deps, payment);
     return res.status(200).json({ success: true });
   } catch (error) {
     console.error('[api] Webhook error:', error);
