@@ -93,3 +93,18 @@ export function fakeRazorpay(payments = {}) {
     }
   };
 }
+
+// Mailer stand-in: records messages; set failWith to make send() reject
+export function fakeMailer() {
+  const mailer = {
+    sent: [],
+    failWith: null,
+    async send(message) {
+      if (mailer.failWith) throw new Error(mailer.failWith);
+      mailer.sent.push(message);
+    }
+  };
+  return mailer;
+}
+
+export const fixedClock = (iso) => () => new Date(iso);

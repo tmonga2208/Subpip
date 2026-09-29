@@ -106,3 +106,35 @@ test('an underpaid webhook payment is ignored', async () => {
   assert.equal(res.statusCode, 200);
   assert.equal(db.read('licenses/pay_W3'), undefined);
 });
+
+test('unexpected errors alert the owner (when dependencies are available)', async () => {
+  const { fakeMailer, fixedClock, fakeFirestore } = await import('../helpers/fake-firestore.js');
+  const mailer = fakeMailer();
+  const deps = { auth, db: fakeFirestore(), mailer, alertTo: 'owner@example.com', now: fixedClock('2026-09-29T10:00:00Z') };
+  const handler = callable(async function brokenThing() { throw new Error('kaboom'); }, async () => deps);
+  const log = console.error;
+  console.error = () => {};
+  await handler(fakeReq({ body: { data: {} } }), fakeRes());
+  console.error = log;
+  assert.equal(mailer.sent.length, 1);
+  assert.match(mailer.sent[0].subject, /internal-error/);
+  assert.match(mailer.sent[0].text, /brokenThing/);
+});
+
+test('/api/health reports config presence without values', async () => {
+  const { default: health } = await import('../../web/api/health.js');
+  const KEYS = ['FIREBASE_SERVICE_ACCOUNT', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET', 'GMAIL_USER', 'GMAIL_APP_PASSWORD', 'DEEPL_API_KEY'];
+  const saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
+  Object.assign(process.env, { FIREBASE_SERVICE_ACCOUNT: '{"secret":1}', RAZORPAY_KEY_SECRET: 'rk', RAZORPAY_WEBHOOK_SECRET: 'wh', GMAIL_USER: 'a@b.c', GMAIL_APP_PASSWORD: 'pw' });
+  delete process.env.DEEPL_API_KEY;
+  const ok = fakeRes();
+  await health({ method: 'GET', headers: {} }, ok);
+  assert.equal(ok.statusCode, 200);
+  assert.deepEqual(ok.body, { ok: true, config: { firebase: true, razorpay: true, webhook: true, deepl: false, email: true } });
+  assert.doesNotMatch(JSON.stringify(ok.body), /secret|rk|wh|pw/);
+  delete process.env.GMAIL_APP_PASSWORD;
+  const down = fakeRes();
+  await health({ method: 'GET', headers: {} }, down);
+  assert.equal(down.statusCode, 503);
+  for (const [k, v] of Object.entries(saved)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+});

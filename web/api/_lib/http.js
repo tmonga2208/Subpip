@@ -3,6 +3,8 @@
 // { error: { message, status } }. Signed-in calls carry a Firebase ID token
 // as `Authorization: Bearer <token>`.
 
+import { alertOwner } from './alerts.js';
+
 export class HttpsError extends Error {
   constructor(status, message) {
     super(message);
@@ -17,6 +19,8 @@ const HTTP_STATUS = {
   'permission-denied': 403,
   'not-found': 404,
   'method-not-allowed': 405,
+  'resource-exhausted': 429,
+  unavailable: 503,
   internal: 500
 };
 
@@ -49,8 +53,9 @@ export function callable(handler, getDeps) {
     allowCors(res);
     if (req.method === 'OPTIONS') return res.status(204).end();
     if (req.method !== 'POST') return sendError(res, 'method-not-allowed', 'Method Not Allowed');
+    let deps;
     try {
-      const deps = await getDeps();
+      deps = await getDeps();
       const data = (req.body && req.body.data) || {};
       const auth = await verifyUser(req, deps.auth);
       const result = await handler(data, { auth }, deps);
@@ -58,6 +63,7 @@ export function callable(handler, getDeps) {
     } catch (error) {
       if (error instanceof HttpsError) return sendError(res, error.status, error.message);
       console.error('[api] Unexpected error:', error);
+      if (deps) await alertOwner(deps, 'internal-error', error.message, { endpoint: handler.name || 'unknown' });
       return sendError(res, 'internal', 'Internal error');
     }
   };
