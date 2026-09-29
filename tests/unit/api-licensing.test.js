@@ -63,7 +63,7 @@ test('activateLicense binds a verified license and marks the user premium', asyn
   const result = await activateLicense({ key: ' subpip-aaaaaaaa-1111 ', deviceId: 'dev1' }, signedIn('u1'), deps(db));
   assert.deepEqual(result, { success: true, licenseKey: 'SUBPIP-AAAAAAAA-1111' });
   assert.equal(db.read('licenses/pay_A1').usedBy, 'u1');
-  assert.deepEqual(db.read('users/u1'), { isPremium: true, licenseKey: 'SUBPIP-AAAAAAAA-1111', deviceId: 'dev1' });
+  assert.deepEqual(db.read('users/u1'), { isPremium: true, licenseKey: 'SUBPIP-AAAAAAAA-1111' });
 });
 
 test('activateLicense refuses a license owned by another account', async () => {

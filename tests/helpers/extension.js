@@ -49,7 +49,7 @@ export function json(status, body) {
 // the request; everything else goes to the network untouched.
 // status: 'ok' | 'slow' (answers after 2s) | 'fail' (500); premiumAfterActivate
 // flips the user to Premium once activateLicense has been called.
-export function firebaseStub({ uid = 'u1', email = 'tester@example.com', premium = false, signIn = 'ok', status = 'ok', premiumAfterActivate = false } = {}) {
+export function firebaseStub({ uid = 'u1', email = 'tester@example.com', premium = false, signIn = 'ok', status = 'ok', premiumAfterActivate = false, deviceId = null } = {}) {
   let isPremium = premium;
   return (request) => {
     const url = request.url();
@@ -66,7 +66,7 @@ export function firebaseStub({ uid = 'u1', email = 'tester@example.com', premium
     if (url.includes(`/documents/users/${uid}`)) {
       const answer = () => request.respond(status === 'fail'
         ? json(500, { error: { message: 'UNAVAILABLE' } })
-        : json(200, { fields: { email: { stringValue: email }, isPremium: { booleanValue: isPremium } } }));
+        : json(200, { fields: { email: { stringValue: email }, isPremium: { booleanValue: isPremium }, ...(deviceId ? { deviceId: { stringValue: deviceId } } : {}) } }));
       if (status === 'slow') setTimeout(answer, 2000);
       else answer();
       return true;

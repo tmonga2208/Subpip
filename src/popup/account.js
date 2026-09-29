@@ -102,7 +102,6 @@ export function initAccount({ doc, auth }) {
     $('account-initial').textContent = user ? user.email.charAt(0).toUpperCase() : '';
     $('account-initial').hidden = !user;
     $('account-icon').hidden = !!user;
-    if (auth.notice()) say($('license-error'), auth.notice());
   }
 
   auth.onChange(render);

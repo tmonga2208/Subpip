@@ -54,7 +54,6 @@ export async function createLicenseForPayment(deps, payment) {
       createdAt: FieldValue.serverTimestamp(),
       usedBy: null,
       activatedAt: null,
-      deviceId: null,
       verified: true
     });
   } catch (error) {
@@ -84,18 +83,14 @@ async function ensureLicenseVerified(deps, licenseDoc) {
 }
 
 // Bind a license to a user and mark them premium, atomically
-async function bindLicenseToUser({ db, FieldValue }, licenseRef, uid, deviceId) {
+async function bindLicenseToUser({ db, FieldValue }, licenseRef, uid) {
   return db.runTransaction(async (tx) => {
     const data = (await tx.get(licenseRef)).data();
     if (data.usedBy && data.usedBy !== uid) {
       return { success: false, error: 'License already used by another account' };
     }
-    tx.update(licenseRef, {
-      usedBy: uid,
-      activatedAt: data.activatedAt || FieldValue.serverTimestamp(),
-      deviceId: deviceId || null
-    });
-    tx.set(db.collection('users').doc(uid), { isPremium: true, licenseKey: data.key, deviceId: deviceId || null }, { merge: true });
+    tx.update(licenseRef, { usedBy: uid, activatedAt: data.activatedAt || FieldValue.serverTimestamp() });
+    tx.set(db.collection('users').doc(uid), { isPremium: true, licenseKey: data.key }, { merge: true });
     return { success: true, licenseKey: data.key };
   });
 }
@@ -131,7 +126,7 @@ export async function activateLicense(data, ctx, deps) {
   if (snap.empty) return { success: false, error: 'Invalid license key' };
   const licenseDoc = snap.docs[0];
   if (!(await ensureLicenseVerified(deps, licenseDoc))) return { success: false, error: 'License payment not verified' };
-  return bindLicenseToUser(deps, licenseDoc.ref, uid, data.deviceId);
+  return bindLicenseToUser(deps, licenseDoc.ref, uid);
 }
 
 export async function claimLicenseByEmail(data, ctx, deps) {
@@ -150,7 +145,7 @@ export async function claimLicenseByEmail(data, ctx, deps) {
     .sort((a, b) => (b.data().usedBy === uid) - (a.data().usedBy === uid));
 
   for (const licenseDoc of candidates) {
-    if (await ensureLicenseVerified(deps, licenseDoc)) return bindLicenseToUser(deps, licenseDoc.ref, uid, data.deviceId);
+    if (await ensureLicenseVerified(deps, licenseDoc)) return bindLicenseToUser(deps, licenseDoc.ref, uid);
   }
   return { success: false, error: 'No payment found for this email. Please complete payment first.' };
 }

@@ -169,8 +169,7 @@ export class LicenseManager {
                         email: { stringValue: email },
                         createdAt: { timestampValue: new Date().toISOString() },
                         isPremium: { booleanValue: false },
-                        licenseKey: { nullValue: null },
-                        deviceId: { nullValue: null }
+                        licenseKey: { nullValue: null }
                     }
                 })
             });
@@ -210,8 +209,7 @@ export class LicenseManager {
                 data: {
                     email: fields.email?.stringValue,
                     isPremium: fields.isPremium?.booleanValue || false,
-                    licenseKey: fields.licenseKey?.stringValue || null,
-                    deviceId: fields.deviceId?.stringValue || null
+                    licenseKey: fields.licenseKey?.stringValue || null
                 }
             };
         } catch (error) {
@@ -246,8 +244,7 @@ export class LicenseManager {
     // Activate license key (server binds it to this account)
     async activateLicense(licenseKey) {
         try {
-            const deviceId = await this.getDeviceId();
-            const result = await this.callFunction('activateLicense', { key: licenseKey, deviceId });
+            const result = await this.callFunction('activateLicense', { key: licenseKey });
             if (!result.success) return result;
             return { success: true, message: 'License activated successfully!' };
         } catch (error) {
@@ -260,8 +257,7 @@ export class LicenseManager {
         try {
             // Refresh first so a just-verified email shows up in the token
             await this.refreshIdToken();
-            const deviceId = await this.getDeviceId();
-            return await this.callFunction('claimLicenseByEmail', { deviceId });
+            return await this.callFunction('claimLicenseByEmail', {});
         } catch (error) {
             if (error.message === 'EMAIL_NOT_VERIFIED') {
                 return { success: false, emailNotVerified: true };
@@ -286,46 +282,6 @@ export class LicenseManager {
         } catch (error) {
             return { success: false, error: error.message };
         }
-    }
-
-    // Validate session (device check)
-    async validateSession(uid) {
-        const status = await this.getUserStatus(uid);
-        if (!status.success) {
-            return { valid: false, error: status.error };
-        }
-
-        if (!status.data.isPremium) {
-            return { valid: false, error: 'No premium license' };
-        }
-
-        const currentDeviceId = await this.getDeviceId();
-        if (status.data.deviceId && status.data.deviceId !== currentDeviceId) {
-            return { valid: false, error: 'License active on another device' };
-        }
-
-        return { valid: true, isPremium: true };
-    }
-
-    // Generate device ID
-    async getDeviceId() {
-        const nav = navigator;
-        const screen = window.screen;
-        const fingerprint = [
-            nav.userAgent,
-            nav.language,
-            screen.colorDepth,
-            screen.width + 'x' + screen.height,
-            new Date().getTimezoneOffset()
-        ].join('|');
-
-        let hash = 0;
-        for (let i = 0; i < fingerprint.length; i++) {
-            const char = fingerprint.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash;
-        }
-        return 'device_' + Math.abs(hash).toString(36);
     }
 
     // Parse Firebase Auth errors

@@ -7,12 +7,10 @@ import { LicenseManager } from './license-manager.js';
 export function createAuth(manager = new LicenseManager()) {
   let user = null;
   let premium = false;
-  let notice = '';
   const listeners = new Set();
   const emit = () => listeners.forEach((fn) => fn());
 
   async function refreshStatus() {
-    notice = '';
     if (user) {
       const status = await manager.getUserStatus(user.uid);
       // Offline or Firebase down: keep the last known status, don't downgrade
@@ -20,12 +18,7 @@ export function createAuth(manager = new LicenseManager()) {
         emit();
         return;
       }
-      premium = false;
-      if (status.data.isPremium) {
-        const session = await manager.validateSession(user.uid);
-        premium = session.valid;
-        if (!session.valid) notice = session.error;
-      }
+      premium = !!status.data.isPremium;
       await chrome.storage.sync.set({ subpipAuth: { uid: user.uid, email: user.email, isPremium: premium } });
     } else {
       premium = false;
@@ -45,7 +38,6 @@ export function createAuth(manager = new LicenseManager()) {
   return {
     user: () => user,
     isPremium: () => premium,
-    notice: () => notice,
     onChange(fn) {
       listeners.add(fn);
     },
