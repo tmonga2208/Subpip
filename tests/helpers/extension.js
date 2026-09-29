@@ -107,11 +107,13 @@ export function useExtension() {
   // Opens popup.html in its own popup window. The popup then targets the
   // active tab of the normal window (see status.js getTargetTab).
   // ready: false returns as soon as the page has loaded, before sign-in settles
-  ctx.openPopup = async ({ stub, ready = true } = {}) => {
+  // timezone drives the regional price (Kolkata → ₹, elsewhere → $)
+  ctx.openPopup = async ({ stub, ready = true, timezone = 'Asia/Kolkata' } = {}) => {
     const known = new Set(ctx.browser.targets());
     await ctx.worker.evaluate(() => chrome.windows.create({ url: 'about:blank', type: 'popup', width: 360, height: 640 }));
     const target = await ctx.browser.waitForTarget((t) => t.type() === 'page' && !known.has(t));
     const popup = await target.page();
+    await popup.emulateTimezone(timezone);
     const errors = [];
     popup.on('pageerror', (error) => errors.push(error.message));
     popup.on('console', (message) => {

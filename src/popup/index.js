@@ -8,6 +8,7 @@ import { createSettingsStore } from './settings-store.js';
 import { initCaptions } from './captions.js';
 import { initHome } from './home.js';
 import { initOptions } from './options.js';
+import { localPrice } from '../shared/pricing.js';
 
 // Extension page, so icon markup strings are fine here (unlike page scripts)
 function renderIcons(root) {
@@ -19,6 +20,8 @@ function renderIcons(root) {
 
 document.addEventListener('DOMContentLoaded', async () => {
   renderIcons(document);
+  // ₹1000 in India, $15 elsewhere
+  document.querySelectorAll('[data-price]').forEach((el) => { el.textContent = localPrice().label; });
   const router = createRouter(document);
   const store = createSettingsStore();
   const auth = createAuth();

@@ -11,14 +11,13 @@ const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
+const { isAcceptedPayment } = require('./pricing');
 
 initializeApp();
 const db = getFirestore();
 
 const REGION = 'asia-south1';
 const RAZORPAY_KEY_ID = 'rzp_live_S9zPibMgaqE7VV';
-const PRICE_PAISE = 100000; // ₹1000
-const CURRENCY = 'INR';
 
 // Generate unique license key
 function generateLicenseKey() {
@@ -55,10 +54,7 @@ async function fetchCapturedPayment(paymentId, { requireFullPrice }) {
     if (payment.status === 'authorized') {
         payment = await razorpay.payments.capture(paymentId, payment.amount, payment.currency);
     }
-    if (payment.status !== 'captured' || payment.currency !== CURRENCY) {
-        return null;
-    }
-    if (requireFullPrice && payment.amount < PRICE_PAISE) {
+    if (payment.status !== 'captured' || !isAcceptedPayment(payment, { requireFullPrice })) {
         return null;
     }
     return payment;
@@ -193,7 +189,7 @@ exports.razorpayWebhook = functions
             }
 
             const payment = req.body.payload.payment.entity;
-            if (payment.currency !== CURRENCY || payment.amount < PRICE_PAISE) {
+            if (!isAcceptedPayment(payment)) {
                 console.error('Payment amount/currency mismatch:', payment.id);
                 return res.status(200).send('Ignored: amount mismatch');
             }

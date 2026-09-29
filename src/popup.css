@@ -156,4 +156,4 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .features li { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
 .features .icon { color: var(--accent); }
 .price { margin: 4px 0 12px; font-size: 22px; font-weight: 700; }
-.price span { color: var(--text-2); font-size: 12px; font-weight: 400; }
+.price span:not([data-price]) { color: var(--text-2); font-size: 12px; font-weight: 400; }

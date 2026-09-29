@@ -18,9 +18,11 @@ export function useWebsite() {
     await ctx.server?.close();
   });
   ctx.url = (pagePath) => `http://127.0.0.1:${ctx.server.port}/${pagePath}`;
-  ctx.open = async (pagePath, { width = 1440, height = 900, intercept } = {}) => {
+  // timezone drives the regional price (Kolkata → ₹, elsewhere → $)
+  ctx.open = async (pagePath, { width = 1440, height = 900, intercept, timezone = 'Asia/Kolkata' } = {}) => {
     const page = await ctx.browser.newPage();
     await page.setViewport({ width, height });
+    await page.emulateTimezone(timezone);
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => {
@@ -44,6 +46,7 @@ window.Razorpay = function (options) { this.options = options; this.handlers = {
 window.Razorpay.prototype.on = function (event, fn) { this.handlers[event] = fn; };
 window.Razorpay.prototype.open = function () {
   window.__rzpOpened = true;
+  window.__rzpOptions = { amount: this.options.amount, currency: this.options.currency };
   const mode = window.__rzpMode || 'success';
   setTimeout(() => {
     if (mode === 'success') this.options.handler({ razorpay_payment_id: 'pay_TEST123' });

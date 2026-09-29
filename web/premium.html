@@ -27,7 +27,8 @@
 
       <div class="checkout-card payment-container" id="paymentSection">
         <h1>SubPIP Premium</h1>
-        <div class="price">₹1000 <span>· lifetime</span></div>
+        <div class="price"><span data-price>₹1000</span> <span>· lifetime</span></div>
+        <button class="currency-switch" id="currencySwitch" type="button"></button>
         <ul class="check-list">
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Real-time caption translation (12 languages)</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Playback speed 0.5×–3×</li>
@@ -80,8 +81,23 @@
 
         // Razorpay Configuration
         const RAZORPAY_KEY_ID = 'rzp_live_S9zPibMgaqE7VV';
-        const AMOUNT = 100000; // Amount in paise (₹1000)
-        const CURRENCY = 'INR';
+        // Regional price (₹1000 in India, $15 elsewhere) from script.js; the
+        // server verifies the currency and amount of the captured payment
+        const { REGIONAL_PRICES, defaultCurrency } = window.SubpipPricing;
+        let price = REGIONAL_PRICES[defaultCurrency()];
+        const otherPrice = () => REGIONAL_PRICES[price.currency === 'INR' ? 'USD' : 'INR'];
+        function renderPrice() {
+            document.querySelectorAll('[data-price]').forEach((el) => { el.textContent = price.label; });
+            document.getElementById('payBtn').textContent = `Pay ${price.label}`;
+            document.getElementById('currencySwitch').textContent = price.currency === 'INR'
+                ? `Outside India? Pay ${otherPrice().label} instead`
+                : `Paying from India? Pay ${otherPrice().label} instead`;
+        }
+        document.getElementById('currencySwitch').addEventListener('click', () => {
+            price = otherPrice();
+            renderPrice();
+        });
+        renderPrice();
 
         // Get email from URL params (if passed)
         const urlParams = new URLSearchParams(window.location.search);
@@ -154,8 +170,8 @@
 
             const options = {
                 key: RAZORPAY_KEY_ID,
-                amount: AMOUNT,
-                currency: CURRENCY,
+                amount: price.amount,
+                currency: price.currency,
                 name: 'SubPIP Premium',
                 description: 'Lifetime Premium License',
                 image: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".85em" font-size="48" fill="%23e94560" font-family="sans-serif">P</text></svg>',
