@@ -23,76 +23,79 @@
   <main class="container">
     <article class="prose">
       <h1>Privacy Policy</h1>
-      <p class="updated">Last updated: <span id="privacyDate"></span></p>
+      <p class="updated">Last updated: September 29, 2026</p>
+
       <section>
-      <h2>1. Introduction</h2>
-      <p>SubPIP ("we", "our", or "the extension") is a browser extension that provides Picture-in-Picture video with subtitles, caption customization, and optional translation. This Privacy Policy explains what data we collect, how we use it, and your choices. We do not sell your personal data.</p>
+        <h2>1. Introduction</h2>
+        <p>SubPIP ("we", "our", or "the extension") is a browser extension that plays videos in Picture-in-Picture with their subtitles, with caption styling, optional translation and an optional Premium upgrade. This policy explains what data SubPIP handles, why, and your choices. We do not sell your personal data and we do not use it for advertising.</p>
       </section>
 
       <section>
-      <h2>2. Data We Collect</h2>
-      <p><strong>Extension (local):</strong></p>
-      <ul>
-      <li><strong>Settings</strong> – Caption preferences (font size, color, position, playback speed, translation language). Stored locally in your browser (Chrome sync storage) and not sent to our servers.</li>
-      <li><strong>Translation cache</strong> – Subtitle text and its translation may be cached locally (IndexedDB) to avoid repeated API calls. This data stays on your device.</li>
-      </ul>
-      <p><strong>If you use Premium (login / license):</strong></p>
-      <ul>
-      <li><strong>Account data</strong> – Email and authentication state are handled by Firebase Authentication. We store your premium status and a device identifier to enforce license terms (e.g., one device per license).</li>
-      <li><strong>License keys</strong> – Stored in Firebase/Firestore and associated with your account for activation and verification.</li>
-      </ul>
+        <h2>2. Data we handle</h2>
+        <p><strong>Everyone (stored in your browser):</strong></p>
+        <ul>
+          <li><strong>Settings</strong> – caption style, playback speed, translation language and whether Auto PiP is on. Stored in Chrome's sync storage, so they follow your Chrome profile. They are not sent to our servers.</li>
+          <li><strong>Translation cache</strong> – caption lines and their translations may be cached in your browser (IndexedDB) to avoid translating the same line twice. This stays on your device.</li>
+        </ul>
+        <p><strong>If you sign in or buy Premium:</strong></p>
+        <ul>
+          <li><strong>Account</strong> – your email address and sign-in state, handled by Firebase Authentication.</li>
+          <li><strong>Premium status</strong> – whether your account is Premium, your license key and a device identifier used to enforce one license per device. Stored in Firebase Firestore.</li>
+          <li><strong>Purchase record</strong> – when you pay, we store the Razorpay payment ID, the email used for the purchase, the amount and currency, and the license key issued. We never receive or store your card or bank details.</li>
+        </ul>
       </section>
 
       <section>
-      <h2>3. How We Use Data</h2>
-      <ul>
-      <li>To provide Picture-in-Picture, subtitles, and playback controls on the sites you use.</li>
-      <li>To offer real-time caption translation: subtitle text is sent to a translation service (see Third-Party Services) only when you enable translation. Results may be cached locally.</li>
-      <li>To manage your Premium account, verify your license, and enforce one license per device where applicable.</li>
-      </ul>
+        <h2>3. How we use it</h2>
+        <ul>
+          <li>To show videos in Picture-in-Picture with subtitles and playback controls on the sites where you use SubPIP.</li>
+          <li>To translate captions, only when you turn translation on: the caption text is sent to a translation service (see section 4). Free users' captions go to MyMemory directly from your browser; Premium users' captions go to MyMemory through our server, which first checks that your account is Premium.</li>
+          <li>To create, verify and activate your Premium license, and to let you recover it with "Check payment" if you lose your key.</li>
+          <li>To show the right price: our website reads your browser's time zone to show ₹1000 in India or $15 elsewhere. The time zone is used only in your browser and is not sent to us.</li>
+        </ul>
       </section>
 
       <section>
-      <h2>4. Third-Party Services</h2>
-      <p>We use the following services; each has its own privacy policy:</p>
-      <ul>
-      <li><strong>Google Firebase</strong> – Authentication and Firestore (account and license data). <a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Google Privacy Policy</a>.</li>
-      <li><strong>Translation API (e.g. MyMemory)</strong> – When you enable translation, subtitle text is sent to the translation provider to return translated text. We do not control their retention policies.</li>
-      <li><strong>Razorpay</strong> – Used on our website for Premium payments. Payment data is processed by Razorpay; we do not store full payment details. <a href="https://razorpay.com/privacy/" target="_blank" rel="noopener">Razorpay Privacy Policy</a>.</li>
-      </ul>
+        <h2>4. Services that process data for us</h2>
+        <p>Each of these services has its own privacy policy:</p>
+        <ul>
+          <li><strong>Google Firebase</strong> – sign-in (Authentication) and account and license data (Firestore). <a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Firebase privacy</a>.</li>
+          <li><strong>Vercel</strong> – hosts our website and the server functions that confirm payments, activate licenses and forward Premium translation requests. Vercel may keep short-lived request logs. <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener">Vercel privacy</a>.</li>
+          <li><strong>MyMemory (Translated)</strong> – translates caption text when translation is on. We do not control how long they keep it. <a href="https://mymemory.translated.net/doc/privacy.php" target="_blank" rel="noopener">MyMemory privacy</a>.</li>
+          <li><strong>Razorpay</strong> – processes Premium payments on our website, in rupees (INR) or US dollars (USD). Your payment details go to Razorpay, not to us. <a href="https://razorpay.com/privacy/" target="_blank" rel="noopener">Razorpay privacy</a>.</li>
+        </ul>
       </section>
 
       <section>
-      <h2>5. Browser Permissions</h2>
-      <p>We request only the permissions needed for the extension to work:</p>
-      <ul>
-      <li><strong>activeTab</strong> – To run Picture-in-Picture in the tab you are currently viewing when you click the extension or use the shortcut.</li>
-      <li><strong>tabs</strong> – To know which tab is active and to support auto-PiP when you switch tabs (so a playing video can go to PiP). We do not collect or store your tab URLs or browsing history.</li>
-      <li><strong>windows</strong> – To support auto-PiP when you switch to another browser window.</li>
-      <li><strong>scripting</strong> – To inject the code that enables PiP and subtitles on the current page.</li>
-      <li><strong>storage</strong> – To save your settings and (if you log in) premium status locally.</li>
-      <li><strong>host permissions (all_urls)</strong> – So the extension can run on video sites (e.g. YouTube, Netflix, Disney+) where you choose to use PiP. We do not read or transmit your browsing history.</li>
-      </ul>
+        <h2>5. Browser permissions</h2>
+        <p>SubPIP asks only for what it needs:</p>
+        <ul>
+          <li><strong>activeTab</strong> – to start Picture-in-Picture in the tab you are viewing when you click the SubPIP icon or press Alt+P.</li>
+          <li><strong>scripting</strong> – to add the Picture-in-Picture player and captions to that page.</li>
+          <li><strong>storage</strong> – to save your settings and sign-in state in your browser.</li>
+          <li><strong>Access to SubPIP's own services</strong> – our server on Vercel, Firebase and MyMemory, so the extension can sign you in, check your license and translate.</li>
+          <li><strong>Access to all sites (optional)</strong> – requested only if you turn on Auto PiP, so SubPIP can be ready on every page to open Picture-in-Picture when you switch tabs. You can turn Auto PiP off at any time, which removes this access. SubPIP does not read, collect or send your browsing history.</li>
+        </ul>
       </section>
 
       <section>
-      <h2>6. Data Storage and Retention</h2>
-      <p>Settings and local caches are stored in your browser. If you uninstall the extension, this local data can be removed by the browser. Account and license data in Firebase are retained as long as your account exists; you can request deletion by contacting us.</p>
+        <h2>6. Storage and retention</h2>
+        <p>Settings and the translation cache stay in your browser; uninstalling the extension or clearing its data removes them. Account, license and purchase records are kept while your account exists, and purchase records may be kept longer where needed for accounting or refunds. You can ask us to delete your account at any time.</p>
       </section>
 
       <section>
-      <h2>7. Your Rights</h2>
-      <p>You can disable the extension or revoke permissions at any time. You can clear extension data (e.g. via Chrome settings). If you have an account, you can log out; to request account or data deletion, contact us using the details below.</p>
+        <h2>7. Your choices</h2>
+        <p>You can use SubPIP without signing in, keep translation off, turn Auto PiP off, remove permissions, or uninstall the extension at any time. If you have an account you can sign out in the popup, and you can ask us to access, correct or delete your data by contacting us.</p>
       </section>
 
       <section>
-      <h2>8. Changes</h2>
-      <p>We may update this Privacy Policy from time to time. The "Last updated" date at the top will be revised when we do. Continued use of the extension after changes constitutes acceptance of the updated policy.</p>
+        <h2>8. Changes</h2>
+        <p>If we change this policy we will update it here and change the "Last updated" date above.</p>
       </section>
 
       <section>
-      <h2>9. Contact</h2>
-      <p>For privacy-related questions or requests, contact us at: <a href="https://tmonga2208.vercel.app/">tmonga2208.vercel.app</a> (or the contact method listed there).</p>
+        <h2>9. Contact</h2>
+        <p>For privacy questions or requests, email <a href="mailto:tarunmonga2208@gmail.com">tarunmonga2208@gmail.com</a>.</p>
       </section>
     </article>
   </main>
@@ -108,8 +111,5 @@
     </div>
   </footer>
   <script src="script.js"></script>
-  <script>
-    document.getElementById('privacyDate').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  </script>
 </body>
 </html>
