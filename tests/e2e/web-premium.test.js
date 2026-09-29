@@ -52,7 +52,7 @@ test('an invalid email is caught before opening Razorpay', async () => {
 });
 
 test('a declined card shows the reason', async () => {
-  const page = await ctx.open('premium.html', { intercept: razorpayStub() });
+  const page = await ctx.open('premium.html', { intercept: both(razorpayStub(), confirmStub()) });
   await page.evaluate(() => { window.__rzpMode = 'failed'; });
   await pay(page);
   await page.waitForFunction(() => document.getElementById('errorMsg').classList.contains('show'));

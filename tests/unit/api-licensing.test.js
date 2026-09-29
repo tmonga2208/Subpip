@@ -3,10 +3,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { confirmPayment, activateLicense, claimLicenseByEmail, translateText } from '../../web/api/_lib/licensing.js';
 import { HttpsError } from '../../web/api/_lib/http.js';
-import { fakeFirestore, fakeRazorpay, FieldValue } from '../helpers/fake-firestore.js';
+import { fakeFirestore, fakeRazorpay, FieldValue, signFor } from '../helpers/fake-firestore.js';
 
-const paid = { status: 'captured', currency: 'INR', amount: 100000, email: 'Buyer@Example.com' };
-const deps = (db, payments = {}, extra = {}) => ({ db, FieldValue, razorpay: fakeRazorpay(payments), ...extra });
+const paid = { status: 'captured', currency: 'INR', amount: 100000, email: 'Buyer@Example.com', order_id: 'order_1' };
+const deps = (db, payments = {}, extra = {}) => ({ db, FieldValue, razorpay: fakeRazorpay(payments), keySecret: 'k', ...extra });
+const signed = (paymentId) => ({ paymentId, orderId: 'order_1', signature: signFor('order_1', paymentId, 'k') });
 const signedIn = (uid, token = {}) => ({ auth: { uid, token } });
 const rejects = (promise, status) => assert.rejects(promise, (e) => e instanceof HttpsError && e.status === status);
 
@@ -14,7 +15,7 @@ const rejects = (promise, status) => assert.rejects(promise, (e) => e instanceof
 
 test('confirmPayment creates one license for a captured full-price payment', async () => {
   const db = fakeFirestore();
-  const result = await confirmPayment({ paymentId: 'pay_A1' }, {}, deps(db, { pay_A1: paid }));
+  const result = await confirmPayment(signed('pay_A1'), {}, deps(db, { pay_A1: paid }));
   assert.match(result.licenseKey, /^SUBPIP-[A-Z0-9]{8}-[A-Z0-9]{4}$/);
   const license = db.read('licenses/pay_A1');
   assert.equal(license.key, result.licenseKey);
@@ -26,29 +27,29 @@ test('confirmPayment creates one license for a captured full-price payment', asy
 test('confirmPayment is idempotent: the same payment returns the same key', async () => {
   const db = fakeFirestore();
   const d = deps(db, { pay_A1: paid });
-  const first = await confirmPayment({ paymentId: 'pay_A1' }, {}, d);
-  const second = await confirmPayment({ paymentId: 'pay_A1' }, {}, d);
+  const first = await confirmPayment(signed('pay_A1'), {}, d);
+  const second = await confirmPayment(signed('pay_A1'), {}, d);
   assert.equal(second.licenseKey, first.licenseKey);
 });
 
 test('confirmPayment accepts $15 in USD', async () => {
   const db = fakeFirestore();
-  const result = await confirmPayment({ paymentId: 'pay_U1' }, {}, deps(db, { pay_U1: { ...paid, currency: 'USD', amount: 1500 } }));
+  const result = await confirmPayment(signed('pay_U1'), {}, deps(db, { pay_U1: { ...paid, currency: 'USD', amount: 1500 } }));
   assert.ok(result.licenseKey);
 });
 
 test('confirmPayment rejects underpayment, unknown ids and malformed ids', async () => {
   const db = fakeFirestore();
-  await rejects(confirmPayment({ paymentId: 'pay_LOW' }, {}, deps(db, { pay_LOW: { ...paid, amount: 50000 } })), 'failed-precondition');
-  await rejects(confirmPayment({ paymentId: 'pay_NONE' }, {}, deps(db)), 'not-found');
-  await rejects(confirmPayment({ paymentId: 'order_1' }, {}, deps(db)), 'invalid-argument');
+  await rejects(confirmPayment(signed('pay_LOW'), {}, deps(db, { pay_LOW: { ...paid, amount: 50000 } })), 'failed-precondition');
+  await rejects(confirmPayment(signed('pay_NONE'), {}, deps(db)), 'not-found');
+  await rejects(confirmPayment({ paymentId: 'order_1', orderId: 'order_1', signature: 'x' }, {}, deps(db)), 'invalid-argument');
   assert.equal(db.read('licenses/pay_LOW'), undefined);
 });
 
 test('confirmPayment captures an authorized payment before issuing a license', async () => {
   const db = fakeFirestore();
   const payments = { pay_AU: { ...paid, status: 'authorized' } };
-  await confirmPayment({ paymentId: 'pay_AU' }, {}, deps(db, payments));
+  await confirmPayment(signed('pay_AU'), {}, deps(db, payments));
   assert.equal(payments.pay_AU.status, 'captured');
 });
 

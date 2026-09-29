@@ -88,7 +88,6 @@
         const FUNCTIONS_BASE_URL = '/api'; // Vercel Functions on this site (web/api/)
 
         // Razorpay Configuration
-        const RAZORPAY_KEY_ID = 'rzp_live_S9zPibMgaqE7VV';
         // Regional price from the time zone (₹1000 in India, $15 elsewhere),
         // via script.js; the server verifies the captured currency and amount
         const { REGIONAL_PRICES, defaultCurrency } = window.SubpipPricing;
@@ -128,14 +127,26 @@
             console.error('Razorpay load error:', err);
         });
 
-        // Ask the server to verify the payment and return the license key
-        async function confirmPayment(paymentId) {
-            const response = await fetch(`${FUNCTIONS_BASE_URL}/confirmPayment`, {
+        // Server creates the order, so the amount is never set by this page
+        async function createOrder(email) {
+            const response = await fetch(`${FUNCTIONS_BASE_URL}/createOrder`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ data: { paymentId } })
+                body: JSON.stringify({ data: { currency: price.currency, email } })
             });
             const body = await response.json();
+            if (body.error) throw new Error(body.error.message || 'Could not start the payment');
+            return body.result;
+        }
+
+        // Server verifies Razorpay's signature for this order and payment
+        async function confirmPayment(response) {
+            const result = await fetch(`${FUNCTIONS_BASE_URL}/confirmPayment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data: { paymentId: response.razorpay_payment_id, orderId: response.razorpay_order_id, signature: response.razorpay_signature } })
+            });
+            const body = await result.json();
             if (body.error) {
                 throw new Error(body.error.message || 'Payment verification failed');
             }
@@ -164,10 +175,21 @@
                 showLoading(false);
             }
 
+            let order;
+            showLoading(true);
+            try {
+                order = await createOrder(email);
+            } catch (e) {
+                showLoading(false);
+                showError('Could not start the payment. Please try again.');
+                return;
+            }
+            showLoading(false);
             const options = {
-                key: RAZORPAY_KEY_ID,
-                amount: price.amount,
-                currency: price.currency,
+                key: order.keyId,
+                order_id: order.orderId,
+                amount: order.amount,
+                currency: order.currency,
                 name: 'SubPIP Premium',
                 description: 'Lifetime Premium License',
                 image: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".85em" font-size="48" fill="%23e94560" font-family="sans-serif">P</text></svg>',
@@ -206,7 +228,7 @@
 
             try {
                 // Server re-checks the payment with Razorpay and creates the license
-                const { licenseKey } = await confirmPayment(response.razorpay_payment_id);
+                const { licenseKey } = await confirmPayment(response);
 
                 // Save to localStorage as backup
                 localStorage.setItem('subpip_license', JSON.stringify({

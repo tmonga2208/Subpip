@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 // In-memory stand-in for the Firestore Admin API surface the licensing code
 // uses: doc get/create/set/update, equality where().limit().get(), and
 // runTransaction with tx.get/update/set.
@@ -81,6 +83,14 @@ export const FieldValue = { serverTimestamp: () => 'SERVER_TIMESTAMP' };
 // Razorpay client stand-in: payments keyed by id
 export function fakeRazorpay(payments = {}) {
   return {
+    orders: {
+      created: [],
+      async create(order) {
+        const id = `order_${this.created.length + 1}`;
+        this.created.push({ ...order, id });
+        return { ...order, id, status: 'created' };
+      }
+    },
     payments: {
       async fetch(id) {
         if (!payments[id]) throw new Error('The id provided does not exist');
@@ -108,3 +118,6 @@ export function fakeMailer() {
 }
 
 export const fixedClock = (iso) => () => new Date(iso);
+
+export const signFor = (orderId, paymentId, secret) =>
+  crypto.createHmac('sha256', secret).update(`${orderId}|${paymentId}`).digest('hex');

@@ -33,7 +33,7 @@ test('landing page: rupees in India, dollars elsewhere', async () => {
 test('checkout in India charges ₹1000 in INR', async () => {
   const page = await ctx.open('premium.html', { intercept: both(razorpayStub(), confirmStub()) });
   assert.deepEqual(await checkout(page), { price: '₹1000 · lifetime', pay: 'Pay ₹1000' });
-  assert.deepEqual(await payAndCapture(page), { amount: 100000, currency: 'INR' });
+  assert.deepEqual(await payAndCapture(page), { amount: 100000, currency: 'INR', orderId: 'order_INR' });
   await page.evaluate(() => localStorage.clear());
   await page.close();
 });
@@ -41,7 +41,7 @@ test('checkout in India charges ₹1000 in INR', async () => {
 test('checkout outside India charges $15 in USD', async () => {
   const page = await ctx.open('premium.html', { timezone: NY, intercept: both(razorpayStub(), confirmStub()) });
   assert.deepEqual(await checkout(page), { price: '$15 · lifetime', pay: 'Pay $15' });
-  assert.deepEqual(await payAndCapture(page), { amount: 1500, currency: 'USD' });
+  assert.deepEqual(await payAndCapture(page), { amount: 1500, currency: 'USD', orderId: 'order_USD' });
   await page.waitForFunction(() => document.getElementById('successSection').classList.contains('show'));
   await page.evaluate(() => localStorage.clear());
   await page.close();

@@ -6,6 +6,8 @@ import crypto from 'node:crypto';
 import { HttpsError } from './http.js';
 import { isAcceptedPayment } from './pricing.js';
 import { sendLicenseEmail } from './emails.js';
+import { validPaymentSignature } from './orders.js';
+import { alertOwner } from './alerts.js';
 
 export function generateLicenseKey() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -139,10 +141,16 @@ function requireAuth(ctx) {
   return ctx.auth;
 }
 
-// Called by the checkout page after Razorpay reports success
+// Called by the checkout after Razorpay reports success for an order
 export async function confirmPayment(data, ctx, deps) {
   const paymentId = typeof data.paymentId === 'string' ? data.paymentId.trim() : '';
-  if (!/^pay_[A-Za-z0-9]+$/.test(paymentId)) throw new HttpsError('invalid-argument', 'Valid payment ID is required');
+  const orderId = typeof data.orderId === 'string' ? data.orderId.trim() : '';
+  if (!/^pay_[A-Za-z0-9]+$/.test(paymentId) || !/^order_[A-Za-z0-9]+$/.test(orderId)) {
+    throw new HttpsError('invalid-argument', 'Valid payment and order IDs are required');
+  }
+  if (!validPaymentSignature(orderId, paymentId, data.signature, deps.keySecret)) {
+    throw new HttpsError('invalid-argument', 'Payment signature is invalid');
+  }
 
   let payment;
   try {
@@ -151,9 +159,15 @@ export async function confirmPayment(data, ctx, deps) {
     throw new HttpsError('not-found', 'Payment not found');
   }
   if (!payment) throw new HttpsError('failed-precondition', 'Payment not completed');
+  if (payment.order_id !== orderId) throw new HttpsError('failed-precondition', 'Payment does not match the order');
 
-  const licenseKey = await issueLicense(deps, payment);
-  return { licenseKey, email: payment.email || null };
+  try {
+    const licenseKey = await issueLicense(deps, payment);
+    return { licenseKey, email: payment.email || null };
+  } catch (error) {
+    await alertOwner(deps, 'license-creation-failed', `Payment ${paymentId} was captured but creating the license failed: ${error.message}`, { paymentId, orderId });
+    throw new HttpsError('internal', 'Payment received, but creating your license failed. We have been notified.');
+  }
 }
 
 export async function activateLicense(data, ctx, deps) {

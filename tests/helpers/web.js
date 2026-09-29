@@ -46,10 +46,10 @@ window.Razorpay = function (options) { this.options = options; this.handlers = {
 window.Razorpay.prototype.on = function (event, fn) { this.handlers[event] = fn; };
 window.Razorpay.prototype.open = function () {
   window.__rzpOpened = true;
-  window.__rzpOptions = { amount: this.options.amount, currency: this.options.currency };
+  window.__rzpOptions = { amount: this.options.amount, currency: this.options.currency, orderId: this.options.order_id };
   const mode = window.__rzpMode || 'success';
   setTimeout(() => {
-    if (mode === 'success') this.options.handler({ razorpay_payment_id: 'pay_TEST123' });
+    if (mode === 'success') this.options.handler({ razorpay_payment_id: 'pay_TEST123', razorpay_order_id: this.options.order_id, razorpay_signature: 'sig_TEST' });
     else this.handlers['payment.failed']({ error: { description: 'Card declined' } });
   }, 50);
 };`;
@@ -64,18 +64,32 @@ export function razorpayStub({ blocked = false } = {}) {
   };
 }
 
-// The confirmPayment Cloud Function
+// createOrder (server-priced: INR 100000, USD 1500) and confirmPayment
+// (requires order id + signature from the fake Razorpay)
 export function confirmStub({ ok = true } = {}) {
+  const cors = { 'Access-Control-Allow-Origin': '*' };
+  const json = (status, body) => ({ status, contentType: 'application/json', headers: cors, body: JSON.stringify(body) });
   return (request) => {
-    if (!request.url().includes('/api/confirmPayment')) return false;
-    if (request.method() === 'OPTIONS') {
-      request.respond({ status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'content-type', 'Access-Control-Allow-Methods': 'POST' } });
+    const url = request.url();
+    if (request.method() === 'OPTIONS' && url.includes('/api/')) {
+      request.respond({ status: 204, headers: { ...cors, 'Access-Control-Allow-Headers': 'content-type', 'Access-Control-Allow-Methods': 'POST' } });
       return true;
     }
-    const body = ok
-      ? { result: { licenseKey: 'SUBPIP-TESTKEY1-ABCD', email: 'buyer@example.com' } }
-      : { error: { message: 'Payment not completed', status: 'FAILED_PRECONDITION' } };
-    request.respond({ status: ok ? 200 : 400, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(body) });
+    if (url.includes('/api/createOrder')) {
+      const { currency } = JSON.parse(request.postData() || '{}').data || {};
+      const amount = { INR: 100000, USD: 1500 }[currency];
+      request.respond(amount ? json(200, { result: { orderId: `order_${currency}`, amount, currency, keyId: 'rzp_test' } }) : json(400, { error: { message: 'Unsupported currency', status: 'INVALID_ARGUMENT' } }));
+      return true;
+    }
+    if (!url.includes('/api/confirmPayment')) return false;
+    const { orderId, signature } = JSON.parse(request.postData() || '{}').data || {};
+    if (!orderId || !signature) {
+      request.respond(json(400, { error: { message: 'Valid payment and order IDs are required', status: 'INVALID_ARGUMENT' } }));
+    } else if (ok) {
+      request.respond(json(200, { result: { licenseKey: 'SUBPIP-TESTKEY1-ABCD', email: 'buyer@example.com' } }));
+    } else {
+      request.respond(json(400, { error: { message: 'Payment not completed', status: 'FAILED_PRECONDITION' } }));
+    }
     return true;
   };
 }
