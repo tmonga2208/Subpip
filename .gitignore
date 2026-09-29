@@ -11,3 +11,7 @@ dist/
 
 # Brainstorming mockups
 .superpowers/
+
+# Firebase service-account keys: never commit
+*-firebase-adminsdk-*.json
+*serviceAccount*.json
