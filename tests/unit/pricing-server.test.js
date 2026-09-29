@@ -1,10 +1,7 @@
 // Server-side price check for captured Razorpay payments
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRequire } from 'node:module';
-
-const require = createRequire(import.meta.url);
-const { PRICES, isAcceptedPayment } = require('../../functions/pricing.js');
+import { PRICES, isAcceptedPayment } from '../../web/api/_lib/pricing.js';
 
 test('two regional prices: ₹1000 and $15', () => {
   assert.deepEqual(PRICES, { INR: 100000, USD: 1500 });

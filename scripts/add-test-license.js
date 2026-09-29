@@ -2,12 +2,12 @@
 // Clients can no longer write to `licenses` (see firestore.rules).
 //
 // Usage (needs `gcloud auth application-default login` or GOOGLE_APPLICATION_CREDENTIALS):
-//   cd functions && npm install && cd ..
+//   npm --prefix web install
 //   node scripts/add-test-license.js [LICENSE-KEY]
 
 const path = require('path');
 const { createRequire } = require('module');
-const requireFromFunctions = createRequire(path.join(__dirname, '../functions/package.json'));
+const requireFromFunctions = createRequire(path.join(__dirname, '../web/package.json'));
 const { initializeApp } = requireFromFunctions('firebase-admin/app');
 const { getFirestore, FieldValue } = requireFromFunctions('firebase-admin/firestore');
 

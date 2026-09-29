@@ -2,7 +2,7 @@ import js from '@eslint/js';
 import globals from 'globals';
 
 export default [
-  { ignores: ['dist/', 'functions/', 'web/', 'node_modules/', '.superpowers/'] },
+  { ignores: ['dist/', 'web/*.html', 'node_modules/', '.superpowers/'] },
   js.configs.recommended,
   { rules: { 'no-unused-vars': ['error', { caughtErrors: 'none' }] } },
   {
@@ -19,6 +19,14 @@ export default [
   {
     files: ['scripts/**/*.js'],
     languageOptions: { sourceType: 'commonjs', globals: globals.node }
+  },
+  {
+    files: ['web/*.js'],
+    languageOptions: { sourceType: 'script', globals: globals.browser }
+  },
+  {
+    files: ['web/api/**/*.js'],
+    languageOptions: { sourceType: 'module', globals: globals.node }
   },
   {
     files: ['tests/**/*.js'],

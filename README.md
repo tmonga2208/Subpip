@@ -58,6 +58,6 @@ Full technical documentation is available in [documentation.md](file:///Users/ta
 
 ### Quick Start
 1. **Extension**: `npm install && npm run build`, then load `dist/` as an unpacked extension. Use `npm run watch` while developing, `npm run lint` to lint, and `npm run package` to build `subpip.zip` for the Chrome Web Store.
-2. **Backend**: Deploy `functions/` to Firebase (Node 22).
+2. **Backend + website**: `web/` deploys to Vercel with `cd web && vercel --prod`; its `api/` folder holds the server functions (payments, licenses, translation). Set `FIREBASE_SERVICE_ACCOUNT`, `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET` in the Vercel project. Firestore rules deploy with `firebase deploy --only firestore:rules` (free Spark plan).
 
 

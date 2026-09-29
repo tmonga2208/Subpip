@@ -2,7 +2,7 @@
 // content script registration.
 
 import { ALL_SITES } from './shared/settings.js';
-import { TOKEN_URL, FUNCTIONS_BASE_URL, TOKEN_MAX_AGE_MS } from './shared/firebase.js';
+import { TOKEN_URL, API_BASE_URL, TOKEN_MAX_AGE_MS } from './shared/firebase.js';
 
 // Get a fresh Firebase ID token for the signed-in user (stored by the popup)
 async function getIdToken() {
@@ -43,7 +43,7 @@ async function translateInBackground(text, targetLang, uid) {
   const idToken = uid ? await getIdToken() : null;
   if (idToken) {
     try {
-      const response = await fetch(`${FUNCTIONS_BASE_URL}/translateText`, {
+      const response = await fetch(`${API_BASE_URL}/translateText`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
         body: JSON.stringify({ data: { text, targetLang } })

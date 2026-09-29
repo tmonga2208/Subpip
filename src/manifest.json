@@ -37,7 +37,7 @@
     "activeTab"
   ],
   "host_permissions": [
-    "https://asia-south1-subpip-premium.cloudfunctions.net/*",
+    "https://subpip.vercel.app/*",
     "https://api.mymemory.translated.net/*",
     "https://identitytoolkit.googleapis.com/*",
     "https://securetoken.googleapis.com/*",

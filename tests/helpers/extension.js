@@ -71,7 +71,7 @@ export function firebaseStub({ uid = 'u1', email = 'tester@example.com', premium
       else answer();
       return true;
     }
-    if (url.includes('cloudfunctions.net/activateLicense')) {
+    if (url.startsWith('https://subpip.vercel.app/api/activateLicense')) {
       if (premiumAfterActivate) isPremium = true;
       request.respond(json(200, { result: { success: true } }));
       return true;

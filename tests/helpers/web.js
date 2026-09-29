@@ -67,7 +67,7 @@ export function razorpayStub({ blocked = false } = {}) {
 // The confirmPayment Cloud Function
 export function confirmStub({ ok = true } = {}) {
   return (request) => {
-    if (!request.url().includes('cloudfunctions.net/confirmPayment')) return false;
+    if (!request.url().includes('/api/confirmPayment')) return false;
     if (request.method() === 'OPTIONS') {
       request.respond({ status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'content-type', 'Access-Control-Allow-Methods': 'POST' } });
       return true;

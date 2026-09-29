@@ -1,7 +1,7 @@
 // Firebase Auth + license calls for the popup, over REST (the Firebase SDK's
 // remote code loading is not allowed in extension pages)
 
-import { FIREBASE_CONFIG, AUTH_BASE_URL, TOKEN_URL, FIRESTORE_BASE_URL, FUNCTIONS_BASE_URL, TOKEN_MAX_AGE_MS } from '../shared/firebase.js';
+import { FIREBASE_CONFIG, AUTH_BASE_URL, TOKEN_URL, FIRESTORE_BASE_URL, API_BASE_URL, TOKEN_MAX_AGE_MS } from '../shared/firebase.js';
 
 // License Manager using Firebase REST APIs
 export class LicenseManager {
@@ -229,7 +229,7 @@ export class LicenseManager {
         const headers = { 'Content-Type': 'application/json' };
         if (this.idToken) headers['Authorization'] = `Bearer ${this.idToken}`;
 
-        const response = await fetch(`${FUNCTIONS_BASE_URL}/${name}`, {
+        const response = await fetch(`${API_BASE_URL}/${name}`, {
             method: 'POST',
             headers,
             body: JSON.stringify({ data })

@@ -18,3 +18,8 @@ test('icons exist at the declared sizes', () => {
     }
   }
 });
+
+test('the extension may call the SubPIP API on Vercel, not Cloud Functions', () => {
+  assert.ok(manifest.host_permissions.includes('https://subpip.vercel.app/*'));
+  assert.ok(!manifest.host_permissions.some((host) => host.includes('cloudfunctions.net')));
+});

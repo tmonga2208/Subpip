@@ -1,0 +1,108 @@
+// Request/response wrapper (web/api/_lib/http.js) and the Razorpay webhook
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+import { Readable } from 'node:stream';
+import { callable, HttpsError } from '../../web/api/_lib/http.js';
+import { handleWebhook } from '../../web/api/_lib/webhook.js';
+import { fakeFirestore, fakeRazorpay, FieldValue } from '../helpers/fake-firestore.js';
+
+function fakeRes() {
+  const res = { statusCode: 200, headers: {}, body: undefined };
+  res.setHeader = (k, v) => { res.headers[k.toLowerCase()] = v; };
+  res.status = (code) => { res.statusCode = code; return res; };
+  res.json = (body) => { res.body = body; return res; };
+  res.send = (body) => { res.body = body; return res; };
+  res.end = () => res;
+  return res;
+}
+const fakeReq = ({ method = 'POST', body, headers = {} } = {}) => ({ method, body, headers });
+const auth = { verifyIdToken: async (token) => { if (token !== 'good') throw new Error('bad token'); return { uid: 'u1', email: 'a@b.c' }; } };
+
+test('callable passes data and the verified user to the handler', async () => {
+  let seen;
+  const handler = callable(async (data, ctx) => { seen = { data, ctx }; return { ok: 1 }; }, async () => ({ auth }));
+  const res = fakeRes();
+  await handler(fakeReq({ body: { data: { x: 1 } }, headers: { authorization: 'Bearer good' } }), res);
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.body, { result: { ok: 1 } });
+  assert.deepEqual(seen.data, { x: 1 });
+  assert.equal(seen.ctx.auth.uid, 'u1');
+  assert.equal(seen.ctx.auth.token.email, 'a@b.c');
+});
+
+test('callable treats a missing or invalid token as signed out', async () => {
+  let seen;
+  const handler = callable(async (data, ctx) => { seen = ctx.auth; return {}; }, async () => ({ auth }));
+  await handler(fakeReq({ body: { data: {} }, headers: { authorization: 'Bearer forged' } }), fakeRes());
+  assert.equal(seen, null);
+});
+
+test('callable maps HttpsError to a status and the callable error shape', async () => {
+  const handler = callable(async () => { throw new HttpsError('permission-denied', 'Premium subscription required'); }, async () => ({ auth }));
+  const res = fakeRes();
+  await handler(fakeReq({ body: { data: {} } }), res);
+  assert.equal(res.statusCode, 403);
+  assert.deepEqual(res.body, { error: { message: 'Premium subscription required', status: 'PERMISSION_DENIED' } });
+});
+
+test('callable hides unexpected errors behind a generic 500', async () => {
+  const handler = callable(async () => { throw new Error('db exploded with secrets'); }, async () => ({ auth }));
+  const res = fakeRes();
+  const log = console.error;
+  console.error = () => {};
+  await handler(fakeReq({ body: { data: {} } }), res);
+  console.error = log;
+  assert.equal(res.statusCode, 500);
+  assert.deepEqual(res.body, { error: { message: 'Internal error', status: 'INTERNAL' } });
+});
+
+test('callable answers CORS preflight and rejects non-POST', async () => {
+  const handler = callable(async () => ({}), async () => ({ auth }));
+  const pre = fakeRes();
+  await handler(fakeReq({ method: 'OPTIONS' }), pre);
+  assert.equal(pre.statusCode, 204);
+  assert.match(pre.headers['access-control-allow-headers'], /authorization/i);
+  const get = fakeRes();
+  await handler(fakeReq({ method: 'GET' }), get);
+  assert.equal(get.statusCode, 405);
+});
+
+// ---- webhook ----
+
+function webhookReq(payload, secret, signature) {
+  const raw = JSON.stringify(payload);
+  const sig = signature ?? crypto.createHmac('sha256', secret).update(raw).digest('hex');
+  const req = Readable.from([Buffer.from(raw)]);
+  req.method = 'POST';
+  req.headers = { 'x-razorpay-signature': sig };
+  return req;
+}
+const captured = (entity) => ({ event: 'payment.captured', payload: { payment: { entity } } });
+
+test('a correctly signed payment.captured webhook creates the license', async () => {
+  const db = fakeFirestore();
+  const res = fakeRes();
+  await handleWebhook(webhookReq(captured({ id: 'pay_W1', currency: 'USD', amount: 1500, email: 'w@example.com' }), 'whsec'), res,
+    { db, FieldValue, razorpay: fakeRazorpay(), webhookSecret: 'whsec' });
+  assert.equal(res.statusCode, 200);
+  assert.ok(db.read('licenses/pay_W1').key);
+});
+
+test('a webhook with a bad signature is refused and creates nothing', async () => {
+  const db = fakeFirestore();
+  const res = fakeRes();
+  await handleWebhook(webhookReq(captured({ id: 'pay_W2', currency: 'INR', amount: 100000 }), 'whsec', 'deadbeef'), res,
+    { db, FieldValue, razorpay: fakeRazorpay(), webhookSecret: 'whsec' });
+  assert.equal(res.statusCode, 401);
+  assert.equal(db.read('licenses/pay_W2'), undefined);
+});
+
+test('an underpaid webhook payment is ignored', async () => {
+  const db = fakeFirestore();
+  const res = fakeRes();
+  await handleWebhook(webhookReq(captured({ id: 'pay_W3', currency: 'USD', amount: 100 }), 'whsec'), res,
+    { db, FieldValue, razorpay: fakeRazorpay(), webhookSecret: 'whsec' });
+  assert.equal(res.statusCode, 200);
+  assert.equal(db.read('licenses/pay_W3'), undefined);
+});

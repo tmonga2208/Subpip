@@ -10,7 +10,8 @@ export const FIREBASE_CONFIG = {
 export const AUTH_BASE_URL = 'https://identitytoolkit.googleapis.com/v1';
 export const TOKEN_URL = `https://securetoken.googleapis.com/v1/token?key=${FIREBASE_CONFIG.apiKey}`;
 export const FIRESTORE_BASE_URL = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents`;
-export const FUNCTIONS_BASE_URL = `https://asia-south1-${FIREBASE_CONFIG.projectId}.cloudfunctions.net`;
+// SubPIP's server API (Vercel Functions in web/api/)
+export const API_BASE_URL = 'https://subpip.vercel.app/api';
 
 // ID tokens last an hour; refresh a little early
 export const TOKEN_MAX_AGE_MS = 50 * 60 * 1000;
