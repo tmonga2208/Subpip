@@ -8,6 +8,7 @@ import { isAcceptedPayment } from './pricing.js';
 import { sendLicenseEmail } from './emails.js';
 import { validPaymentSignature } from './orders.js';
 import { alertOwner } from './alerts.js';
+import { translateForUser, MAX_TEXT_LENGTH } from './translate.js';
 
 export function generateLicenseKey() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -203,20 +204,17 @@ export async function claimLicenseByEmail(data, ctx, deps) {
   return { success: false, error: 'No payment found for this email. Please complete payment first.' };
 }
 
-// Premium translation via MyMemory; a contact email raises its free daily limit
+// Premium translation (see translate.js)
 export async function translateText(data, ctx, deps) {
   const { uid } = requireAuth(ctx);
   const { text, targetLang } = data;
   if (!text || typeof text !== 'string') throw new HttpsError('invalid-argument', 'Text is required');
+  if (text.length > MAX_TEXT_LENGTH) throw new HttpsError('invalid-argument', 'Text is too long');
   if (!targetLang || typeof targetLang !== 'string') throw new HttpsError('invalid-argument', 'Target language is required');
 
   const user = await deps.db.collection('users').doc(uid).get();
   if (!user.exists || !user.data().isPremium) throw new HttpsError('permission-denied', 'Premium subscription required');
 
-  const params = new URLSearchParams({ q: text, langpair: `Autodetect|${targetLang}` });
-  if (deps.myMemoryEmail) params.set('de', deps.myMemoryEmail);
-  const response = await deps.fetch(`https://api.mymemory.translated.net/get?${params}`);
-  const body = await response.json();
-  if (body.responseStatus !== 200 || !body.responseData?.translatedText) throw new HttpsError('internal', 'Translation failed');
-  return { success: true, translation: body.responseData.translatedText, sourceText: text, targetLang };
+  const { translation, provider } = await translateForUser(deps, uid, text, targetLang);
+  return { success: true, translation, provider, sourceText: text, targetLang };
 }

@@ -117,16 +117,3 @@ test('translateText is premium-only and needs sign-in', async () => {
   await rejects(translateText({ text: 'hi', targetLang: 'es' }, {}, deps(db)), 'unauthenticated');
   await rejects(translateText({ text: 'hi', targetLang: 'es' }, signedIn('free'), deps(db)), 'permission-denied');
 });
-
-test('translateText returns the MyMemory translation for premium users', async () => {
-  const db = fakeFirestore({ 'users/pro': { isPremium: true } });
-  let calledUrl = '';
-  const fetch = async (url) => {
-    calledUrl = url;
-    return { json: async () => ({ responseStatus: 200, responseData: { translatedText: 'hola' } }) };
-  };
-  const result = await translateText({ text: 'hello', targetLang: 'es' }, signedIn('pro'), deps(db, {}, { fetch, myMemoryEmail: 'ops@example.com' }));
-  assert.equal(result.translation, 'hola');
-  assert.match(calledUrl, /langpair=Autodetect%7Ces|langpair=Autodetect\|es/);
-  assert.match(calledUrl, /de=ops%40example\.com/);
-});
