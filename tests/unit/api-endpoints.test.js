@@ -41,3 +41,11 @@ test('without FIREBASE_SERVICE_ACCOUNT the endpoints answer with a clean error',
     console.error = log;
   }
 });
+
+test('the API only depends on CommonJS-loadable jose (Vercel cannot require() ES modules)', async () => {
+  const { createRequire } = await import('node:module');
+  const requireFromWeb = createRequire(new URL('../../web/package.json', import.meta.url));
+  // firebase-admin 14 → jwks-rsa 4 → jose 6 (ESM-only) crashed every function at load on Vercel
+  const jose = requireFromWeb('jose/package.json');
+  assert.notEqual(jose.type, 'module', `jose ${jose.version} is ESM-only`);
+});
