@@ -142,8 +142,17 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
   function translateView() {
     if (!isPremium) return [backRow(), el('div', 'menu-note', UPGRADE_NOTE)];
     const code = getSessionSettings().targetLanguage;
+    const dual = !!getSessionSettings().dualSubtitles;
     return [
       backRow(),
+      item({
+        label: 'Show original too',
+        value: dual ? 'On' : 'Off',
+        onSelect: () => {
+          applyOverride({ dualSubtitles: !dual });
+          render();
+        }
+      }),
       item({
         label: 'Off',
         checked: !captions.translationOn,

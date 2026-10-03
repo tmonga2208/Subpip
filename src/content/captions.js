@@ -25,20 +25,27 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
   };
 
   // Translation with flicker prevention: show the last translation until the
-  // new one arrives, and never retry a line that already failed.
+  // new one arrives, and never retry a line that already failed. With dual
+  // subtitles the original is on screen anyway, so its translation simply
+  // appears under it when it arrives.
   let lastTranslation = '';
   let pendingTranslation = null;
   let translationTimer = null;
   const failedTranslations = new Set();
   session.onCleanup(() => clearTimeout(translationTimer));
 
-  function displayText(text) {
-    const lang = getSettings().targetLanguage;
-    if (!translationOn || !text || !lang) return text;
+  // What to put on screen for a caption line: { text }, or for dual subtitles
+  // { original, translation }
+  function display(text) {
+    const { targetLanguage: lang, dualSubtitles: dual } = getSettings();
+    if (!translationOn || !text || !lang) return { text };
 
     const cacheKey = `${text}_${lang}`;
-    if (translationCache[cacheKey]) return (lastTranslation = translationCache[cacheKey]);
-    if (failedTranslations.has(cacheKey)) return text;
+    if (translationCache[cacheKey]) {
+      lastTranslation = translationCache[cacheKey];
+      return dual ? { original: text, translation: lastTranslation } : { text: lastTranslation };
+    }
+    if (failedTranslations.has(cacheKey)) return { text };
 
     if (pendingTranslation !== cacheKey) {
       pendingTranslation = cacheKey;
@@ -52,7 +59,23 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
         }
       }, 80);
     }
-    return lastTranslation || text;
+    // A non-breaking space holds the translation's row, so the caption does
+    // not jump when it arrives
+    return dual ? { original: text, translation: '\u00A0' } : { text: lastTranslation || text };
+  }
+
+  function paint(el, shown) {
+    if (shown.original === undefined) {
+      el.textContent = shown.text;
+      return;
+    }
+    const original = pipDoc.createElement('span');
+    original.className = 'subpip-original';
+    original.textContent = shown.original;
+    const translation = pipDoc.createElement('span');
+    translation.className = 'subpip-translation';
+    translation.textContent = shown.translation;
+    el.replaceChildren(original, translation);
   }
 
   function limitCaptionLines(root) {
@@ -89,9 +112,8 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
 
     let currentText = '';
     rerender = () => {
-      const shown = displayText(currentText);
-      captionEl.textContent = shown;
-      captionEl.style.display = shown ? '' : 'none';
+      paint(captionEl, display(currentText));
+      captionEl.style.display = currentText ? '' : 'none';
     };
     return (text) => {
       if (text === currentText) return;
@@ -129,12 +151,12 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
     rerender = () => {
       if (!siteEl) return;
       const text = siteEl.textContent?.trim() || '';
-      const shown = displayText(text);
+      const shown = display(text);
       captionEl.replaceChildren();
 
-      if (shown !== text && siteEl.firstElementChild) {
+      if (shown.text !== text && siteEl.firstElementChild) {
         const line = siteEl.firstElementChild.cloneNode(false);
-        line.textContent = shown;
+        paint(line, shown);
         captionEl.appendChild(line);
       } else {
         for (const node of siteEl.childNodes) captionEl.appendChild(node.cloneNode(true));

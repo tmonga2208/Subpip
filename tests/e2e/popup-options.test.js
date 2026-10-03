@@ -49,6 +49,20 @@ test('premium: turning on translation and picking a language', async () => {
   await popup.close();
 });
 
+test('premium: "Show the original line too" is saved and still on next time', async () => {
+  const popup = await premiumPopup();
+  await popup.click('.row[data-go="translate"]');
+  assert.equal(await popup.$eval('#dual-on', (el) => el.checked), false);
+  await popup.click('#dual-on');
+  await sleep(100);
+  assert.equal((await ctx.storage()).subpipSettings.dualSubtitles, true);
+  await popup.close();
+  const again = await premiumPopup();
+  await again.click('.row[data-go="translate"]');
+  assert.equal(await again.$eval('#dual-on', (el) => el.checked), true);
+  await again.close();
+});
+
 test('premium: default playback speed', async () => {
   const popup = await premiumPopup();
   await popup.click('.row[data-go="speed"]');

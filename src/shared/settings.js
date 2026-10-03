@@ -15,6 +15,8 @@ export const DEFAULT_SETTINGS = {
   playbackSpeed: 1,
   translationEnabled: false,
   targetLanguage: 'en',
+  // Show the original line above its translation
+  dualSubtitles: false,
   externalSubtitleUrl: '',
   // Needs the optional all-sites permission, so it is opt-in
   autoPip: false

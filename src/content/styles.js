@@ -114,5 +114,13 @@ export function generateSubtitleStyles(settings) {
     left: 50% !important;
     transform: translateX(-50%) !important;
   }
+  span.subpip-original,
+  span.subpip-translation {
+    display: block !important;
+  }
+  span.subpip-original {
+    font-size: 0.8em !important;
+    opacity: 0.85 !important;
+  }
 `;
 }

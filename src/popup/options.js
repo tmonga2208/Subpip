@@ -50,6 +50,7 @@ export function initOptions({ doc, store, auth, router }) {
   radioList($('speed-list'), SPEEDS.map((speed) => ({ value: speed, label: `${speed}×` })),
     (speed) => store.update({ playbackSpeed: speed }));
   $('translate-on').addEventListener('change', () => store.update({ translationEnabled: $('translate-on').checked }));
+  $('dual-on').addEventListener('change', () => store.update({ dualSubtitles: $('dual-on').checked }));
 
   // Auto PiP needs SubPIP on every site: ask for that access only when it is
   // turned on (the request must happen inside this click)
@@ -84,6 +85,7 @@ export function initOptions({ doc, store, auth, router }) {
     setRowValue('autopip-value', autoPip ? 'On' : 'Off');
     setRowValue('account-value', auth.user() ? auth.user().email : 'Sign in');
     $('translate-on').checked = !!settings.translationEnabled;
+    $('dual-on').checked = !!settings.dualSubtitles;
     $('language-list').setAttribute('aria-disabled', String(!settings.translationEnabled));
     markChecked($('language-list'), settings.targetLanguage);
     markChecked($('speed-list'), settings.playbackSpeed);
