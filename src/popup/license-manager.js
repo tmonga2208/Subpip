@@ -252,6 +252,13 @@ export class LicenseManager {
         }
     }
 
+    // A code that ties a purchase on the checkout page to this account, so
+    // the payment activates Premium here by itself
+    async startCheckout() {
+        const result = await this.callFunction('startCheckout', {});
+        return result.code;
+    }
+
     // Find and activate a paid license for this account's verified email
     async claimLicenseByEmail() {
         try {

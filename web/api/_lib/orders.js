@@ -3,6 +3,8 @@
 import crypto from 'node:crypto';
 import { HttpsError } from './http.js';
 import { PRICES } from './pricing.js';
+import { accountForCheckout } from './checkout.js';
+import { log } from './log.js';
 
 export async function createOrder(data, ctx, deps) {
   const currency = data.currency;
@@ -14,7 +16,23 @@ export async function createOrder(data, ctx, deps) {
     receipt: `subpip_${deps.now().getTime()}`,
     notes: email ? { email } : {}
   });
-  return { orderId: order.id, amount: order.amount, currency: order.currency, keyId: deps.keyId };
+  const account = await recordAccount(deps, data.checkout, order.id);
+  return { orderId: order.id, amount: order.amount, currency: order.currency, keyId: deps.keyId, ...(account ? { accountEmail: account.email } : {}) };
+}
+
+// Started from the popup while signed in: the order is recorded for that
+// account, so its payment can activate Premium there without a key. If this
+// fails the purchase goes ahead as an ordinary one (the buyer pastes the key).
+async function recordAccount(deps, checkoutCode, orderId) {
+  try {
+    const account = await accountForCheckout(deps, checkoutCode);
+    if (!account) return null;
+    await deps.db.collection('orders').doc(orderId).set({ uid: account.uid, email: account.email, createdAt: deps.now().getTime() });
+    return account;
+  } catch (error) {
+    log('error', 'checkout-account-failed', { orderId, error: error.message });
+    return null;
+  }
 }
 
 export function validPaymentSignature(orderId, paymentId, signature, secret) {

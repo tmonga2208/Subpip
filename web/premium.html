@@ -56,12 +56,13 @@
         <div class="success-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></div>
         <h1>Payment successful</h1>
         <p class="muted">Your Premium license is ready.</p>
+        <p id="activatedNote" hidden>Premium is already active on <strong id="activatedEmail"></strong>. Open the SubPIP popup and it is there. Keep the key below as your proof of purchase.</p>
         <div class="license-box">
           <div class="license-label">Your license key</div>
           <div class="license-key" id="licenseKey"></div>
           <button class="btn btn-ghost btn-sm copy-btn" type="button" onclick="copyLicense()">Copy license key</button>
         </div>
-        <div class="instructions">
+        <div class="instructions" id="activateSteps">
           <h2>Activate it</h2>
           <ol>
             <li>Click the SubPIP icon in your browser.</li>
@@ -101,6 +102,9 @@
         const urlParams = new URLSearchParams(window.location.search);
         const prefilledEmail = urlParams.get('email') || '';
         document.getElementById('emailInput').value = prefilledEmail;
+        // Opened from the extension while signed in: this code ties the
+        // purchase to that account, so Premium activates by itself
+        const checkoutCode = urlParams.get('c') || '';
 
         // Dynamically load Razorpay script
         let razorpayLoaded = false;
@@ -135,7 +139,7 @@
             const response = await fetch(`${FUNCTIONS_BASE_URL}/createOrder`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ data: { currency: price.currency, email } })
+                body: JSON.stringify({ data: { currency: price.currency, email, ...(checkoutCode ? { checkout: checkoutCode } : {}) } })
             });
             const body = await response.json();
             if (body.error) throw new Error(body.error.message || 'Could not start the payment');
@@ -194,7 +198,7 @@
                 amount: order.amount,
                 currency: order.currency,
                 name: 'SubPIP Premium',
-                description: 'Lifetime Premium License',
+                description: order.accountEmail ? `Lifetime Premium for ${order.accountEmail}` : 'Lifetime Premium License',
                 image: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".85em" font-size="48" fill="%23e94560" font-family="sans-serif">P</text></svg>',
                 handler: async function (response) {
                     await handlePaymentSuccess(response, email);
@@ -231,28 +235,35 @@
 
             try {
                 // Server re-checks the payment with Razorpay and creates the license
-                const { licenseKey } = await confirmPayment(response);
+                // activatedFor: the account Premium was activated on, when the
+                // purchase was started from the extension
+                const { licenseKey, activatedFor } = await confirmPayment(response);
 
                 // Save to localStorage as backup
                 localStorage.setItem('subpip_license', JSON.stringify({
                     licenseKey: licenseKey,
                     paymentId: response.razorpay_payment_id,
-                    email: email
+                    email: email,
+                    activatedFor: activatedFor || null
                 }));
 
                 showLoading(false);
-                showSuccess(licenseKey, email);
+                showSuccess(licenseKey, email, activatedFor);
             } catch (error) {
                 showLoading(false);
                 showError('Failed to save license. Please contact support with payment ID: ' + response.razorpay_payment_id);
             }
         }
 
-        function showSuccess(licenseKey, email) {
+        function showSuccess(licenseKey, email, activatedFor) {
             document.getElementById('paymentSection').classList.add('hide');
             document.getElementById('successSection').classList.add('show');
             document.getElementById('licenseKey').textContent = licenseKey;
             document.getElementById('userEmailDisplay').textContent = email;
+            // Already active on the buyer's account: nothing to paste
+            document.getElementById('activatedEmail').textContent = activatedFor || '';
+            document.getElementById('activatedNote').hidden = !activatedFor;
+            document.getElementById('activateSteps').hidden = !!activatedFor;
         }
 
         window.copyLicense = function () {
@@ -287,7 +298,7 @@
                 try {
                     const data = JSON.parse(saved);
                     if (data.licenseKey) {
-                        showSuccess(data.licenseKey, data.email || '');
+                        showSuccess(data.licenseKey, data.email || '', data.activatedFor);
                     }
                 } catch (e) { }
             }

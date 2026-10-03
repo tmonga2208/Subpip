@@ -42,7 +42,7 @@
         <ul>
           <li><strong>Account</strong> – your email address and sign-in state, handled by Firebase Authentication.</li>
           <li><strong>Premium status</strong> – whether your account is Premium and your license key. Stored in Firebase Firestore.</li>
-          <li><strong>Purchase record</strong> – when you pay, we store the Razorpay payment ID, the email used for the purchase, the amount and currency, and the license key issued. We never receive or store your card or bank details.</li>
+          <li><strong>Purchase record</strong> – when you pay, we store the Razorpay payment ID, the email used for the purchase, the amount and currency, and the license key issued. If you start the purchase from the extension while signed in, we also record which account it is for, so Premium can be turned on for that account automatically. We never receive or store your card or bank details.</li>
         </ul>
       </section>
 

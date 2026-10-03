@@ -10,8 +10,13 @@ export function formatAmount(amount, currency) {
 
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-export function licenseEmail({ keys, payment }) {
+// activatedFor: the account Premium was already activated on (a purchase
+// started from the popup), so there is nothing left to paste
+export function licenseEmail({ keys, payment, activatedFor }) {
   const plural = keys.length > 1;
+  const active = activatedFor
+    ? `Premium is already active on ${activatedFor}: open SubPIP and it is there. Keep this key as your proof of purchase.`
+    : '';
   const steps = [
     'Click the SubPIP icon in your browser.',
     'Sign in (or create an account) with this email address.',
@@ -26,8 +31,7 @@ export function licenseEmail({ keys, payment }) {
     `Your license key${plural ? 's' : ''}:`,
     ...keys.map((key) => `  ${key}`),
     '',
-    'To activate:',
-    ...steps.map((step, i) => `  ${i + 1}. ${step}`),
+    ...(active ? [active] : ['To activate:', ...steps.map((step, i) => `  ${i + 1}. ${step}`)]),
     '',
     receipt,
     'Not happy? You can get a full refund within 7 days of purchase, no questions asked.',
@@ -37,7 +41,7 @@ export function licenseEmail({ keys, payment }) {
 <h2 style="margin:0 0 12px">Your SubPIP Premium license</h2>
 <p>Thanks for getting SubPIP Premium!</p>
 ${keys.map((key) => `<p style="font:600 18px ui-monospace,Menlo,monospace;background:#f4f4f5;padding:12px 14px;border-radius:8px">${escapeHtml(key)}</p>`).join('')}
-<ol>${steps.map((step) => `<li>${escapeHtml(step)}</li>`).join('')}</ol>
+${active ? `<p>${escapeHtml(active)}</p>` : `<ol>${steps.map((step) => `<li>${escapeHtml(step)}</li>`).join('')}</ol>`}
 ${receipt ? `<p style="color:#555">${escapeHtml(receipt)}</p>` : ''}
 <p style="color:#555">Not happy? You can get a full refund within 7 days of purchase, no questions asked.</p>
 <p style="color:#555">Questions: <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></p>
@@ -46,7 +50,7 @@ ${receipt ? `<p style="color:#555">${escapeHtml(receipt)}</p>` : ''}
 }
 
 // Never throws; a failure is logged and alerted, and the caller carries on
-export async function sendLicenseEmail(deps, { to, keys, payment }) {
+export async function sendLicenseEmail(deps, { to, keys, payment, activatedFor }) {
   if (!to) {
     log('warn', 'license-email-skipped', { reason: 'no-email', paymentId: payment?.id });
     return false;
@@ -56,7 +60,7 @@ export async function sendLicenseEmail(deps, { to, keys, payment }) {
     return false;
   }
   try {
-    await deps.mailer.send({ to, ...licenseEmail({ keys, payment }) });
+    await deps.mailer.send({ to, ...licenseEmail({ keys, payment, activatedFor }) });
     log('info', 'license-email-sent', { paymentId: payment?.id });
     return true;
   } catch (error) {

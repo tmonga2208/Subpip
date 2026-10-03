@@ -84,7 +84,12 @@ export function initAccount({ doc, auth }) {
   });
 
   doc.querySelectorAll('[data-action="get-premium"]').forEach((button) => {
-    button.addEventListener('click', () => chrome.tabs.create({ url: PREMIUM_URL }));
+    button.addEventListener('click', async () => {
+      setBusy(button, true);
+      const url = await auth.checkoutUrl(PREMIUM_URL);
+      setBusy(button, false);
+      chrome.tabs.create({ url });
+    });
   });
 
   function render() {

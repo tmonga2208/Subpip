@@ -47,6 +47,7 @@ window.Razorpay.prototype.on = function (event, fn) { this.handlers[event] = fn;
 window.Razorpay.prototype.open = function () {
   window.__rzpOpened = true;
   window.__rzpOptions = { amount: this.options.amount, currency: this.options.currency, orderId: this.options.order_id };
+  window.__rzpDescription = this.options.description;
   const mode = window.__rzpMode || 'success';
   setTimeout(() => {
     if (mode === 'success') this.options.handler({ razorpay_payment_id: 'pay_TEST123', razorpay_order_id: this.options.order_id, razorpay_signature: 'sig_TEST' });
@@ -65,8 +66,10 @@ export function razorpayStub({ blocked = false } = {}) {
 }
 
 // createOrder (server-priced: INR 100000, USD 1500) and confirmPayment
-// (requires order id + signature from the fake Razorpay)
-export function confirmStub({ ok = true } = {}) {
+// (requires order id + signature from the fake Razorpay). With `account`, an
+// order that carries a checkout code is for that account, and paying it
+// activates Premium there. `seen` collects what the page sent.
+export function confirmStub({ ok = true, account = null, seen = [] } = {}) {
   const cors = { 'Access-Control-Allow-Origin': '*' };
   const json = (status, body) => ({ status, contentType: 'application/json', headers: cors, body: JSON.stringify(body) });
   return (request) => {
@@ -76,9 +79,12 @@ export function confirmStub({ ok = true } = {}) {
       return true;
     }
     if (url.includes('/api/createOrder')) {
-      const { currency } = JSON.parse(request.postData() || '{}').data || {};
+      const data = JSON.parse(request.postData() || '{}').data || {};
+      seen.push({ endpoint: 'createOrder', data });
+      const { currency } = data;
       const amount = { INR: 100000, USD: 1500 }[currency];
-      request.respond(amount ? json(200, { result: { orderId: `order_${currency}`, amount, currency, keyId: 'rzp_test' } }) : json(400, { error: { message: 'Unsupported currency', status: 'INVALID_ARGUMENT' } }));
+      const forAccount = account && data.checkout ? { accountEmail: account } : {};
+      request.respond(amount ? json(200, { result: { orderId: `order_${currency}`, amount, currency, keyId: 'rzp_test', ...forAccount } }) : json(400, { error: { message: 'Unsupported currency', status: 'INVALID_ARGUMENT' } }));
       return true;
     }
     if (!url.includes('/api/confirmPayment')) return false;
@@ -86,7 +92,7 @@ export function confirmStub({ ok = true } = {}) {
     if (!orderId || !signature) {
       request.respond(json(400, { error: { message: 'Valid payment and order IDs are required', status: 'INVALID_ARGUMENT' } }));
     } else if (ok) {
-      request.respond(json(200, { result: { licenseKey: 'SUBPIP-TESTKEY1-ABCD', email: 'buyer@example.com' } }));
+      request.respond(json(200, { result: { licenseKey: 'SUBPIP-TESTKEY1-ABCD', email: 'buyer@example.com', ...(account ? { activatedFor: account } : {}) } }));
     } else {
       request.respond(json(400, { error: { message: 'Payment not completed', status: 'FAILED_PRECONDITION' } }));
     }

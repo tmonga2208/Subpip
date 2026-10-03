@@ -63,6 +63,24 @@ export function createAuth(manager = new LicenseManager()) {
       if (result.success) await refreshStatus();
       return result;
     },
+    // Where "Get Premium" goes. Signed in, the checkout is tied to this
+    // account (Premium then activates without a key); if the server cannot be
+    // reached in time the page still opens, with the email filled in.
+    async checkoutUrl(baseUrl, timeoutMs = 4000) {
+      if (!user) return baseUrl;
+      const params = new URLSearchParams();
+      try {
+        const code = await Promise.race([
+          manager.startCheckout(),
+          new Promise((resolve) => setTimeout(resolve, timeoutMs))
+        ]);
+        if (code) params.set('c', code);
+      } catch (e) {
+        // Fall back to an ordinary purchase; the key can be pasted afterwards
+      }
+      params.set('email', user.email);
+      return `${baseUrl}?${params}`;
+    },
     async checkPayment() {
       const result = await manager.claimLicenseByEmail();
       if (result.emailNotVerified) {

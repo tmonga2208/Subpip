@@ -93,12 +93,36 @@ export async function createLicenseForPayment(deps, payment) {
 const EMAIL_CLAIM_MS = 5 * 60 * 1000;
 
 export async function issueLicense(deps, payment) {
-  const { key, email, ref } = await createLicenseForPayment(deps, payment);
-  await emailLicenseOnce(deps, { ref, key, email, payment });
-  return key;
+  return (await issue(deps, payment)).key;
 }
 
-async function emailLicenseOnce(deps, { ref, key, email, payment }) {
+async function issue(deps, payment) {
+  const { key, email, ref } = await createLicenseForPayment(deps, payment);
+  const activatedFor = await activateForOrder(deps, payment, ref);
+  await emailLicenseOnce(deps, { ref, key, email, payment, activatedFor });
+  return { key, activatedFor };
+}
+
+// An order started from the popup (see checkout.js) names the account it is
+// for: Premium is activated there straight away. Only the server's own record
+// of the order counts, never notes on the payment, which the payer controls.
+// Returns the account's email, or null. It never throws: the buyer still gets
+// the key and can activate by hand.
+async function activateForOrder(deps, payment, licenseRef) {
+  if (!payment.order_id) return null;
+  try {
+    const order = await deps.db.collection('orders').doc(payment.order_id).get();
+    if (!order.exists) return null;
+    const { uid, email } = order.data();
+    const bound = await bindLicenseToUser(deps, licenseRef, uid);
+    return bound.success ? email || 'your SubPIP account' : null;
+  } catch (error) {
+    log('error', 'auto-activation-failed', { paymentId: payment.id, error: error.message });
+    return null;
+  }
+}
+
+async function emailLicenseOnce(deps, { ref, key, email, payment, activatedFor }) {
   if (!email) return;
   if (!deps.mailer) {
     log('error', 'license-email-skipped', { reason: 'mailer-not-configured', paymentId: payment.id });
@@ -113,7 +137,7 @@ async function emailLicenseOnce(deps, { ref, key, email, payment }) {
     return true;
   });
   if (!claimed) return;
-  if (await sendLicenseEmail(deps, { to: email, keys: [key], payment })) await ref.update({ emailedAt: nowMs });
+  if (await sendLicenseEmail(deps, { to: email, keys: [key], payment, activatedFor })) await ref.update({ emailedAt: nowMs });
 }
 
 export const RESEND_MESSAGE = "If a purchase exists for that email, we've sent the license to it.";
@@ -222,8 +246,8 @@ export async function confirmPayment(data, ctx, deps) {
   if (payment.order_id !== orderId) throw new HttpsError('failed-precondition', 'Payment does not match the order');
 
   try {
-    const licenseKey = await issueLicense(deps, payment);
-    return { licenseKey, email: payment.email || null };
+    const { key, activatedFor } = await issue(deps, payment);
+    return { licenseKey: key, email: payment.email || null, ...(activatedFor ? { activatedFor } : {}) };
   } catch (error) {
     await alertOwner(deps, 'license-creation-failed', `Payment ${paymentId} was captured but creating the license failed: ${error.message}`, { paymentId, orderId });
     throw new HttpsError('internal', 'Payment received, but creating your license failed. We have been notified.');

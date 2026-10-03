@@ -63,7 +63,8 @@ export function json(status, body) {
 // the request; everything else goes to the network untouched.
 // status: 'ok' | 'slow' (answers after 2s) | 'fail' (500); premiumAfterActivate
 // flips the user to Premium once activateLicense has been called.
-export function firebaseStub({ uid = 'u1', email = 'tester@example.com', premium = false, signIn = 'ok', status = 'ok', premiumAfterActivate = false, deviceId = null } = {}) {
+// checkout: the code startCheckout answers with; without one it fails (500)
+export function firebaseStub({ uid = 'u1', email = 'tester@example.com', premium = false, signIn = 'ok', status = 'ok', premiumAfterActivate = false, deviceId = null, checkout = null } = {}) {
   let isPremium = premium;
   return (request) => {
     const url = request.url();
@@ -83,6 +84,10 @@ export function firebaseStub({ uid = 'u1', email = 'tester@example.com', premium
         : json(200, { fields: { email: { stringValue: email }, isPremium: { booleanValue: isPremium }, ...(deviceId ? { deviceId: { stringValue: deviceId } } : {}) } }));
       if (status === 'slow') setTimeout(answer, 2000);
       else answer();
+      return true;
+    }
+    if (url.startsWith('https://subpip.vercel.app/api/startCheckout')) {
+      request.respond(checkout ? json(200, { result: { code: checkout } }) : json(500, { error: { message: 'Internal error', status: 'INTERNAL' } }));
       return true;
     }
     if (url.startsWith('https://subpip.vercel.app/api/activateLicense')) {
