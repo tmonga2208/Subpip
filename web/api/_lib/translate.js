@@ -7,7 +7,7 @@ import { alertOwner, day } from './alerts.js';
 
 export const DAILY_CHAR_LIMIT = 60000;
 export const MAX_TEXT_LENGTH = 1000;
-export const DEEPL_TARGETS = { en: 'EN-US', es: 'ES', fr: 'FR', de: 'DE', it: 'IT', pt: 'PT-BR', zh: 'ZH-HANS', ja: 'JA', ko: 'KO', ar: 'AR', ru: 'RU' };
+export const DEEPL_TARGETS = { en: 'EN-US', es: 'ES', fr: 'FR', de: 'DE', it: 'IT', pt: 'PT-BR', zh: 'ZH-HANS', ja: 'JA', ko: 'KO', hi: 'HI', ar: 'AR', ru: 'RU' };
 const DEEPL_URL = 'https://api-free.deepl.com/v2/translate';
 
 const cacheId = (lang, text) => crypto.createHash('sha256').update(`${lang}\n${text}`).digest('hex');

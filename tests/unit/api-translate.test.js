@@ -19,7 +19,7 @@ function deepl({ status = 200, text = 'hola' } = {}) {
 const deps = (fetch, extra = {}) => ({ db: fakeFirestore(), FieldValue, fetch, deeplKey: 'dk', mailer: fakeMailer(), alertTo: 'o@x.y', now: fixedClock('2026-09-29T10:00:00Z'), ...extra });
 
 test('DeepL target codes', () => {
-  assert.deepEqual(DEEPL_TARGETS, { en: 'EN-US', es: 'ES', fr: 'FR', de: 'DE', it: 'IT', pt: 'PT-BR', zh: 'ZH-HANS', ja: 'JA', ko: 'KO', ar: 'AR', ru: 'RU' });
+  assert.deepEqual(DEEPL_TARGETS, { en: 'EN-US', es: 'ES', fr: 'FR', de: 'DE', it: 'IT', pt: 'PT-BR', zh: 'ZH-HANS', ja: 'JA', ko: 'KO', hi: 'HI', ar: 'AR', ru: 'RU' });
 });
 
 test('first request goes to DeepL, the second comes from the cache', async () => {
@@ -49,9 +49,15 @@ test('over the daily cap the server says so (the extension then uses MyMemory)',
   assert.equal(calls.length, 0);
 });
 
+test('Hindi is translated by DeepL like the other languages', async () => {
+  const { fetch, calls } = deepl({ text: 'नमस्ते' });
+  assert.deepEqual(await translateForUser(deps(fetch), 'u1', 'hello', 'hi'), { translation: 'नमस्ते', provider: 'deepl' });
+  assert.deepEqual(calls[0].body, { text: ['hello'], target_lang: 'HI' });
+});
+
 test('unsupported languages and a missing key are declined without calling DeepL', async () => {
   const { fetch, calls } = deepl();
-  await rejects(translateForUser(deps(fetch), 'u1', 'hello', 'hi'), 'failed-precondition');
+  await rejects(translateForUser(deps(fetch), 'u1', 'hello', 'tlh'), 'failed-precondition');
   await rejects(translateForUser(deps(fetch, { deeplKey: '' }), 'u1', 'hello', 'es'), 'failed-precondition');
   assert.equal(calls.length, 0);
 });
