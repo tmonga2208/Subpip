@@ -1,8 +1,10 @@
-// SubPIP background service worker: translation requests and auto-PiP
-// content script registration.
+// SubPIP background service worker: translation requests, the Alt+P
+// shortcut and auto-PiP content script registration.
 
-import { ALL_SITES } from './shared/settings.js';
+import { ALL_SITES, readStoredSettings } from './shared/settings.js';
 import { TOKEN_URL, API_BASE_URL, TOKEN_MAX_AGE_MS } from './shared/firebase.js';
+import { togglePipInTab, injectRelay } from './shared/inject.js';
+import { probeTab } from './popup/status.js';
 
 // Get a fresh Firebase ID token for the signed-in user (stored by the popup)
 async function getIdToken() {
@@ -78,6 +80,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch(() => sendResponse({ translation: null }));
     return true; // keep channel open for async sendResponse
   }
+});
+
+// Alt+P: open or close Picture-in-Picture without going through the popup
+function togglePipFromShortcut(tab) {
+  if (!tab?.id) return;
+  // This first injection has to be sent before anything is awaited. Only then
+  // does the shortcut's user gesture reach the page, where it stays valid for
+  // a few seconds - long enough for the steps below. requestWindow needs it.
+  const activated = chrome.scripting.executeScript({ target: { tabId: tab.id }, world: 'MAIN', func: () => {} });
+  (async () => {
+    await activated;
+    const probe = await probeTab(tab.id);
+    if (!probe || !(probe.hasVideo || probe.pipOpen)) throw new Error('Nothing to open on this page');
+    await togglePipInTab(tab.id, await readStoredSettings());
+    await injectRelay(tab.id);
+  })().catch(() => {
+    // No video, or a page SubPIP cannot run on: the popup says which
+    chrome.action.openPopup().catch(() => {});
+  });
+}
+
+chrome.commands.onCommand.addListener((command, tab) => {
+  if (command === 'toggle-pip') togglePipFromShortcut(tab);
 });
 
 // Auto-PiP needs SubPIP running in every page before the user switches tabs,

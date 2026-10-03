@@ -23,3 +23,12 @@ test('the extension may call the SubPIP API on Vercel, not Cloud Functions', () 
   assert.ok(manifest.host_permissions.includes('https://subpip.vercel.app/*'));
   assert.ok(!manifest.host_permissions.some((host) => host.includes('cloudfunctions.net')));
 });
+
+test('Alt+P toggles Picture-in-Picture; the popup has its own shortcut', () => {
+  const { 'toggle-pip': toggle, _execute_action: popup } = manifest.commands;
+  assert.equal(toggle.suggested_key.default, 'Alt+P');
+  assert.ok(toggle.description);
+  // Two commands on one key: Chrome would bind only one of them
+  assert.notEqual(popup.suggested_key.default, 'Alt+P');
+  assert.equal(Object.values(popup.suggested_key).includes('Alt+P'), false);
+});

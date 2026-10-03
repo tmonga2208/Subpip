@@ -28,14 +28,20 @@ function probePage() {
   return { host: location.hostname, pipOpen, hasVideo: videos.length > 0, hasTextTrack };
 }
 
+// What is in the tab right now, or null where SubPIP cannot run (error pages,
+// PDFs, pages we lack access to)
+export async function probeTab(tabId) {
+  try {
+    const [{ result }] = await chrome.scripting.executeScript({ target: { tabId }, world: 'MAIN', func: probePage });
+    return result || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function detectPage(tab) {
   if (!tab || !tab.url || RESTRICTED.some((pattern) => pattern.test(tab.url))) return { state: 'restricted' };
-  let probe;
-  try {
-    [{ result: probe }] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, world: 'MAIN', func: probePage });
-  } catch {
-    return { state: 'restricted' }; // error pages, PDFs, pages we lack access to
-  }
+  const probe = await probeTab(tab.id);
   if (!probe) return { state: 'restricted' };
   const host = probe.host.replace(/^www\./, '');
   const adapter = getSiteAdapter(probe.host);

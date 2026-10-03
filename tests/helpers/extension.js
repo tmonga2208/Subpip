@@ -2,7 +2,7 @@
 // against a fixture tab. The test copy of the extension gets all-sites access
 // so the popup can inspect and inject into test tabs without a toolbar click.
 import puppeteer from 'puppeteer-core';
-import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { appendFile, cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { before, after, beforeEach } from 'node:test';
@@ -10,12 +10,20 @@ import { findBrowser } from '../../scripts/find-browser.mjs';
 import { startServer } from './server.js';
 import { DIST_DIR, FIXTURES_DIR, openFixture } from './browser.js';
 
-async function launchWithExtension() {
+async function launchWithExtension({ shortcutViaAction = false } = {}) {
   const extDir = await mkdtemp(path.join(os.tmpdir(), 'subpip-ext-'));
   await cp(DIST_DIR, extDir, { recursive: true });
   const manifestPath = path.join(extDir, 'manifest.json');
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
   manifest.host_permissions.push('<all_urls>');
+  if (shortcutViaAction) {
+    // A test cannot press an extension shortcut, but it can click the toolbar
+    // button, which is the same kind of browser gesture. This copy has no
+    // popup, and its click runs the real shortcut handler.
+    delete manifest.action.default_popup;
+    await appendFile(path.join(extDir, 'background.js'),
+      "\nchrome.action.onClicked.addListener((tab) => chrome.commands.onCommand.dispatch('toggle-pip', tab));\n");
+  }
   await writeFile(manifestPath, JSON.stringify(manifest));
 
   const userDataDir = await mkdtemp(path.join(os.tmpdir(), 'subpip-test-'));
@@ -86,11 +94,11 @@ export function firebaseStub({ uid = 'u1', email = 'tester@example.com', premium
   };
 }
 
-export function useExtension() {
+export function useExtension(options) {
   const ctx = {};
   before(async () => {
     ctx.server = await startServer({ fixturesDir: FIXTURES_DIR, distDir: DIST_DIR });
-    Object.assign(ctx, await launchWithExtension());
+    Object.assign(ctx, await launchWithExtension(options));
   });
   after(async () => {
     await ctx.browser?.close();
@@ -110,6 +118,8 @@ export function useExtension() {
   ctx.setAuthCache = (auth) => ctx.worker.evaluate((value) => chrome.storage.local.set({ subpipAuth: value }), auth);
   ctx.authCache = () => ctx.worker.evaluate(async () => (await chrome.storage.local.get('subpipAuth')).subpipAuth);
   ctx.tabIdFor = (url) => ctx.worker.evaluate(async (u) => (await chrome.tabs.query({ url: u }))[0].id, url);
+  // Only with { shortcutViaAction: true }: the toolbar click that stands in for Alt+P
+  ctx.pressShortcut = async (page) => page.triggerExtensionAction((await ctx.browser.extensions()).get(ctx.extensionId));
 
   // Opens popup.html in its own popup window. The popup then targets the
   // active tab of the normal window (see status.js getTargetTab).

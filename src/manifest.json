@@ -22,12 +22,15 @@
     "service_worker": "background.js"
   },
   "commands": {
+    "toggle-pip": {
+      "suggested_key": {
+        "default": "Alt+P"
+      },
+      "description": "Open or close Picture-in-Picture"
+    },
     "_execute_action": {
       "suggested_key": {
-        "windows": "Alt+P",
-        "mac": "Alt+P",
-        "chromeos": "Alt+P",
-        "linux": "Alt+P"
+        "default": "Alt+Shift+P"
       }
     }
   },

@@ -1,6 +1,7 @@
 // Home: the page status card and the Open / Close Picture-in-Picture button
 
 import { getTargetTab, detectPage, describeStatus } from './status.js';
+import { togglePipInTab, injectRelay } from '../shared/inject.js';
 
 export function initHome({ doc, store, auth }) {
   const $ = (id) => doc.getElementById(id);
@@ -22,16 +23,10 @@ export function initHome({ doc, store, auth }) {
     if (!tab) return;
     const settings = { ...store.get(), isPremium: auth.isPremium(), uid: auth.user()?.uid };
     try {
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        world: 'MAIN',
-        func: (s) => { window.__SUBPIP_SETTINGS__ = s; window.__SUBPIP_RUN__ = true; },
-        args: [settings]
-      });
-      await chrome.scripting.executeScript({ target: { tabId: tab.id }, world: 'MAIN', files: ['script.js'] });
+      await togglePipInTab(tab.id, settings);
       // Then save and add the relay (translation + live settings)
       await store.flush();
-      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['translate-relay.js'] });
+      await injectRelay(tab.id);
     } catch (error) {
       console.warn('[SubPIP] Could not start Picture-in-Picture:', error);
     }
