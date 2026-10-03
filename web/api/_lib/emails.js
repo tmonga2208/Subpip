@@ -2,7 +2,7 @@
 import { alertOwner } from './alerts.js';
 import { log } from './log.js';
 
-const SUPPORT_EMAIL = 'tarunmonga2208@gmail.com';
+export const SUPPORT_EMAIL = 'tarunmonga2208@gmail.com';
 
 export function formatAmount(amount, currency) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount / 100);

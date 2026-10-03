@@ -143,9 +143,9 @@ async function emailLicenseOnce(deps, { ref, key, email, payment, activatedFor }
 export const RESEND_MESSAGE = "If a purchase exists for that email, we've sent the license to it.";
 const RESEND_INTERVAL_MS = 10 * 60 * 1000;
 const RESEND_PER_ADDRESS_PER_DAY = 3;
-// Keeps the lost-key form from spending the Gmail allowance that purchase
-// emails and alerts depend on
-const RESEND_GLOBAL_PER_DAY = 100;
+// The email service's free plan sends 100 emails a day in all: this keeps the
+// lost-key form from spending the share that purchase emails and alerts need
+const RESEND_GLOBAL_PER_DAY = 30;
 
 // "Lost your key?": emails a buyer's keys, only to the purchase email, rate
 // limited; the reply never reveals a purchase (the email is sent after it)

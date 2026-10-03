@@ -40,8 +40,11 @@ test('alerts never throw, even when email fails or is not configured', async () 
 });
 
 test('configStatus reports presence only, and what is required', () => {
-  const config = configStatus({ FIREBASE_SERVICE_ACCOUNT: '{}', RAZORPAY_KEY_SECRET: 's', RAZORPAY_WEBHOOK_SECRET: 'w', GMAIL_USER: 'a@b.c', GMAIL_APP_PASSWORD: 'p' });
+  const config = configStatus({ FIREBASE_SERVICE_ACCOUNT: '{}', RAZORPAY_KEY_SECRET: 's', RAZORPAY_WEBHOOK_SECRET: 'w', RESEND_API_KEY: 're_p', EMAIL_FROM: 'SubPIP <a@b.c>' });
   assert.deepEqual(config, { firebase: true, razorpay: true, webhook: true, deepl: false, email: true });
   assert.equal(requiredConfigOk(config), true);
   assert.equal(requiredConfigOk({ ...config, email: false }), false);
+  // Resend needs both its key and a sender on a verified domain
+  assert.equal(configStatus({ RESEND_API_KEY: 're_p' }).email, false);
+  assert.equal(configStatus({ EMAIL_FROM: 'SubPIP <a@b.c>' }).email, false);
 });

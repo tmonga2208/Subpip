@@ -1,8 +1,8 @@
 // Feedback from the page shown after SubPIP is uninstalled (uninstalled.html).
 // It is anonymous: a reason, an optional comment and the extension version.
 // Each answer is stored and emailed to the owner, within daily caps so a flood
-// can neither fill the database nor use up the Gmail allowance that license
-// emails depend on.
+// can neither fill the database nor use up the daily email allowance that
+// license emails depend on.
 import crypto from 'node:crypto';
 import { HttpsError } from './http.js';
 import { day } from './alerts.js';

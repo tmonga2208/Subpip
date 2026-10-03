@@ -3,8 +3,9 @@
 //   RAZORPAY_KEY_SECRET       Razorpay API key secret (pairs with RAZORPAY_KEY_ID)
 //   RAZORPAY_WEBHOOK_SECRET   secret set on the Razorpay webhook
 //   DEEPL_API_KEY             DeepL API Free key (Premium translation)
-//   GMAIL_USER, GMAIL_APP_PASSWORD  Gmail account + app password for emails
-//   ALERT_EMAIL               optional; owner alerts go here (default GMAIL_USER)
+//   RESEND_API_KEY            Resend API key (license emails, alerts, feedback)
+//   EMAIL_FROM                sender on a domain verified in Resend, e.g. SubPIP <licenses@example.com>
+//   ALERT_EMAIL               optional; owner alerts go here (default: the support address)
 
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
@@ -12,6 +13,7 @@ import { getAuth } from 'firebase-admin/auth';
 import Razorpay from 'razorpay';
 import { waitUntil } from '@vercel/functions';
 import { createMailer } from './mailer.js';
+import { SUPPORT_EMAIL } from './emails.js';
 
 export const RAZORPAY_KEY_ID = 'rzp_live_S9zPibMgaqE7VV';
 
@@ -22,7 +24,7 @@ export function configStatus(env) {
     razorpay: !!env.RAZORPAY_KEY_SECRET,
     webhook: !!env.RAZORPAY_WEBHOOK_SECRET,
     deepl: !!env.DEEPL_API_KEY,
-    email: !!(env.GMAIL_USER && env.GMAIL_APP_PASSWORD)
+    email: !!(env.RESEND_API_KEY && env.EMAIL_FROM)
   };
 }
 
@@ -41,8 +43,9 @@ export function liveDeps(env = process.env) {
     keySecret: env.RAZORPAY_KEY_SECRET || '',
     webhookSecret: env.RAZORPAY_WEBHOOK_SECRET || '',
     deeplKey: env.DEEPL_API_KEY || '',
-    mailer: createMailer({ user: env.GMAIL_USER, pass: env.GMAIL_APP_PASSWORD }),
-    alertTo: env.ALERT_EMAIL || env.GMAIL_USER || '',
+    // Replies to any email reach support, whatever address sends it
+    mailer: createMailer({ apiKey: env.RESEND_API_KEY, from: env.EMAIL_FROM, replyTo: SUPPORT_EMAIL }),
+    alertTo: env.ALERT_EMAIL || SUPPORT_EMAIL,
     fetch: globalThis.fetch,
     now: () => new Date(),
     // Finish work after the response is sent (Vercel keeps the function alive)

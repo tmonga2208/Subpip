@@ -5,7 +5,6 @@ import crypto from 'node:crypto';
 import { Readable } from 'node:stream';
 import { issueLicense, resendLicense, confirmPayment } from '../../web/api/_lib/licensing.js';
 import { handleWebhook } from '../../web/api/_lib/webhook.js';
-import { mailerOptions } from '../../web/api/_lib/mailer.js';
 import { fakeFirestore, fakeRazorpay, fakeMailer, fixedClock, FieldValue, signFor } from '../helpers/fake-firestore.js';
 
 const quiet = async (fn) => { const e = console.error; const l = console.log; console.error = () => {}; console.log = () => {}; try { return await fn(); } finally { console.error = e; console.log = l; } };
@@ -54,12 +53,14 @@ test('lost-key sends at most 3 emails per address per day', async () => {
   assert.equal(d.mailer.sent.length, 3);
 });
 
-test('lost-key sends at most 100 emails a day across all addresses', async () => {
+// Resend's free plan sends 100 emails a day in all: the lost-key form may use
+// 30 of them, which leaves room for purchase emails, alerts and feedback
+test('lost-key sends at most 30 emails a day across all addresses', async () => {
   const d = deps();
-  for (let i = 0; i < 105; i++) d.db.docs.set(`licenses/pay_${i}`, { key: `SUBPIP-K${String(i).padStart(7, '0')}-0001`, email: `b${i}@example.com`, verified: true });
-  for (let i = 0; i < 105; i++) await quiet(() => resendLicense({ email: `b${i}@example.com` }, {}, d));
+  for (let i = 0; i < 35; i++) d.db.docs.set(`licenses/pay_${i}`, { key: `SUBPIP-K${String(i).padStart(7, '0')}-0001`, email: `b${i}@example.com`, verified: true });
+  for (let i = 0; i < 35; i++) await quiet(() => resendLicense({ email: `b${i}@example.com` }, {}, d));
   await Promise.all(d.deferred);
-  assert.equal(d.mailer.sent.length, 100);
+  assert.equal(d.mailer.sent.length, 30);
 });
 
 // 2. Charged but rejected → alert
@@ -111,11 +112,6 @@ test('a license created without its email is emailed by the next call, once', as
   await quiet(() => issueLicense(d, payment));
   assert.equal(d.mailer.sent.filter((m) => m.to === 'lost@example.com').length, 1);
   assert.ok(d.db.read('licenses/pay_L').emailedAt);
-});
-
-test('SMTP connections time out quickly instead of hanging the function', () => {
-  const options = mailerOptions('a@b.c', 'pw');
-  assert.ok(options.connectionTimeout <= 10000 && options.greetingTimeout <= 10000 && options.socketTimeout <= 15000);
 });
 
 // 5. Webhook alerts

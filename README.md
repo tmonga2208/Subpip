@@ -96,8 +96,9 @@ The functions run in Mumbai (`web/vercel.json`), next to the Firestore database.
 | `RAZORPAY_KEY_SECRET` | Razorpay API key secret |
 | `RAZORPAY_WEBHOOK_SECRET` | Razorpay webhook secret (events: `payment.captured`, `refund.processed`) → `https://subpip.vercel.app/api/razorpayWebhook` |
 | `DEEPL_API_KEY` | DeepL API Free key (online Premium translation; optional — without it translation falls back to MyMemory) |
-| `GMAIL_USER`, `GMAIL_APP_PASSWORD` | Gmail account and app password for license emails, alerts and uninstall feedback |
-| `ALERT_EMAIL` | Optional; where owner alerts and feedback go (defaults to `GMAIL_USER`) |
+| `RESEND_API_KEY` | [Resend](https://resend.com) API key for license emails, alerts and uninstall feedback (the free plan sends 100 emails a day) |
+| `EMAIL_FROM` | Sender on a domain verified in Resend, e.g. `SubPIP <licenses@example.com>`. Without a verified domain Resend only delivers to the account's own address |
+| `ALERT_EMAIL` | Optional; where owner alerts and feedback go (defaults to the support address) |
 
 In Razorpay, set **Payment capture → Automatic** (Settings → Payment capture). The webhook issues licenses on `payment.captured`, so buyers who close the checkout early still get theirs.
 
