@@ -8,20 +8,37 @@ export function findHiddenTextTrack(video) {
   ) || null;
 }
 
+const CHARACTER_REFERENCES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', lrm: '', rlm: '' };
+
+// Caption text as plain text: formatting tags (<i>, <font ...>, <v Name>,
+// <c.class>, karaoke <00:01.000>) and ASS overrides ({\an8}) are removed and
+// character references decoded. Captions are shown with textContent, so
+// anything left in would appear on screen as typed.
+export function plainCaptionText(text) {
+  return (text || '')
+    .replace(/\{\\[^}]*\}/g, '')
+    .replace(/<\/?[a-zA-Z][^>]*>|<\d+:\d{2}(?::\d{2})?[.,]\d{1,3}>/g, '')
+    .replace(/&(#x[0-9a-fA-F]+|#\d+|[a-zA-Z]+);/g, (whole, ref) => {
+      if (ref[0] !== '#') return ref in CHARACTER_REFERENCES ? CHARACTER_REFERENCES[ref] : whole;
+      const code = ref[1] === 'x' || ref[1] === 'X' ? parseInt(ref.slice(2), 16) : parseInt(ref.slice(1), 10);
+      return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : whole;
+    })
+    .trim();
+}
+
 export function cueText(track) {
   return [...(track.activeCues || [])]
-    .map((cue) => (cue.text || '').replace(/<[^>]+>/g, ''))
+    .map((cue) => plainCaptionText(cue.text))
     .join('\n')
     .trim();
 }
 
-// Parse VTT/SRT timestamp to seconds
+// Parse a VTT/SRT timestamp to seconds: [h:]mm:ss.mmm, hours of any length.
+// NaN when it cannot be read, so the cue is dropped rather than placed at 0.
 function parseTimestamp(ts) {
-  const m = ts.trim().match(/^(\d{2}):(\d{2}):(\d{2})[,.](\d{3})$/);
-  if (m) return parseInt(m[1], 10) * 3600 + parseInt(m[2], 10) * 60 + parseInt(m[3], 10) + parseInt(m[4], 10) / 1000;
-  const m2 = ts.trim().match(/^(\d{1,2}):(\d{2})[,.](\d{3})$/);
-  if (m2) return parseInt(m2[1], 10) * 60 + parseInt(m2[2], 10) + parseInt(m2[3], 10) / 1000;
-  return 0;
+  const m = ts.trim().match(/^(?:(\d+):)?(\d{1,2}):(\d{2})[,.](\d{1,3})$/);
+  if (!m) return NaN;
+  return Number(m[1] || 0) * 3600 + Number(m[2]) * 60 + Number(m[3]) + Number(m[4].padEnd(3, '0')) / 1000;
 }
 
 // Parse VTT or SRT content into cues [{ start, end, text }]
@@ -40,7 +57,8 @@ export function parseVTTOrSRT(content) {
       const textLines = [];
       i++;
       while (i < lines.length && lines[i].trim() !== '') {
-        textLines.push(lines[i].trim());
+        const text = plainCaptionText(lines[i]);
+        if (text) textLines.push(text);
         i++;
       }
       if (start >= 0 && end > start && textLines.length) {
