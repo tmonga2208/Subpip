@@ -17,7 +17,47 @@ test('the license email has the key, steps, receipt and refund note', () => {
   const email = licenseEmail({ keys: ['SUBPIP-AAAAAAAA-1111'], payment });
   assert.equal(email.subject, 'Your SubPIP Premium license');
   for (const part of ['SUBPIP-AAAAAAAA-1111', 'Account & license', '$15', 'pay_E1', '7 days']) assert.ok(email.text.includes(part), part);
-  assert.match(email.html, /SUBPIP-AAAAAAAA-1111/);
+  for (const part of ['SUBPIP-AAAAAAAA-1111', 'Account &amp; license', '$15', 'pay_E1', '7 days']) assert.ok(email.html.includes(part), part);
+});
+
+// Mail apps block images and strip stylesheets, so the design has to hold
+// with neither
+test('the HTML is a whole document that needs no images or outside files', () => {
+  const { html } = licenseEmail({ keys: ['SUBPIP-AAAAAAAA-1111'], payment });
+  assert.match(html, /^<!doctype html>/i);
+  assert.doesNotMatch(html, /<img|<link|<script|url\(/i);
+});
+
+test('the inbox preview says what is inside without showing the key', () => {
+  const { html } = licenseEmail({ keys: ['SUBPIP-AAAAAAAA-1111'], payment });
+  const visible = html.slice(html.indexOf('<body')).replace(/<[^>]+>/g, ' ').trim();
+  assert.match(visible, /^Your license key and how to activate it\./);
+});
+
+test('every key is shown when the email carries several (lost-key)', () => {
+  const keys = ['SUBPIP-AAAAAAAA-1111', 'SUBPIP-BBBBBBBB-2222'];
+  const email = licenseEmail({ keys });
+  for (const key of keys) {
+    assert.ok(email.text.includes(key), key);
+    assert.ok(email.html.includes(key), key);
+  }
+  // No payment, so no receipt
+  assert.doesNotMatch(email.text, /Receipt/);
+  assert.doesNotMatch(email.html, /Payment ID/);
+});
+
+test('text from outside cannot add markup to the email', () => {
+  const { html } = licenseEmail({ keys: ['K'], payment: { id: 'pay_<b>x</b>', amount: 1500, currency: 'USD' }, activatedFor: '"><script>alert(1)</script>@example.com' });
+  assert.doesNotMatch(html, /<script|<b>x/);
+  assert.match(html, /&lt;script&gt;/);
+});
+
+test('the email says where to get the key again and how to reach support', () => {
+  const email = licenseEmail({ keys: ['K'], payment });
+  assert.match(email.text, /https:\/\/subpip\.vercel\.app\/premium\.html/);
+  assert.match(email.html, /href="https:\/\/subpip\.vercel\.app\/premium\.html"/);
+  assert.match(email.text, /reply to this email/i);
+  assert.match(email.html, /reply to this email/i);
 });
 
 test('issuing a license emails the buyer exactly once, even when called twice', async () => {
