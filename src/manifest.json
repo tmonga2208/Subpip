@@ -39,13 +39,6 @@
     "storage",
     "activeTab"
   ],
-  "host_permissions": [
-    "https://subpip.vercel.app/*",
-    "https://api.mymemory.translated.net/*",
-    "https://identitytoolkit.googleapis.com/*",
-    "https://securetoken.googleapis.com/*",
-    "https://firestore.googleapis.com/*"
-  ],
   "optional_host_permissions": [
     "<all_urls>"
   ]

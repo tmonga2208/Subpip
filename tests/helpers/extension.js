@@ -10,12 +10,14 @@ import { findBrowser } from '../../scripts/find-browser.mjs';
 import { startServer } from './server.js';
 import { DIST_DIR, FIXTURES_DIR, openFixture } from './browser.js';
 
-async function launchWithExtension({ shortcutViaAction = false } = {}) {
+async function launchWithExtension({ shortcutViaAction = false, allSites = true } = {}) {
   const extDir = await mkdtemp(path.join(os.tmpdir(), 'subpip-ext-'));
   await cp(DIST_DIR, extDir, { recursive: true });
   const manifestPath = path.join(extDir, 'manifest.json');
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-  manifest.host_permissions.push('<all_urls>');
+  // allSites: false leaves the extension as users install it: no host access,
+  // so its requests to the API and Firebase are ordinary cross-origin ones
+  if (allSites) manifest.host_permissions = [...(manifest.host_permissions || []), '<all_urls>'];
   if (shortcutViaAction) {
     // A test cannot press an extension shortcut, but it can click the toolbar
     // button, which is the same kind of browser gesture. This copy has no
@@ -66,8 +68,13 @@ export function json(status, body) {
 // checkout: the code startCheckout answers with; without one it fails (500)
 export function firebaseStub({ uid = 'u1', email = 'tester@example.com', premium = false, signIn = 'ok', status = 'ok', premiumAfterActivate = false, deviceId = null, checkout = null } = {}) {
   let isPremium = premium;
+  const STUBBED = /identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com|firestore\.googleapis\.com|subpip\.vercel\.app\/api\//;
   return (request) => {
     const url = request.url();
+    if (request.method() === 'OPTIONS' && STUBBED.test(url)) {
+      request.respond({ status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS', 'Access-Control-Allow-Headers': 'authorization, content-type' } });
+      return true;
+    }
     if (url.includes('accounts:signInWithPassword') || url.includes('accounts:signUp')) {
       if (signIn === 'network') {
         request.abort('internetdisconnected');

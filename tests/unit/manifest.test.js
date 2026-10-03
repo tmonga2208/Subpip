@@ -19,9 +19,13 @@ test('icons exist at the declared sizes', () => {
   }
 });
 
-test('the extension may call the SubPIP API on Vercel, not Cloud Functions', () => {
-  assert.ok(manifest.host_permissions.includes('https://subpip.vercel.app/*'));
-  assert.ok(!manifest.host_permissions.some((host) => host.includes('cloudfunctions.net')));
+test('installing asks for access to no site at all', () => {
+  // Every service SubPIP calls (its API, Firebase, MyMemory) answers cross-origin
+  // requests, so none needs host access - and each one listed here would add
+  // "read and change your data on..." to the install prompt
+  assert.deepEqual(manifest.host_permissions || [], []);
+  // All-sites access stays opt-in, for Auto PiP only
+  assert.deepEqual(manifest.optional_host_permissions, ['<all_urls>']);
 });
 
 test('Alt+P toggles Picture-in-Picture; the popup has its own shortcut', () => {
