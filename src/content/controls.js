@@ -6,6 +6,8 @@ import { createIcon } from '../shared/icons.js';
 import { CONTROLS_CSS } from './controls.css.js';
 
 const HIDE_DELAY_MS = 2500;
+// A notch of a mouse wheel (about 100px of scroll) is this much volume
+const VOLUME_PER_NOTCH = 0.05;
 const HOST_LAYOUT = {
   display: 'block', position: 'fixed', top: '0', right: '0', bottom: '0', left: '0',
   width: 'auto', height: 'auto', margin: '0', padding: '0', border: '0',
@@ -33,7 +35,14 @@ function make(doc, tag, props = {}, children = []) {
   return node;
 }
 
-export function createControls({ video, pipDoc, session, seekTo, captions }) {
+// Volume in whole percent, so repeated steps do not drift. Turning it up unmutes.
+function changeVolume(video, delta) {
+  if (delta > 0) video.muted = false;
+  video.volume = Math.min(1, Math.max(0, Math.round((video.volume + delta) * 100) / 100));
+}
+
+// next: the site's "next video" call, where it has one (offered with Premium)
+export function createControls({ video, pipDoc, session, seekTo, captions, fitWindow = () => {}, isPremium = false, next = null }) {
   const { listen, onCleanup } = session;
   const h = (tag, props, ...children) => make(pipDoc, tag, props, children);
   const setIcon = (button, name) => button.replaceChildren(createIcon(pipDoc, name));
@@ -60,6 +69,7 @@ export function createControls({ video, pipDoc, session, seekTo, captions }) {
   const playBtn = iconButton('play', 'Play (Space)', 'play');
   const backBtn = iconButton('skip back', 'Back 10 seconds (←)', 'back10');
   const fwdBtn = iconButton('skip fwd', 'Forward 10 seconds (→)', 'forward10');
+  const nextBtn = isPremium && next ? iconButton('next', 'Next video (Shift+N)', 'next') : null;
   const muteBtn = iconButton('mute', 'Mute (M)', 'volume');
   const volInput = h('input', { class: 'vol-input', type: 'range', min: '0', max: '1', step: '0.01', 'aria-label': 'Volume' });
   const cur = h('span', { class: 'cur', text: '0:00' });
@@ -68,7 +78,7 @@ export function createControls({ video, pipDoc, session, seekTo, captions }) {
   ccBtn.setAttribute('aria-pressed', 'true');
 
   const row = h('div', { class: 'row' },
-    playBtn, backBtn, fwdBtn,
+    playBtn, backBtn, fwdBtn, ...(nextBtn ? [nextBtn] : []),
     h('div', { class: 'vol' }, muteBtn, volInput),
     h('span', { class: 'time' }, cur, ' / ', dur),
     h('span', { class: 'spacer' }),
@@ -76,7 +86,9 @@ export function createControls({ video, pipDoc, session, seekTo, captions }) {
   );
   const bar = h('div', { class: 'bar' }, h('div', { class: 'seek' }, seekInput, tip), row);
   const root = h('div', { class: 'root' }, h('div', { class: 'fade' }), bar);
-  shadow.append(root);
+  // Buttons of the site's player (Skip intro, Next episode), see setActions
+  const actionsEl = h('div', { class: isPremium ? 'actions' : 'actions with-bar' });
+  shadow.append(root, actionsEl);
   // Keep focus off buttons on mouse press, so Space keeps meaning play/pause
   root.addEventListener('mousedown', (event) => {
     if (event.target.closest('.btn, .menu-item')) event.preventDefault();
@@ -94,6 +106,7 @@ export function createControls({ video, pipDoc, session, seekTo, captions }) {
 
   backBtn.addEventListener('click', () => seekTo(video.currentTime - 10));
   fwdBtn.addEventListener('click', () => seekTo(video.currentTime + 10));
+  if (nextBtn) nextBtn.addEventListener('click', () => next());
 
   // Volume
   const syncVolume = () => {
@@ -210,10 +223,68 @@ export function createControls({ video, pipDoc, session, seekTo, captions }) {
   root.addEventListener('focusin', show);
   pipDoc.documentElement.style.setProperty('--subpip-caption-shift', '0px');
 
+  // The picture itself: click to play or pause, double-click to fit the
+  // window to the video, scroll for volume. (Captions let clicks through.)
+  const onPicture = (event) => [video, pipDoc.body, pipDoc.documentElement].includes(event.composedPath()[0]);
+  // A press that closes the menu is only that
+  let closingMenu = false;
+  listen(pipDoc, 'pointerdown', () => { closingMenu = menuOpen(); }, true);
+  listen(pipDoc, 'click', (event) => {
+    if (!onPicture(event) || closingMenu) return;
+    if (video.paused) video.play();
+    else video.pause();
+    show();
+  });
+  listen(pipDoc, 'dblclick', (event) => {
+    if (onPicture(event)) fitWindow();
+  });
+  // Trackpads send many small scrolls: add them up until they make a percent
+  let scrolled = 0;
+  listen(pipDoc, 'wheel', (event) => {
+    if (!onPicture(event)) return;
+    event.preventDefault();
+    scrolled -= (event.deltaY / 100) * VOLUME_PER_NOTCH;
+    if (Math.abs(scrolled) < 0.01) return;
+    changeVolume(video, scrolled);
+    scrolled = 0;
+    show();
+  }, { passive: false });
+
+  // The site's passing buttons, offered here while the site shows them. With
+  // Premium they stay up without the control bar, as they do on the site, and
+  // press the site's own; a free viewer sees them with the bar, marked Premium.
+  let actionsShown = '';
+  let actionsNow = new Map();
+  const setActions = (actions) => {
+    // The site may have re-made a button since the last look
+    actionsNow = new Map(actions.map((action) => [action.id, action]));
+    const ids = actions.map((action) => action.id).join(' ');
+    if (ids === actionsShown) return;
+    actionsShown = ids;
+    actionsEl.replaceChildren(...actions.map(({ id, label }) => {
+      const pill = h('button', { class: 'pill', type: 'button', text: label });
+      if (!isPremium) pill.append(h('span', { class: 'tag', text: 'Premium' }));
+      pill.addEventListener('click', () => {
+        if (isPremium) {
+          const action = actionsNow.get(id);
+          if (action) action.press();
+        } else if (menu) {
+          menu.showUpgrade();
+          show();
+        }
+      });
+      return pill;
+    }));
+  };
+
   return {
     host,
     bar,
     show,
+    setActions,
+    // For things shown over the picture that are not part of the bar
+    mount: (node) => shadow.append(node),
+    refreshMenu: () => menu && menu.refresh(),
     isVisible: () => visible,
     toggleCaptions: () => setCaptions(!captionsOn),
     captionsOn: () => captionsOn,
@@ -251,7 +322,7 @@ export function createControls({ video, pipDoc, session, seekTo, captions }) {
 }
 
 // Keyboard shortcuts inside the PiP window
-export function handlePipKeydown(event, { video, seekTo, controls }) {
+export function handlePipKeydown(event, { video, seekTo, controls, next = null }) {
   const origin = event.composedPath()[0];
   const tag = origin && origin.tagName;
   // Our seek/volume sliders keep the shortcuts; real text fields don't
@@ -260,29 +331,54 @@ export function handlePipKeydown(event, { video, seekTo, controls }) {
   // A focused button already acts on Space/Enter; don't double-toggle
   if (tag === 'BUTTON' && (event.code === 'Space' || event.code === 'Enter')) return;
 
+  // Live streams have no length to take tenths of
+  const length = isFinite(video.duration) ? video.duration : 0;
+  const modified = event.ctrlKey || event.metaKey || event.altKey;
+  // With Ctrl or Cmd the arrows move a tenth of the video instead of 10 seconds
+  const arrowStep = (event.ctrlKey || event.metaKey) && length ? length / 10 : 10;
+
+  // 0-9 jump to that many tenths; with a modifier the key is the browser's
+  if (/^[0-9]$/.test(event.key)) {
+    if (modified || !length) return;
+    seekTo(length * Number(event.key) / 10);
+    event.preventDefault();
+    controls.show();
+    return;
+  }
+
   switch (event.code) {
     case 'Space':
       if (video.paused) video.play();
       else video.pause();
       break;
     case 'ArrowRight':
-      seekTo(video.currentTime + 10);
+      seekTo(video.currentTime + arrowStep);
       break;
     case 'ArrowLeft':
-      seekTo(video.currentTime - 10);
+      seekTo(video.currentTime - arrowStep);
+      break;
+    case 'Home':
+      seekTo(0);
+      break;
+    case 'End':
+      if (!length) return;
+      seekTo(length);
       break;
     case 'ArrowUp':
-      video.muted = false;
-      video.volume = Math.min(1, video.volume + 0.1);
+      changeVolume(video, 0.1);
       break;
     case 'ArrowDown':
-      video.volume = Math.max(0, video.volume - 0.1);
+      changeVolume(video, -0.1);
       break;
     case 'KeyM':
       video.muted = !video.muted;
       break;
     case 'KeyC':
       controls.toggleCaptions();
+      break;
+    case 'KeyN':
+      if (!event.shiftKey || !next) return;
+      next();
       break;
     case 'Escape':
       controls.closeMenu();

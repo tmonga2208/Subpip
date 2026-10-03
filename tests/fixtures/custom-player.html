@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><link rel="icon" href="data:,"><title>custom player</title>
+<style>
+  body { margin: 0; }
+  .player { position: relative; width: 640px; height: 360px; background: #000; }
+  .chrome { position: absolute; left: 8px; top: 8px; color: #fff; }
+  /* Like most caption layers, this one lets clicks through to the player */
+  .cc-layer { position: absolute; left: 0; right: 0; bottom: 48px; text-align: center; pointer-events: none; }
+  .cc-line { display: inline-block; padding: 4px 8px; background: rgba(0, 0, 0, 0.7); color: #fff; font: 18px sans-serif; }
+</style></head>
+<body>
+  <div class="player">
+    <video id="v" src="test.mp4" width="640" height="360" muted loop></video>
+    <div class="chrome"><button id="play" type="button">Play</button> <a href="#episode">Episode 4</a></div>
+    <div class="cc-layer"><div class="cc-window"><span class="cc-line">custom line one</span></div></div>
+  </div>
+  <p id="about">About this episode: a paragraph of ordinary page text that is not a caption.</p>
+  <script>
+    window.clicks = 0;
+    document.querySelector('.player').addEventListener('click', () => { window.clicks++; });
+    window.setLine = (text) => { document.querySelector('.cc-line').textContent = text; };
+    // The site throws its caption layer away and builds a new one
+    window.recreate = (text) => {
+      document.querySelector('.cc-layer').remove();
+      const layer = Object.assign(document.createElement('div'), { className: 'cc-layer' });
+      const win = Object.assign(document.createElement('div'), { className: 'cc-window' });
+      win.append(Object.assign(document.createElement('span'), { className: 'cc-line', textContent: text }));
+      layer.append(win);
+      document.querySelector('.player').append(layer);
+    };
+    window.saved = [];
+    window.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'SUBPIP_SAVE_CAPTION_SELECTOR') window.saved.push(event.data.selector);
+    });
+  </script>
+</body>
+</html>

@@ -2,7 +2,8 @@
 // video, an open PiP window, a player embedded from another site, or can't be
 // scripted at all.
 
-import { getSiteAdapter } from '../content/adapters.js';
+import { getSiteAdapter, PLAYER_CAPTIONS } from '../content/adapters.js';
+import { captionSelectorFor } from '../shared/settings.js';
 
 const RESTRICTED = [
   /^chrome:/, /^chrome-extension:/, /^edge:/, /^about:/, /^view-source:/, /^devtools:/,
@@ -21,8 +22,9 @@ export async function getTargetTab() {
   return tabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0))[0] || null;
 }
 
-// Runs in the page (must be self-contained)
-function probePage() {
+// Runs in the page (must be self-contained). players: the common web players'
+// caption elements, [{ name, selector }]
+function probePage(players) {
   const pipOpen = !!(window.documentPictureInPicture && window.documentPictureInPicture.window);
   const videos = [...document.querySelectorAll('video')];
   const hasTextTrack = videos.some((video) => [...video.textTracks].some((track) => track.kind === 'subtitles' || track.kind === 'captions'));
@@ -30,16 +32,18 @@ function probePage() {
   // cannot reach. Players ask for fullscreen or autoplay; ads and widgets
   // usually do not. The biggest one is the one worth opening.
   const size = (frame) => frame.getBoundingClientRect();
-  const players = [...document.querySelectorAll('iframe[src]')]
+  const embeds = [...document.querySelectorAll('iframe[src]')]
     .filter((frame) => {
       const asks = `${frame.getAttribute('allow') || ''} ${frame.hasAttribute('allowfullscreen') ? 'fullscreen' : ''}`;
       return /^https?:/.test(frame.src) && size(frame).width >= 200 && size(frame).height >= 110 &&
         /fullscreen|autoplay|encrypted-media|picture-in-picture/.test(asks);
     })
     .sort((a, b) => size(b).width * size(b).height - size(a).width * size(a).height);
+  const player = players.find((known) => document.querySelector(known.selector));
   return {
     host: location.hostname, path: location.pathname, pipOpen, hasVideo: videos.length > 0, hasTextTrack,
-    embedUrl: players.length ? players[0].src : null
+    player: player ? player.name : null,
+    embedUrl: embeds.length ? embeds[0].src : null
   };
 }
 
@@ -47,7 +51,7 @@ function probePage() {
 // PDFs, pages we lack access to)
 export async function probeTab(tabId) {
   try {
-    const [{ result }] = await chrome.scripting.executeScript({ target: { tabId }, world: 'MAIN', func: probePage });
+    const [{ result }] = await chrome.scripting.executeScript({ target: { tabId }, world: 'MAIN', func: probePage, args: [PLAYER_CAPTIONS] });
     return result || null;
   } catch {
     return null;
@@ -60,10 +64,12 @@ export async function detectPage(tab) {
   if (!probe) return { state: 'restricted' };
   const host = probe.host.replace(/^www\./, '');
   const adapter = getSiteAdapter(probe.host, probe.path);
-  const captionSource = adapter.label || (probe.hasTextTrack ? 'page text track' : null);
+  // What the viewer pointed at on this site comes before anything else
+  const picked = !!(await captionSelectorFor(probe.host));
+  const captionSource = picked ? 'picked on this page' : adapter.label || (probe.hasTextTrack ? 'page text track' : probe.player);
   if (!probe.pipOpen && !probe.hasVideo && probe.embedUrl) return { state: 'embedded', host, embedUrl: probe.embedUrl };
   const state = probe.pipOpen ? 'pip' : probe.hasVideo ? 'video' : 'none';
-  return { state, host, captionSource };
+  return { state, host, captionSource, picked };
 }
 
 export function describeStatus(status) {

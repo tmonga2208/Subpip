@@ -7,6 +7,8 @@ import { createControls, handlePipKeydown } from './controls.js';
 import { createSettingsMenu } from './settings-menu.js';
 import { pipWindowSize } from './video.js';
 import { createSession } from './session.js';
+import { findSiteActions } from './site-actions.js';
+import { createStudyTools } from './study.js';
 
 function copyPageStyles(pipDoc) {
   [...document.styleSheets].forEach((styleSheet) => {
@@ -82,7 +84,23 @@ export async function openPipWindow({ video, adapter, getSettings, onClose, subt
     }
   };
 
-  const controls = createControls({ video, pipDoc, session, seekTo, captions });
+  // Gives the window the shape of the video at its current width, so no
+  // black bars are left. Chrome only lets a window resize itself from a click
+  // inside it.
+  const fitWindow = () => {
+    if (!video.videoWidth || !video.videoHeight) return;
+    const frameWidth = pipWindow.outerWidth - pipWindow.innerWidth;
+    const frameHeight = pipWindow.outerHeight - pipWindow.innerHeight;
+    const height = Math.round(pipWindow.innerWidth * video.videoHeight / video.videoWidth);
+    try {
+      pipWindow.resizeTo(pipWindow.innerWidth + frameWidth, height + frameHeight);
+    } catch (e) {
+      // Not from a click in this window: leave the size alone
+    }
+  };
+
+  const next = isPremium && adapter.next ? adapter.next : null;
+  const controls = createControls({ video, pipDoc, session, seekTo, captions, fitWindow, isPremium, next });
   pipDoc.body.appendChild(controls.host);
   controls.show();
 
@@ -91,18 +109,29 @@ export async function openPipWindow({ video, adapter, getSettings, onClose, subt
     subtitleStyle.textContent = generateSubtitleStyles(sessionSettings());
     captions.refresh();
   };
+  const study = isPremium ? createStudyTools({ video, pipDoc, session, captions, controls, seekTo, getSettings: sessionSettings }) : null;
   controls.mountMenu(createSettingsMenu({
     video, pipDoc, session, isPremium,
     getSessionSettings: sessionSettings,
     applyOverride,
-    captions
+    captions,
+    study
   }));
 
   if (isPremium && settings.playbackSpeed) {
     video.playbackRate = settings.playbackSpeed;
   }
 
-  pipWindow.addEventListener('keydown', (event) => handlePipKeydown(event, { video, seekTo, controls }));
+  // The site's passing buttons (Skip intro, Next episode), looked for for as
+  // long as the window is open
+  const lookForSiteButtons = () => controls.setActions(findSiteActions(adapter));
+  lookForSiteButtons();
+  session.every(700, lookForSiteButtons);
+
+  pipWindow.addEventListener('keydown', (event) => {
+    if (study && study.handleKeydown(event)) return;
+    handlePipKeydown(event, { video, seekTo, controls, next });
+  });
 
   pipWindow.addEventListener('pagehide', () => {
     session.dispose();

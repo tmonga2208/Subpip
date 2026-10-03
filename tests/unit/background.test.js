@@ -11,7 +11,8 @@ const fire = (name, ...args) => Promise.all(listeners[name].map((listener) => li
 const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 // The browser the background runs in: what is saved, granted, registered and open
-const browser = { settings: {}, local: {}, session: {}, allSites: false, registered: [], tabs: [], injected: [], uninstallUrls: [] };
+// granted: access to single sites; matches: where the scripts are registered; queried: which tabs were looked for
+const browser = { settings: {}, local: {}, session: {}, allSites: false, granted: [], registered: [], matches: null, tabs: [], queried: null, injected: [], uninstallUrls: [] };
 const area = (name) => ({
   get: async (keys) => Object.fromEntries([].concat(keys).filter((k) => k in browser[name]).map((k) => [k, browser[name][k]])),
   set: async (items) => { Object.assign(browser[name], items); }
@@ -35,7 +36,10 @@ globalThis.chrome = {
     setUninstallURL: async (url) => { browser.uninstallUrls.push(url); }
   },
   commands: { onCommand: event('command') },
-  permissions: { onAdded: event('permissionAdded'), onRemoved: event('permissionRemoved'), contains: async () => browser.allSites },
+  permissions: {
+    onAdded: event('permissionAdded'), onRemoved: event('permissionRemoved'),
+    contains: async ({ origins }) => browser.allSites || origins.every((origin) => browser.granted.includes(origin))
+  },
   storage: {
     onChanged: event('storageChanged'),
     sync: { get: async () => ({ subpipSettings: browser.settings }) },
@@ -45,10 +49,13 @@ globalThis.chrome = {
   scripting: {
     getRegisteredContentScripts: async () => browser.registered.map((id) => ({ id })),
     unregisterContentScripts: async ({ ids }) => { browser.registered = browser.registered.filter((id) => !ids.includes(id)); },
-    registerContentScripts: async (scripts) => { browser.registered.push(...scripts.map((script) => script.id)); },
+    registerContentScripts: async (scripts) => {
+      browser.registered.push(...scripts.map((script) => script.id));
+      browser.matches = scripts[0].matches;
+    },
     executeScript: async ({ target, files }) => { browser.injected.push(`${target.tabId}:${files.join(',')}`); return [{}]; }
   },
-  tabs: { query: async () => browser.tabs }
+  tabs: { query: async ({ url }) => { browser.queried = url; return browser.tabs; } }
 };
 await startWorker();
 
@@ -116,4 +123,57 @@ test('events that arrive together do not register the scripts twice', async () =
   await Promise.all([fire('permissionAdded', {}), fire('permissionAdded', {}), fire('storageChanged', { subpipSettings: { oldValue: {}, newValue: { autoPip: true } } }, 'sync')]);
   await settle();
   assert.deepEqual(browser.registered, ['subpip-relay', 'subpip-main']);
+});
+
+// ---- Auto PiP for single sites ----
+
+const SITE = '*://*.example.com/*';
+const clean = (extra) => Object.assign(browser, { settings: {}, local: {}, allSites: false, granted: [], registered: [], matches: null, tabs: [], queried: null, injected: [] }, extra);
+
+test('a site chosen for Auto PiP, with access to it, is set up for that site alone', async () => {
+  clean({ settings: { autoPip: false, autoPipSites: ['example.com'] }, granted: [SITE], tabs: [{ id: 3 }] });
+  await startWorker();
+  assert.deepEqual(browser.registered, ['subpip-relay', 'subpip-main']);
+  assert.deepEqual(browser.matches, [SITE]);
+  assert.equal(browser.local.subpipAutoPipActive, false);
+  assert.deepEqual(browser.local.subpipAutoPipSitesActive, ['example.com']);
+  // Its open tabs get SubPIP; no other tab is touched
+  assert.deepEqual(browser.queried, [SITE]);
+  assert.deepEqual(browser.injected.sort(), ['3:script.js', '3:translate-relay.js']);
+});
+
+test('a chosen site this browser has no access to is left out', async () => {
+  clean({ settings: { autoPipSites: ['example.com', 'other.example'] }, granted: [SITE] });
+  await startWorker();
+  assert.deepEqual(browser.matches, [SITE]);
+  assert.deepEqual(browser.local.subpipAutoPipSitesActive, ['example.com']);
+  clean({ settings: { autoPipSites: ['example.com'] } });
+  await startWorker();
+  assert.deepEqual(browser.registered, []);
+  assert.deepEqual(browser.local.subpipAutoPipSitesActive, []);
+});
+
+test('a site added later reaches the open tabs of that site only', async () => {
+  clean({ settings: { autoPipSites: ['example.com'] }, granted: [SITE, '*://*.second.example/*'], tabs: [{ id: 5 }] });
+  await startWorker();
+  browser.injected = [];
+  browser.settings = { autoPipSites: ['example.com', 'second.example'] };
+  await fire('storageChanged', { subpipSettings: { oldValue: { autoPipSites: ['example.com'] }, newValue: browser.settings } }, 'sync');
+  await settle();
+  assert.deepEqual(browser.matches, [SITE, '*://*.second.example/*']);
+  assert.deepEqual(browser.queried, ['*://*.second.example/*']);
+  assert.deepEqual(browser.injected.sort(), ['5:script.js', '5:translate-relay.js']);
+});
+
+test('with every site switched on, single sites need nothing of their own', async () => {
+  clean({ settings: { autoPip: true, autoPipSites: ['example.com'] }, allSites: true });
+  await startWorker();
+  assert.deepEqual(browser.matches, ['<all_urls>']);
+  assert.equal(browser.local.subpipAutoPipActive, true);
+});
+
+test('a saved "site" that is not a host name is ignored', async () => {
+  clean({ settings: { autoPipSites: ['not a site/*', 'example.com'] }, allSites: true });
+  await startWorker();
+  assert.deepEqual(browser.matches, [SITE]);
 });

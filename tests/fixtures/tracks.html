@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><link rel="icon" href="data:,"><title>tracks</title></head>
+<body>
+  <div id="wrap"><video id="v" src="test.mp4" width="640" height="360" muted loop>
+    <track kind="subtitles" src="subs-es.vtt" srclang="es" label="Español">
+    <track kind="subtitles" src="subs.vtt" srclang="en">
+    <track kind="metadata" src="subs.vtt">
+  </video></div>
+  <script>
+    // All tracks start off. ?showing=en has the page show that one itself, as
+    // a plain <video controls> page does.
+    const showing = new URLSearchParams(location.search).get('showing');
+    // Kept here: the video leaves this document while it is in Picture-in-Picture
+    const video = document.getElementById('v');
+    for (const track of video.textTracks) track.mode = track.language === showing && track.kind === 'subtitles' ? 'showing' : 'disabled';
+    window.trackModes = () => [...video.textTracks].filter((track) => track.kind === 'subtitles').map((track) => track.mode);
+  </script>
+</body>
+</html>

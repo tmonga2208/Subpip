@@ -21,7 +21,7 @@ test('privacy policy uses the shared layout', async () => {
 
 test('the policy has a fixed revision date, not today\'s date', async () => {
   const html = await readFile(`${WEB_DIR}/privacy.html`, 'utf8');
-  assert.match(html, /Last updated: October 3, 2026/);
+  assert.match(html, /Last updated: October 4, 2026/);
   assert.doesNotMatch(html, /toLocaleDateString/);
 });
 
@@ -40,6 +40,11 @@ test('the policy describes what the extension does today', async () => {
   // Email goes through Resend now, not Gmail
   assert.match(text, /Resend/);
   assert.doesNotMatch(text, /Google \(Gmail\)/);
+  // What the newer features keep, and where
+  assert.match(text, /Captions from speech[^.]*on your device/);
+  assert.match(text, /Saved lines[^.]*on your computer/i);
+  assert.match(text, /Captions you picked on a site/);
+  assert.match(text, /which sites Auto PiP is on for/);
   assert.doesNotMatch(text, /device identifier/i);
   assert.match(text, /cache/i);
   // Regional pricing reads the time zone locally

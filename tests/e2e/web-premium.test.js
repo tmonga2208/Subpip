@@ -33,7 +33,7 @@ test('checkout card shows price, features and the pay button', async () => {
     features: document.querySelectorAll('.checkout .check-list li').length,
     pay: document.getElementById('payBtn').textContent.trim()
   }));
-  assert.deepEqual(card, { title: 'SubPIP Premium', price: '₹1000 · lifetime', features: 4, pay: 'Pay ₹1000' });
+  assert.deepEqual(card, { title: 'SubPIP Premium', price: '₹1000 · lifetime', features: 7, pay: 'Pay ₹1000' });
   assert.deepEqual(page.errors, []);
   await page.close();
 });

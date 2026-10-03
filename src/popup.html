@@ -32,6 +32,7 @@
           <kbd class="kbd">Alt+P</kbd>
         </div>
         <button class="primary" id="pip-btn" type="button" disabled>Open Picture-in-Picture</button>
+        <button class="link" id="pick-captions" type="button" hidden>Captions not showing? Pick them on the page</button>
 
         <h2 class="section-label">Captions</h2>
         <div class="preview" id="home-preview"><span class="preview-caption">This is how captions look</span></div>
@@ -47,6 +48,7 @@
           <button class="row" type="button" data-go="translate" data-premium><span class="row-label">Translate captions</span><span class="row-value" id="translate-value"></span><span data-icon="chevron-right"></span></button>
           <button class="row" type="button" data-go="speed" data-premium><span class="row-label">Playback speed</span><span class="row-value" id="speed-value"></span><span data-icon="chevron-right"></span></button>
           <button class="row" type="button" data-go="autopip"><span class="row-label">Auto PiP on tab switch</span><span class="row-value" id="autopip-value"></span><span data-icon="chevron-right"></span></button>
+          <button class="row" type="button" data-go="saved" data-premium><span class="row-label">Saved lines</span><span class="row-value" id="saved-value"></span><span data-icon="chevron-right"></span></button>
           <button class="row" type="button" data-go="account"><span class="row-label">Account &amp; license</span><span class="row-value" id="account-value"></span><span data-icon="chevron-right"></span></button>
         </div>
       </section>
@@ -91,9 +93,21 @@
       </section>
 
       <section class="view" data-view="autopip" data-title="Auto PiP" hidden>
-        <p class="paragraph">Opens Picture-in-Picture automatically when you switch away from a tab playing video. Chrome will ask once for access to all sites so SubPIP can be ready on every page.</p>
-        <label class="field toggle-field"><span class="field-label">Auto PiP on tab switch</span><input type="checkbox" class="switch" id="autopip-on"></label>
+        <p class="paragraph">Opens Picture-in-Picture automatically when you switch away from a tab playing video. SubPIP has to be ready on the page beforehand, so Chrome asks once for access: to one site, or to all sites.</p>
+        <label class="field toggle-field" id="autopip-site-field" hidden><span class="field-label">On <span id="autopip-site"></span></span><input type="checkbox" class="switch" id="autopip-site-on"></label>
+        <label class="field toggle-field"><span class="field-label">On every site</span><input type="checkbox" class="switch" id="autopip-on"></label>
         <p class="error" id="autopip-error" role="alert" hidden></p>
+        <div id="autopip-sites" hidden>
+          <h2 class="section-label">Sites</h2>
+          <div class="rows" id="autopip-site-list"></div>
+        </div>
+      </section>
+
+      <section class="view" data-view="saved" data-title="Saved lines" hidden>
+        <p class="hint" id="saved-empty">Nothing saved yet. In the Picture-in-Picture window, click a word in the captions and press Save line. Saved lines stay on this computer.</p>
+        <div class="saved-list" id="saved-list"></div>
+        <button class="secondary spaced" type="button" id="saved-export">Export as CSV</button>
+        <button class="link danger" type="button" id="saved-clear">Clear all</button>
       </section>
 
       <section class="view" data-view="account" data-title="Account &amp; license" hidden>
@@ -133,6 +147,9 @@
           <li><span data-icon="check"></span>Real-time caption translation, with the original line if you want it</li>
           <li><span data-icon="check"></span>Playback speed control (0.5×–3×)</li>
           <li><span data-icon="check"></span>Your own subtitles from an SRT / VTT file or link</li>
+          <li><span data-icon="check"></span>Captions from speech, for videos that have none</li>
+          <li><span data-icon="check"></span>Study tools: replay a line, word meanings, saved lines</li>
+          <li><span data-icon="check"></span>Skip intro and Next buttons in the window</li>
         </ul>
         <div class="price"><span data-price>₹1000</span> <span>lifetime</span></div>
         <button class="primary" type="button" data-action="get-premium">Get Premium</button>

@@ -2,7 +2,8 @@
 // fetch past the page's CSP, so this relays settings from storage and
 // translate requests to the background.
 
-import { readStoredSettings, AUTO_PIP_ACTIVE } from './shared/settings.js';
+import { readStoredSettings, saveCaptionSelector, AUTO_PIP_ACTIVE, AUTO_PIP_SITES_ACTIVE, CAPTION_SELECTORS } from './shared/settings.js';
+import { saveLine } from './shared/saved-lines.js';
 
 // Tells the page script which relay is speaking: after an update a tab can
 // have the previous relay and its replacement at the same time
@@ -20,7 +21,7 @@ function extensionIsThere() {
 
 async function postSettings() {
   try {
-    const settings = await readStoredSettings();
+    const settings = await readStoredSettings(location.hostname);
     window.postMessage({ type: 'SUBPIP_SETTINGS_UPDATED', settings, relay: relayId }, '*');
   } catch (e) {
     // Extension was reloaded; this relay is orphaned
@@ -29,7 +30,7 @@ async function postSettings() {
 
 function start() {
   chrome.storage.onChanged.addListener((changes, area) => {
-    if ((area === 'sync' && changes.subpipSettings) || (area === 'local' && (changes.subpipAuth || changes[AUTO_PIP_ACTIVE]))) postSettings();
+    if ((area === 'sync' && (changes.subpipSettings || changes[CAPTION_SELECTORS])) || (area === 'local' && (changes.subpipAuth || changes[AUTO_PIP_ACTIVE] || changes[AUTO_PIP_SITES_ACTIVE]))) postSettings();
   });
 
   const onMessage = (event) => {
@@ -37,6 +38,20 @@ function start() {
 
     if (event.data.type === 'SUBPIP_SETTINGS_REQUEST') {
       postSettings();
+      return;
+    }
+
+    // The viewer pointed at this site's captions: remember them for the site.
+    // The site is taken from this page, never from the message.
+    if (event.data.type === 'SUBPIP_SAVE_CAPTION_SELECTOR') {
+      saveCaptionSelector(location.hostname, event.data.selector).catch(() => {});
+      return;
+    }
+
+    // A line kept from the study tools. Where it came from is this page's
+    // word, not the message's.
+    if (event.data.type === 'SUBPIP_SAVE_LINE') {
+      saveLine({ ...(event.data.line || {}), title: document.title, url: location.href }).catch(() => {});
       return;
     }
 

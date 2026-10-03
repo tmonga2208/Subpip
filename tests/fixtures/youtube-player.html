@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><link rel="icon" href="data:,"><title>youtube player fixture</title></head>
+<body>
+  <div id="movie_player">
+    <video id="v" src="test.mp4" width="640" height="360" muted loop></video>
+    <div id="ytp-caption-window-container"></div>
+  </div>
+  <script>
+    // A stand-in for YouTube's player object and its captions module.
+    // ?on starts with captions on, as a viewer who keeps them on would have.
+    const TRACKS = [
+      { languageCode: 'en', displayName: 'English (auto-generated)', kind: 'asr' },
+      { languageCode: 'en', displayName: 'English', kind: '' },
+      { languageCode: 'fr', displayName: 'French', kind: '' }
+    ];
+    const state = { on: new URLSearchParams(location.search).has('on'), lang: 'en', calls: [] };
+    const player = document.getElementById('movie_player');
+    function paint() {
+      const container = document.getElementById('ytp-caption-window-container');
+      container.replaceChildren();
+      if (!state.on) return;
+      const win = Object.assign(document.createElement('div'), { className: 'caption-window' });
+      const text = Object.assign(document.createElement('span'), { className: 'captions-text' });
+      text.append(Object.assign(document.createElement('span'), { textContent: `captions in ${state.lang}` }));
+      win.append(text);
+      container.append(win);
+    }
+    Object.assign(player, {
+      isSubtitlesOn: () => state.on,
+      loadModule(name) { state.calls.push(`load ${name}`); if (name === 'captions') { state.on = true; paint(); } },
+      unloadModule(name) { state.calls.push(`unload ${name}`); if (name === 'captions') { state.on = false; paint(); } },
+      getOption(module, option) {
+        if (option === 'tracklist') return TRACKS;
+        return state.on ? TRACKS.find((track) => track.languageCode === state.lang && !track.kind) : {};
+      },
+      setOption(module, option, value) {
+        state.calls.push(`set ${value && value.languageCode ? value.languageCode : 'off'}`);
+        if (value && value.languageCode) { state.on = true; state.lang = value.languageCode; } else state.on = false;
+        paint();
+      },
+      nextVideo() { state.calls.push('next'); }
+    });
+    window.playerState = state;
+    paint();
+  </script>
+</body>
+</html>

@@ -1,11 +1,34 @@
 // Caption sources other than site DOM: text tracks and subtitle files
 
-// A subtitles/captions track the site renders itself (mode "hidden").
-// "showing" tracks are drawn by the video element, so they already appear in PiP.
-export function findHiddenTextTrack(video) {
-  return [...(video.textTracks || [])].find((track) =>
-    (track.kind === 'subtitles' || track.kind === 'captions') && track.mode === 'hidden'
-  ) || null;
+// The subtitle and caption tracks a video carries
+export function subtitleTracks(video) {
+  return [...(video.textTracks || [])].filter((track) => track.kind === 'subtitles' || track.kind === 'captions');
+}
+
+const sameLanguage = (a, b) => !!a && !!b && a.toLowerCase().split('-')[0] === b.toLowerCase().split('-')[0];
+
+// The track to start with: one the page has on, else the viewer's language,
+// else the first. wasMode holds what a track's mode was before SubPIP took it
+// over (see captions.js).
+export function preferredTrack(tracks, wasMode = new Map(), languages = navigator.languages) {
+  const mode = (track) => wasMode.get(track) || track.mode;
+  return tracks.find((track) => mode(track) === 'showing')
+    || tracks.find((track) => mode(track) === 'hidden')
+    || languages.map((language) => tracks.find((track) => sameLanguage(track.language, language))).find(Boolean)
+    || tracks[0]
+    || null;
+}
+
+// What to call a track in the menu: its label, else its language, else its place
+export function trackLabel(track, index) {
+  if (track.label) return track.label;
+  try {
+    const name = new Intl.DisplayNames(['en'], { type: 'language' }).of(track.language);
+    if (name && name !== track.language) return name;
+  } catch (e) {
+    // Not a language tag
+  }
+  return `Track ${index + 1}`;
 }
 
 const CHARACTER_REFERENCES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', lrm: '', rlm: '' };
@@ -26,8 +49,12 @@ export function plainCaptionText(text) {
     .trim();
 }
 
-export function cueText(track) {
-  return [...(track.activeCues || [])]
+// The lines of a text track at a time. Read from the cues themselves, not
+// from activeCues: a track that loads while the video is paused has its cues
+// long before the browser marks any of them active.
+export function trackTextAt(track, time) {
+  return [...(track.cues || [])]
+    .filter((cue) => time >= cue.startTime && time < cue.endTime)
     .map((cue) => plainCaptionText(cue.text))
     .join('\n')
     .trim();

@@ -44,6 +44,7 @@ export function generateSubtitleStyles(settings) {
     max-width: 90% !important;
     height: auto !important;
     text-align: center !important;
+    white-space: pre-line !important;
     z-index: 9999 !important;
     transition: top 0.1s, bottom 0.1s !important;
   }

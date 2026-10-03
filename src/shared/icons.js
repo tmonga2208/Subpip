@@ -11,6 +11,7 @@ const ICONS = {
   pause: [['path', { d: 'M7 5h3.5v14H7zM13.5 5H17v14h-3.5z', ...FILL }]],
   back10: [['path', { d: 'M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4', ...STROKE }]],
   forward10: [['path', { d: 'M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4', ...STROKE }]],
+  next: [['path', { d: 'M6 5v14l10-7z', ...FILL }], ['path', { d: 'M18 5v14', ...STROKE }]],
   volume: [['path', { d: 'M4 9h4l5-4v14l-5-4H4z', ...FILL }], ['path', { d: 'M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12', ...STROKE }]],
   'volume-muted': [['path', { d: 'M4 9h4l5-4v14l-5-4H4z', ...FILL }], ['path', { d: 'M16 9l5 6M21 9l-5 6', ...STROKE }]],
   cc: [['rect', { x: '3', y: '5', width: '18', height: '14', rx: '3', ...STROKE }], ['path', { d: 'M10.5 10a2 2 0 1 0 0 4M17 10a2 2 0 1 0 0 4', ...STROKE }]],

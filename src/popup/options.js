@@ -1,13 +1,20 @@
 // Home option rows and their pages: Translate, Playback speed, Auto PiP.
 // Premium rows send free users to the upgrade page instead.
 
-import { LANGUAGES, SPEEDS, ALL_SITES } from '../shared/settings.js';
+import { LANGUAGES, SPEEDS, ALL_SITES, siteKey, sitePattern, isSiteName } from '../shared/settings.js';
 import { iconMarkup } from '../shared/icons.js';
+import { getTargetTab } from './status.js';
 
 export function initOptions({ doc, store, auth, router }) {
   const $ = (id) => doc.getElementById(id);
   const languageName = (code) => (LANGUAGES.find((lang) => lang.code === code) || { name: code }).name;
   let autoPipAllowed = false;
+  // The single sites Auto PiP is chosen for that this browser has access to,
+  // and the site in the current tab (null on a page that is not a site)
+  let allowedSites = [];
+  let site = null;
+  const chosenSites = () => (store.get().autoPipSites || []).filter(isSiteName);
+  const access = (name) => ({ origins: [sitePattern(name)] });
 
   doc.querySelectorAll('.row[data-go]').forEach((row) => row.addEventListener('click', () => {
     router.go(row.hasAttribute('data-premium') && !auth.isPremium() ? 'upgrade' : row.dataset.go);
@@ -85,16 +92,50 @@ export function initOptions({ doc, store, auth, router }) {
       await chrome.permissions.remove(ALL_SITES);
       autoPipAllowed = false;
       store.update({ autoPip: false });
+      await findAccess();
     }
   });
+
+  // ...or on single sites: then Chrome is asked for that site alone
+  async function setSite(name, on) {
+    const error = $('autopip-error');
+    error.hidden = true;
+    const without = chosenSites().filter((chosen) => chosen !== name);
+    if (on) {
+      store.update({ autoPipSites: [...without, name] });
+      if (!await chrome.permissions.request(access(name))) {
+        store.update({ autoPipSites: without });
+        error.textContent = `SubPIP needs access to ${name} for Auto PiP there.`;
+        error.hidden = false;
+      }
+    } else {
+      store.update({ autoPipSites: without });
+      // Access held through "every site" is not this site's to give back
+      if (!autoPipAllowed) await chrome.permissions.remove(access(name)).catch(() => {});
+    }
+    await findAccess();
+  }
+  $('autopip-site-on').addEventListener('change', () => setSite(site, $('autopip-site-on').checked));
+
+  // What this browser has granted, for the switches to show
+  async function findAccess() {
+    autoPipAllowed = await chrome.permissions.contains(ALL_SITES);
+    const granted = [];
+    for (const name of chosenSites()) {
+      if (await chrome.permissions.contains(access(name))) granted.push(name);
+    }
+    allowedSites = granted;
+    render();
+  }
 
   function render() {
     const settings = store.get();
     const premium = auth.isPremium();
     const autoPip = !!settings.autoPip && autoPipAllowed;
+    const sites = chosenSites().filter((name) => allowedSites.includes(name));
     setRowValue('translate-value', premium ? (settings.translationEnabled ? languageName(settings.targetLanguage) : 'Off') : null);
     setRowValue('speed-value', premium ? `${settings.playbackSpeed}×` : null);
-    setRowValue('autopip-value', autoPip ? 'On' : 'Off');
+    setRowValue('autopip-value', autoPip ? 'On' : sites.length === 1 ? sites[0] : sites.length ? `${sites.length} sites` : 'Off');
     setRowValue('account-value', auth.user() ? auth.user().email : 'Sign in');
     $('translate-on').checked = !!settings.translationEnabled;
     $('dual-on').checked = !!settings.dualSubtitles;
@@ -102,12 +143,44 @@ export function initOptions({ doc, store, auth, router }) {
     markChecked($('language-list'), settings.targetLanguage);
     markChecked($('speed-list'), settings.playbackSpeed);
     $('autopip-on').checked = autoPip;
+    $('autopip-site-field').hidden = !site;
+    $('autopip-site').textContent = site || '';
+    $('autopip-site-on').checked = !!site && sites.includes(site);
+    $('autopip-sites').hidden = sites.length === 0;
+    $('autopip-site-list').replaceChildren(...sites.map((name) => {
+      const row = doc.createElement('div');
+      row.className = 'row';
+      const label = doc.createElement('span');
+      label.className = 'row-label';
+      label.textContent = name;
+      const remove = doc.createElement('button');
+      remove.type = 'button';
+      remove.className = 'remove';
+      remove.textContent = 'Remove';
+      remove.addEventListener('click', () => setSite(name, false));
+      row.append(label, remove);
+      return row;
+    }));
   }
 
-  store.subscribe(render);
+  // The settings arrive after the popup has opened, with the chosen sites in them
+  let sitesSeen = '';
+  store.subscribe(() => {
+    render();
+    const now = chosenSites().join(' ');
+    if (now === sitesSeen) return;
+    sitesSeen = now;
+    findAccess();
+  });
   auth.onChange(render);
-  chrome.permissions.contains(ALL_SITES).then((allowed) => {
-    autoPipAllowed = allowed;
+  findAccess();
+  getTargetTab().then((tab) => {
+    try {
+      const url = new URL(tab.url);
+      if (/^https?:$/.test(url.protocol) && isSiteName(siteKey(url.hostname))) site = siteKey(url.hostname);
+    } catch (e) {
+      // No tab, or a page without an address SubPIP may see
+    }
     render();
   });
   render();

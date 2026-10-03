@@ -9,6 +9,7 @@ import { withDefaults } from '../shared/settings.js';
 import { getSiteAdapter } from './adapters.js';
 import { findVideo } from './video.js';
 import { openPipWindow } from './pip-window.js';
+import { startCaptionPicker } from './caption-picker.js';
 
 function isRestrictedPage() {
   const href = window.location.href || '';
@@ -56,6 +57,25 @@ function createInstance() {
         }
       }
     }
+  }
+
+  // The viewer points at the captions of a site SubPIP does not know. The
+  // choice is saved for this site by the relay, and used at once if the
+  // window is open.
+  let picking = false;
+  function pickCaptions() {
+    if (picking || isRestrictedPage()) return;
+    picking = true;
+    startCaptionPicker({
+      onDone(selector) {
+        picking = false;
+        if (!selector) return;
+        currentSettings = { ...currentSettings, captionSelector: selector };
+        window.__SUBPIP_SETTINGS__ = currentSettings;
+        window.postMessage({ type: 'SUBPIP_SAVE_CAPTION_SELECTOR', selector }, '*');
+        if (activeSession) activeSession.onSettingsChanged();
+      }
+    });
   }
 
   function toggle() {
@@ -113,7 +133,7 @@ function createInstance() {
   window.postMessage({ type: 'SUBPIP_SETTINGS_REQUEST' }, '*');
   updateAutoPip();
 
-  return { toggle, open: openPip };
+  return { toggle, open: openPip, pickCaptions };
 }
 
 if (!window.__SUBPIP__) {

@@ -8,6 +8,7 @@ import { createSettingsStore } from './settings-store.js';
 import { initCaptions } from './captions.js';
 import { initHome } from './home.js';
 import { initOptions } from './options.js';
+import { initSaved } from './saved.js';
 import { localPrice } from '../shared/pricing.js';
 
 // Extension page, so icon markup strings are fine here (unlike page scripts)
@@ -29,6 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initCaptions({ doc: document, store, router, auth });
   const home = initHome({ doc: document, store, auth });
   initOptions({ doc: document, store, auth, router });
+  const saved = initSaved({ doc: document, auth });
 
   document.getElementById('account-btn').addEventListener('click', () => router.go('account'));
   document.getElementById('upgrade-check-payment').addEventListener('click', () => {
@@ -41,6 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await Promise.all([
     home.refresh(),
     store.load(),
+    saved.load(),
     auth.init().catch((error) => console.warn('[SubPIP] Could not restore sign-in:', error))
   ]);
   document.body.dataset.ready = 'true';

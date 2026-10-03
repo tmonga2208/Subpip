@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { getSiteAdapter } from '../../src/content/adapters.js';
+import { getSiteAdapter, findPlayerCaptions, PLAYER_CAPTIONS } from '../../src/content/adapters.js';
 import { generateSubtitleStyles } from '../../src/content/styles.js';
 import { withDefaults } from '../../src/shared/settings.js';
 
@@ -40,4 +40,15 @@ test('every site caption element takes the user\'s caption style', () => {
     const rule = new RegExp(`${styled.replace(/[.#-]/g, '\\$&')}[^{]*\\{[^}]*font-size: 22px[^}]*color: #ffe14d`);
     assert.match(css, rule, host);
   }
+});
+
+// ---- Players many sites embed ----
+
+const pageWith = (...selectors) => ({ querySelector: (selector) => (selectors.includes(selector) ? {} : null) });
+
+test('the common web players are recognised by their caption element', () => {
+  assert.deepEqual(PLAYER_CAPTIONS.map((player) => player.name), ['Video.js', 'JW Player', 'Plyr', 'Bitmovin', 'Shaka Player']);
+  assert.equal(findPlayerCaptions(pageWith('.jw-captions')).name, 'JW Player');
+  assert.equal(findPlayerCaptions(pageWith('.vjs-text-track-display')).selector, '.vjs-text-track-display');
+  assert.equal(findPlayerCaptions(pageWith('.something-else')), null);
 });

@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><link rel="icon" href="data:,"><title>streaming site</title></head>
+<body>
+  <a id="jump" href="#player" role="button">Skip to main content</a>
+  <div id="player" class="player">
+    <video id="v" src="test.mp4" width="640" height="360" muted loop></video>
+    <!-- Shown by the site for a few seconds at the right moments -->
+    <button id="skip" type="button" hidden>Skip Intro</button>
+    <button id="recap" type="button" hidden>SKIP RECAP</button>
+    <div id="next" role="button" aria-label="Next Episode" hidden><svg width="24" height="24"></svg></div>
+    <button id="ad" type="button" hidden>Skip Ad</button>
+  </div>
+  <script>
+    window.pressed = [];
+    for (const id of ['jump', 'skip', 'recap', 'next', 'ad']) document.getElementById(id).addEventListener('click', (event) => { event.preventDefault(); window.pressed.push(id); });
+    window.showButton = (id, on = true) => { document.getElementById(id).hidden = !on; };
+    // Sites take the button away once it has been used
+    document.getElementById('skip').addEventListener('click', () => window.showButton('skip', false));
+  </script>
+</body>
+</html>

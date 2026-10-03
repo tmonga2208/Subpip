@@ -1,7 +1,7 @@
 // SubPIP background service worker: translation requests, the Alt+P
 // shortcut, auto-PiP content script registration and the uninstall page.
 
-import { ALL_SITES, AUTO_PIP_ACTIVE, readStoredSettings } from './shared/settings.js';
+import { ALL_SITES, AUTO_PIP_ACTIVE, AUTO_PIP_SITES_ACTIVE, isSiteName, sitePattern, readStoredSettings } from './shared/settings.js';
 import { TOKEN_URL, API_BASE_URL, TOKEN_MAX_AGE_MS, UNINSTALL_URL } from './shared/firebase.js';
 import { togglePipInTab, injectRelay } from './shared/inject.js';
 import { probeTab } from './popup/status.js';
@@ -104,7 +104,7 @@ function togglePipFromShortcut(tab) {
     await activated;
     const probe = await probeTab(tab.id);
     if (!probe || !(probe.hasVideo || probe.pipOpen)) throw new Error('Nothing to open on this page');
-    await togglePipInTab(tab.id, await readStoredSettings());
+    await togglePipInTab(tab.id, await readStoredSettings(probe.host));
     await injectRelay(tab.id);
   })().catch(() => {
     // No video, or a page SubPIP cannot run on: the popup says which
@@ -116,44 +116,55 @@ chrome.commands.onCommand.addListener((command, tab) => {
   if (command === 'toggle-pip') togglePipFromShortcut(tab);
 });
 
-// Auto-PiP needs SubPIP running in every page before the user switches tabs,
-// so Chrome's "enterpictureinpicture" handler exists (see content/index.js).
-// These scripts are only registered while auto-PiP is on and the optional
-// all-sites permission is granted.
-const AUTO_PIP_SCRIPTS = [
-  { id: 'subpip-relay', matches: ['<all_urls>'], js: ['translate-relay.js'], runAt: 'document_start', allFrames: false },
-  { id: 'subpip-main', matches: ['<all_urls>'], js: ['script.js'], world: 'MAIN', runAt: 'document_idle', allFrames: false }
+// Auto-PiP needs SubPIP running in a page before the user switches tabs, so
+// Chrome's "enterpictureinpicture" handler exists (see content/index.js).
+// These scripts are only registered while auto-PiP is on and the access it
+// needs is granted: to all sites, or to the single sites the user chose.
+const autoPipScripts = (matches) => [
+  { id: 'subpip-relay', matches, js: ['translate-relay.js'], runAt: 'document_start', allFrames: false },
+  { id: 'subpip-main', matches, js: ['script.js'], world: 'MAIN', runAt: 'document_idle', allFrames: false }
 ];
+const AUTO_PIP_SCRIPT_IDS = autoPipScripts([]).map((script) => script.id);
+const EVERY_SITE = ['http://*/*', 'https://*/*'];
 
-// Auto PiP is in force on this browser only when the user has switched it on
-// and this browser holds the all-sites permission. That is recorded for the
-// pages (see AUTO_PIP_ACTIVE) and decides whether the scripts are registered.
+// Auto PiP is in force on this browser only where the user has switched it on
+// and this browser holds the permission for it. That is recorded for the
+// pages (see AUTO_PIP_ACTIVE) and decides where the scripts are registered.
 async function applyAutoPip(reconnect) {
-  const [{ subpipSettings }, { [AUTO_PIP_ACTIVE]: wasActive }] = await Promise.all([
+  const [{ subpipSettings }, { [AUTO_PIP_ACTIVE]: wasEverywhere, [AUTO_PIP_SITES_ACTIVE]: wasOn = [] }] = await Promise.all([
     chrome.storage.sync.get(['subpipSettings']),
-    chrome.storage.local.get([AUTO_PIP_ACTIVE])
+    chrome.storage.local.get([AUTO_PIP_ACTIVE, AUTO_PIP_SITES_ACTIVE])
   ]);
-  const active = subpipSettings?.autoPip === true && await chrome.permissions.contains(ALL_SITES);
-  const ids = AUTO_PIP_SCRIPTS.map((script) => script.id);
-  const registered = await chrome.scripting.getRegisteredContentScripts({ ids });
+  const everywhere = subpipSettings?.autoPip === true && await chrome.permissions.contains(ALL_SITES);
+  const sites = [];
+  for (const site of (subpipSettings?.autoPipSites || []).filter(isSiteName)) {
+    if (await chrome.permissions.contains({ origins: [sitePattern(site)] })) sites.push(site);
+  }
+  const matches = everywhere ? ['<all_urls>'] : sites.map(sitePattern);
+  const registered = await chrome.scripting.getRegisteredContentScripts({ ids: AUTO_PIP_SCRIPT_IDS });
 
   if (registered.length) {
     await chrome.scripting.unregisterContentScripts({ ids: registered.map((script) => script.id) });
   }
-  if (active) {
-    await chrome.scripting.registerContentScripts(AUTO_PIP_SCRIPTS);
+  if (matches.length) {
+    await chrome.scripting.registerContentScripts(autoPipScripts(matches));
   }
-  await chrome.storage.local.set({ [AUTO_PIP_ACTIVE]: active });
+  await chrome.storage.local.set({ [AUTO_PIP_ACTIVE]: everywhere, [AUTO_PIP_SITES_ACTIVE]: sites });
 
   // Registered scripts only reach pages loaded from now on. Tabs that are
-  // already open get SubPIP directly: when Auto PiP has just come into force,
-  // and at the start of a new run of the extension, which cut open tabs off
-  // from the previous one (see the relay).
-  if (active && (reconnect || !wasActive)) await addToOpenTabs();
+  // already open get SubPIP directly: where Auto PiP has just come into
+  // force, and at the start of a new run of the extension, which cut open
+  // tabs off from the previous one (see the relay).
+  if (everywhere) {
+    if (reconnect || !wasEverywhere) await addToOpenTabs(EVERY_SITE);
+  } else {
+    const reach = reconnect ? sites : sites.filter((site) => !wasOn.includes(site));
+    if (reach.length) await addToOpenTabs(reach.map(sitePattern));
+  }
 }
 
-async function addToOpenTabs() {
-  const tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'], discarded: false });
+async function addToOpenTabs(url) {
+  const tabs = await chrome.tabs.query({ url, discarded: false });
   await Promise.allSettled(tabs.map(async (tab) => {
     await injectRelay(tab.id);
     await chrome.scripting.executeScript({ target: { tabId: tab.id }, world: 'MAIN', files: ['script.js'] });
@@ -185,8 +196,7 @@ chrome.permissions.onAdded.addListener(() => syncAutoPip());
 chrome.permissions.onRemoved.addListener(() => syncAutoPip());
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'sync' && changes.subpipSettings) {
-    const before = changes.subpipSettings.oldValue?.autoPip;
-    const after = changes.subpipSettings.newValue?.autoPip;
-    if (before !== after) syncAutoPip();
+    const chosen = (settings) => JSON.stringify([settings?.autoPip === true, settings?.autoPipSites || []]);
+    if (chosen(changes.subpipSettings.oldValue) !== chosen(changes.subpipSettings.newValue)) syncAutoPip();
   }
 });

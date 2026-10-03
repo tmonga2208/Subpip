@@ -157,3 +157,19 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .features .icon { color: var(--accent); }
 .price { margin: 4px 0 12px; font-size: 22px; font-weight: 700; }
 .price span:not([data-price]) { color: var(--text-2); font-size: 12px; font-weight: 400; }
+
+/* Saved lines */
+.saved-item { padding: 9px 0; border-bottom: 1px solid var(--border); }
+.saved-item:last-child { border-bottom: 0; }
+.saved-text { font-weight: 600; overflow-wrap: anywhere; }
+.saved-translation { color: var(--text-2); overflow-wrap: anywhere; }
+.saved-translation:empty { display: none; }
+.saved-word { margin-top: 3px; color: var(--accent-text); font-size: 11px; }
+.saved-source { margin-top: 3px; overflow: hidden; color: var(--text-2); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.secondary:disabled { opacity: 0.5; cursor: default; }
+
+/* Auto PiP: the sites it is on */
+div.row { cursor: default; }
+div.row:hover { background: transparent; }
+.remove { flex: none; padding: 2px 6px; border: 0; background: none; color: var(--text-2); font-size: 11px; cursor: pointer; }
+.remove:hover { color: var(--danger-text); }

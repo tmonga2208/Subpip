@@ -46,13 +46,16 @@ async function loadFile(page, file) {
   await chooser.accept([path.join(FIXTURES_DIR, file)]);
 }
 
-test('free users see Premium on the Subtitles row and an upgrade note', async () => {
+// The Subtitles page itself is free (it chooses among the page's captions);
+// bringing your own file is the Premium part
+test('free users see Premium on Load file and an upgrade note when they try it', async () => {
   const page = await open({ isPremium: false });
   await openMenu(page);
-  assert.ok((await menuItems(page)).includes('Subtitles=Premium'));
   await clickItem(page, 'Subtitles');
+  assert.ok((await menuItems(page)).includes('Load file…=Premium'));
+  assert.equal(await note(page), null);
+  await clickItem(page, 'Load file…');
   assert.match(await note(page), /Premium feature/);
-  assert.deepEqual(await menuItems(page), ['Back=']);
   await done(page);
 });
 
@@ -90,7 +93,7 @@ test('Use page captions drops the file again', async () => {
   await clickItem(page, 'Use page captions');
   await captionIs(page, 'Second hidden cue');
   await clickItem(page, 'Back');
-  assert.ok((await menuItems(page)).includes('Subtitles=Page'));
+  assert.ok((await menuItems(page)).includes('Subtitles=English'));
   await done(page);
 });
 

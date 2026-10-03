@@ -91,7 +91,39 @@ export const CONTROLS_CSS = `
   background: rgba(255, 77, 94, 0.15); color: #ff7a86;
 }
 .menu-note { padding: 8px 10px; font-size: 12px; line-height: 1.4; color: #8b8d93; }
+.actions {
+  position: absolute; left: 10px; bottom: 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  font: 13px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; color: #f2f2f2;
+  transition: bottom 0.2s, opacity 0.2s; pointer-events: auto;
+}
+.root.visible ~ .actions { bottom: 62px; }
+.actions.with-bar { opacity: 0; pointer-events: none; }
+.root.visible ~ .actions.with-bar { opacity: 1; pointer-events: auto; }
+.pill {
+  all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 8px; padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; background: rgba(17, 18, 20, 0.9);
+  font-weight: 600; color: #f2f2f2; cursor: pointer;
+}
+.pill:hover { background: #f2f2f2; color: #111214; }
+.pill .tag { margin-left: 0; }
+.lookup {
+  position: absolute; left: 50%; bottom: 104px; transform: translateX(-50%); box-sizing: border-box;
+  width: max-content; max-width: calc(100% - 24px); max-height: calc(100% - 120px); overflow: auto; padding: 12px 14px;
+  border: 1px solid #25262a; border-radius: 12px; background: #111214; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; color: #f2f2f2; pointer-events: auto;
+}
+.lookup-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+.lookup-word { font-size: 16px; font-weight: 700; }
+.lookup-meaning { color: #ff7a86; font-size: 15px; }
+.lookup-line { color: #b8bac0; }
+.lookup-translation { margin-top: 2px; }
+.lookup-save {
+  all: unset; box-sizing: border-box; margin-top: 10px; padding: 6px 10px; border: 1px solid #3a3b40; border-radius: 8px;
+  font-size: 12px; cursor: pointer;
+}
+.lookup-save:hover { background: rgba(255, 255, 255, 0.07); }
+.lookup-save:disabled { color: #8b8d93; cursor: default; }
 @media (max-width: 360px) {
-  .skip, .time { display: none; }
+  .skip, .next, .time { display: none; }
 }
 `;

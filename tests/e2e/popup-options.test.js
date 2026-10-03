@@ -6,7 +6,7 @@ import { sleep } from '../helpers/browser.js';
 const ctx = useExtension();
 
 const rows = (popup) => popup.evaluate(() => Object.fromEntries(
-  [...document.querySelectorAll('.row')].map((row) => [row.dataset.go, row.querySelector('.row-value').textContent])
+  [...document.querySelectorAll('.row[data-go]')].map((row) => [row.dataset.go, row.querySelector('.row-value').textContent])
 ));
 const view = (popup) => popup.evaluate(() => [...document.querySelectorAll('.view')].find((v) => !v.hidden).dataset.view);
 
@@ -19,7 +19,7 @@ async function premiumPopup() {
 
 test('free users see Premium tags and reach the upgrade page', async () => {
   const popup = await ctx.openPopup();
-  assert.deepEqual(await rows(popup), { translate: 'Premium', speed: 'Premium', autopip: 'Off', account: 'Sign in' });
+  assert.deepEqual(await rows(popup), { translate: 'Premium', speed: 'Premium', autopip: 'Off', saved: 'Premium', account: 'Sign in' });
   await popup.click('.row[data-go="translate"]');
   assert.equal(await view(popup), 'upgrade');
   assert.equal(await popup.$eval('#page-title', (el) => el.textContent), 'SubPIP Premium');
@@ -95,7 +95,7 @@ test('premium: default playback speed', async () => {
 test('auto PiP explains itself and turns on', async () => {
   const popup = await ctx.openPopup();
   await popup.click('.row[data-go="autopip"]');
-  assert.match(await popup.$eval('[data-view="autopip"] .paragraph', (el) => el.textContent), /access to all sites/);
+  assert.match(await popup.$eval('[data-view="autopip"] .paragraph', (el) => el.textContent), /asks once for access: to one site, or to all sites/);
   await popup.click('#autopip-on');
   await sleep(300);
   assert.equal((await ctx.storage()).subpipSettings.autoPip, true);
@@ -108,5 +108,55 @@ test('the account row shows the signed-in email', async () => {
   await ctx.signInAs({ email: 'me@example.com' });
   const popup = await ctx.openPopup({ stub: firebaseStub({ email: 'me@example.com' }) });
   await popup.waitForFunction(() => document.getElementById('account-value').textContent === 'me@example.com');
+  await popup.close();
+});
+
+// ---- Auto PiP for the site in the current tab ----
+
+test('Auto PiP can be switched on for the current site alone, and taken off again', async () => {
+  const page = await ctx.newPage('generic.html', 'films.localhost');
+  const popup = await ctx.openPopup();
+  await popup.click('.row[data-go="autopip"]');
+  await popup.waitForFunction(() => !document.getElementById('autopip-site-field').hidden);
+  assert.equal(await popup.$eval('#autopip-site', (el) => el.textContent), 'films.localhost');
+  await popup.click('#autopip-site-on');
+  await popup.waitForFunction(() => document.querySelectorAll('#autopip-site-list .row').length === 1);
+  const saved = (await ctx.storage()).subpipSettings;
+  assert.deepEqual(saved.autoPipSites, ['films.localhost']);
+  assert.notEqual(saved.autoPip, true);
+  assert.equal(await popup.$eval('#autopip-site-list .row-label', (el) => el.textContent), 'films.localhost');
+  await popup.click('#back-btn');
+  assert.equal((await rows(popup)).autopip, 'films.localhost');
+
+  // Off again, from the list
+  await popup.click('.row[data-go="autopip"]');
+  await popup.click('#autopip-site-list .row .remove');
+  await popup.waitForFunction(() => document.querySelectorAll('#autopip-site-list .row').length === 0);
+  assert.deepEqual((await ctx.storage()).subpipSettings.autoPipSites, []);
+  assert.equal(await popup.$eval('#autopip-site-on', (el) => el.checked), false);
+  await popup.close();
+  await page.close();
+});
+
+test('a refused request for a site leaves it off and says why', async () => {
+  const page = await ctx.newPage('generic.html', 'films.localhost');
+  const popup = await ctx.openPopup();
+  await popup.evaluate(() => { chrome.permissions.request = async () => false; });
+  await popup.click('.row[data-go="autopip"]');
+  await popup.waitForFunction(() => !document.getElementById('autopip-site-field').hidden);
+  await popup.click('#autopip-site-on');
+  await popup.waitForFunction(() => !document.getElementById('autopip-error').hidden);
+  assert.match(await popup.$eval('#autopip-error', (el) => el.textContent), /needs access to films\.localhost/);
+  assert.deepEqual((await ctx.storage()).subpipSettings.autoPipSites, []);
+  assert.equal(await popup.$eval('#autopip-site-on', (el) => el.checked), false);
+  await popup.close();
+  await page.close();
+});
+
+test('on a page that is not a site, only "every site" is offered', async () => {
+  const popup = await ctx.openPopup();
+  await popup.click('.row[data-go="autopip"]');
+  await sleep(300);
+  assert.equal(await popup.$eval('#autopip-site-field', (el) => el.hidden), true);
   await popup.close();
 });

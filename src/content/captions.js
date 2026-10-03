@@ -1,13 +1,34 @@
 // Captions inside the PiP window. Sources, in priority order:
 //   1. The user's own subtitles (Premium): a file loaded from the PiP menu,
 //      or the VTT/SRT link saved in the popup
-//   2. The site's own caption element (adapter.subtitleSelector), mirrored
-//   3. A hidden text track the page renders itself (generic sites)
-// "showing" text tracks are drawn by the video element and need nothing here.
+//   2. The element the viewer pointed at on this site (caption-picker.js)
+//   3. The site's own caption element (adapter.subtitleSelector), mirrored
+//   4. One of the video's subtitle tracks (sites without an adapter)
+//   5. The caption element of one of the common web players
+// And when the viewer asks for it (Premium): captions written from the
+// video's own sound, by Chrome's on-device speech recognition.
+// The page's captions are switched on when they are off, and the menu chooses
+// between the languages the page offers.
 
 import { translationCache, translateText } from './translation.js';
-import { findHiddenTextTrack, cueText, cueAt, parseVTTOrSRT } from './subtitles.js';
+import { subtitleTracks, preferredTrack, trackLabel, trackTextAt, cueAt, parseVTTOrSRT, plainCaptionText } from './subtitles.js';
+import { lineAt, createLineLog, speechCaption, speechLines } from './lines.js';
+import { SPEECH_TAGS } from '../shared/settings.js';
 import { createSession } from './session.js';
+import { findPlayerCaptions } from './adapters.js';
+
+// With "stop after each line", how long before a line's end the video stops
+const STOP_BEFORE_END = 0.08;
+// Captions from speech: taken away after this long without anything new, and
+// - while they are being translated - renewed no more often than this
+const SPEECH_QUIET_MS = 4000;
+const TRANSLATED_SPEECH_GAP_MS = 1000;
+
+// The lines an element shows: none while it is not displayed
+function elementLines(element) {
+  if (!element.getClientRects().length) return '';
+  return element.innerText.split('\n').map((line) => line.trim()).filter(Boolean).join('\n').slice(0, 400);
+}
 
 // memory.value outlives the PiP window, so a loaded file is still there when
 // the window is reopened on the same page
@@ -20,9 +41,32 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
 
   // CC toggle state, re-applied whenever the caption element is replaced
   let captionsVisible = true;
+  // With Premium a caption can be clicked for a word's meaning (study.js);
+  // otherwise clicks go through it to the picture
   const present = () => {
-    if (captionEl) captionEl.style.visibility = captionsVisible ? '' : 'hidden';
+    if (!captionEl) return;
+    captionEl.style.visibility = captionsVisible ? '' : 'hidden';
+    captionEl.setAttribute('data-subpip-captions', '');
+    captionEl.style.setProperty('pointer-events', isPremium ? 'auto' : 'none', 'important');
+    if (isPremium) captionEl.style.cursor = 'pointer';
   };
+
+  // The caption as the page gave it (before any translation), and the lines
+  // seen so far where the page gives no timings (see lines.js)
+  let rawLine = '';
+  const log = createLineLog();
+  let pauseAfterLine = false;
+  // A file's or a track's lines come with their own times
+  const timed = () => !!own || pageSource === 'track';
+  function noteLine(text) {
+    if (text === rawLine) return;
+    const previous = rawLine;
+    rawLine = text;
+    if (timed()) return;
+    log.note(video.currentTime, text);
+    // No end time to stop at: stop when the line gives way to the next
+    if (pauseAfterLine && previous && !text.startsWith(previous) && !video.paused) video.pause();
+  }
 
   // Translation with flicker prevention: show the last translation until the
   // new one arrives, and never retry a line that already failed. With dual
@@ -90,6 +134,9 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
   let retime = () => { };
   let source = null;
   session.onCleanup(() => source && source.dispose());
+  // Which of the page's captions are in use: 'picked', 'site', 'track',
+  // 'player', or null while it is the viewer's own file (or nothing yet)
+  let pageSource = null;
   function show(startSource) {
     if (source) source.dispose();
     if (captionEl) captionEl.remove();
@@ -97,6 +144,10 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
     rerender = () => { };
     retime = () => { };
     lastTranslation = '';
+    pageSource = null;
+    rawLine = '';
+    // Any other captions take the place of the ones from speech
+    if (startSource !== listenToSpeech && speech.state !== 'off') setSpeech('off', null);
     source = createSession();
     startSource(source);
   }
@@ -118,6 +169,7 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
     return (text) => {
       if (text === currentText) return;
       currentText = text;
+      noteLine(text);
       rerender();
     };
   }
@@ -140,9 +192,17 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
   // 2. Mirror the site's own caption element (keeps its styling). Sites often
   // re-create this element, so re-find it whenever it gets detached.
   function mirrorSiteCaptions({ onCleanup, every }) {
+    pageSource = 'site';
     captionEl = pipDoc.createElement('div');
     pipDoc.body.appendChild(captionEl);
     present();
+
+    // Where SubPIP can work the site's caption switch, captions that are off
+    // are on for as long as they are mirrored
+    if (siteCaptions && siteCaptions.current() === null) {
+      siteCaptions.turnOn();
+      onCleanup(() => siteCaptions.select(null));
+    }
 
     let siteEl = null;
     const observer = new MutationObserver(() => rerender());
@@ -151,6 +211,7 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
     rerender = () => {
       if (!siteEl) return;
       const text = siteEl.textContent?.trim() || '';
+      noteLine(text);
       const shown = display(text);
       captionEl.replaceChildren();
 
@@ -182,29 +243,207 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
     every(1000, attach);
   }
 
-  // 3. Generic sites: render cues from a text track the page draws itself
-  function followTextTrack({ listen, onCleanup }) {
+  // 3. Generic sites: one of the video's subtitle tracks. A track the page
+  // shows itself would also be drawn inside this window, by the video element;
+  // while the window is open SubPIP draws it instead (in the viewer's caption
+  // style, translated if asked) and the page gets its tracks back afterwards.
+  const wasMode = new Map();
+  session.onCleanup(() => {
+    for (const [track, mode] of wasMode) track.mode = mode;
+  });
+  // The track on screen: undefined until one is picked, null once the viewer chose Off
+  let pageTrack;
+  let retrack = () => { };
+  function followTextTrack({ listen, onCleanup, every }) {
+    pageSource = 'track';
     const setText = useTextCaptions();
     let track = null;
-    const onCueChange = () => setText(track ? cueText(track) : '');
+    const onCueChange = () => setText(track ? trackTextAt(track, video.currentTime) : '');
     const pickTrack = () => {
-      const next = findHiddenTextTrack(video);
-      if (next === track) return;
-      if (track) track.removeEventListener('cuechange', onCueChange);
-      track = next;
-      if (track) track.addEventListener('cuechange', onCueChange);
+      const tracks = subtitleTracks(video);
+      for (const each of tracks) {
+        if (!wasMode.has(each)) wasMode.set(each, each.mode);
+        if (each.mode === 'showing') each.mode = 'hidden';
+      }
+      if (pageTrack !== null && !tracks.includes(pageTrack)) pageTrack = preferredTrack(tracks, wasMode) || undefined;
+      const next = pageTrack || null;
+      // A track that is off loads nothing and reports no lines
+      if (next && next.mode === 'disabled') next.mode = 'hidden';
+      if (next !== track) {
+        if (track) track.removeEventListener('cuechange', onCueChange);
+        track = next;
+        if (track) track.addEventListener('cuechange', onCueChange);
+      }
       onCueChange();
     };
-    onCleanup(() => track && track.removeEventListener('cuechange', onCueChange));
+    retrack = pickTrack;
+    onCleanup(() => {
+      retrack = () => { };
+      if (track) track.removeEventListener('cuechange', onCueChange);
+    });
     if (video.textTracks) {
       listen(video.textTracks, 'change', pickTrack);
       listen(video.textTracks, 'addtrack', pickTrack);
       listen(video.textTracks, 'removetrack', pickTrack);
     }
+    listen(video, 'timeupdate', onCueChange);
+    listen(video, 'seeked', onCueChange);
+    // A track's file arrives some time after the track is switched on, with no
+    // event to say so when the video is paused
+    every(500, onCueChange);
     pickTrack();
   }
 
-  const showPageCaptions = adapter.subtitleSelector ? mirrorSiteCaptions : followTextTrack;
+  // Captions the page keeps in an element of its own, read as text and drawn
+  // in SubPIP's caption box. Sites re-create such elements, so it is looked up
+  // again whenever it has gone.
+  function followElementText({ onCleanup, every }, selector, kind) {
+    pageSource = kind;
+    const setText = useTextCaptions();
+    let element = null;
+    const read = () => setText(element && element.isConnected ? elementLines(element) : '');
+    const observer = new MutationObserver(read);
+    onCleanup(() => observer.disconnect());
+    const attach = () => {
+      if (!element || !element.isConnected) {
+        observer.disconnect();
+        try {
+          element = document.querySelector(selector);
+        } catch (e) {
+          element = null;
+        }
+        if (element) observer.observe(element, { childList: true, subtree: true, characterData: true, attributes: true });
+      }
+      read();
+    };
+    attach();
+    every(1000, attach);
+  }
+
+  const siteCaptions = adapter.captions || null;
+  // What the viewer pointed at on this site comes before anything SubPIP
+  // works out by itself
+  let pickedSelector = (settings.captionSelector || '').trim();
+
+  function showPageCaptions(scope) {
+    if (pickedSelector) return followElementText(scope, pickedSelector, 'picked');
+    if (adapter.subtitleSelector) return mirrorSiteCaptions(scope);
+    // A site without an adapter: the video's subtitle tracks, else the caption
+    // element of a player SubPIP recognises. Either may only appear once the
+    // page's captions start.
+    let started = false;
+    const start = () => {
+      if (started) return;
+      const hasTracks = subtitleTracks(video).length > 0;
+      const player = hasTracks ? null : findPlayerCaptions();
+      if (!hasTracks && !player) return;
+      started = true;
+      if (player) followElementText(scope, player.selector, 'player');
+      else followTextTrack(scope);
+    };
+    start();
+    scope.every(1000, start);
+    if (video.textTracks) scope.listen(video.textTracks, 'addtrack', start);
+  }
+
+  // Captions from the video's own sound (Premium). Chrome's speech
+  // recognition listens to it on this device, in the language the viewer says
+  // is spoken. state: off | fetching (the speech pack) | on | unsupported
+  // (browser) | unavailable (language) | blocked (the sound) | failed
+  const speech = { state: 'off', language: null };
+  let speechChanged = () => { };
+  let speechRequest = 0;
+  function setSpeech(state, language = speech.language) {
+    speech.state = state;
+    speech.language = language;
+    speechChanged();
+  }
+  // The PiP window's own: it stays in front, the page may be a background tab
+  const Recognition = () => pipDoc.defaultView.SpeechRecognition || pipDoc.defaultView.webkitSpeechRecognition || null;
+
+  function listenToSpeech({ onCleanup }) {
+    pageSource = 'speech';
+    const setText = useTextCaptions();
+    let recognition = null;
+    let over = false;
+    let restartTimer = null;
+    let quietTimer = null;
+    let showTimer = null;
+    // Lines already taken off the screen after a silence
+    let hidden = 0;
+    let lastShown = 0;
+    let latest = '';
+    const showNow = () => {
+      lastShown = Date.now();
+      setText(latest);
+    };
+    const showSoon = (text) => {
+      latest = text;
+      const wait = (translationOn ? TRANSLATED_SPEECH_GAP_MS : 0) - (Date.now() - lastShown);
+      clearTimeout(showTimer);
+      if (wait <= 0) showNow();
+      else showTimer = setTimeout(showNow, wait);
+    };
+    const onResult = (event) => {
+      let said = '';
+      for (let i = 0; i < event.results.length; i++) said += ` ${event.results[i][0].transcript}`;
+      showSoon(speechCaption(said, hidden));
+      clearTimeout(quietTimer);
+      quietTimer = setTimeout(() => {
+        hidden = speechLines(said).length;
+        showSoon('');
+      }, SPEECH_QUIET_MS);
+    };
+    const start = () => {
+      if (over) return;
+      let track = null;
+      try {
+        track = video.captureStream().getAudioTracks()[0] || null;
+      } catch (e) {
+        track = null;
+      }
+      // Protected video, or sound from another site
+      if (!track) {
+        over = true;
+        setSpeech('blocked');
+        return;
+      }
+      hidden = 0;
+      recognition = new (Recognition())();
+      Object.assign(recognition, { lang: SPEECH_TAGS[speech.language], continuous: true, interimResults: true, processLocally: true });
+      recognition.addEventListener('result', onResult);
+      // It stops by itself now and then, and when the video's sound changes
+      recognition.addEventListener('end', () => {
+        recognition = null;
+        if (!over) restartTimer = setTimeout(start, 300);
+      });
+      recognition.addEventListener('error', (event) => {
+        if (!['not-allowed', 'service-not-allowed', 'language-not-supported'].includes(event.error)) return;
+        over = true;
+        setSpeech('failed');
+      });
+      try {
+        recognition.start(track);
+      } catch (e) {
+        over = true;
+        setSpeech('failed');
+      }
+    };
+    onCleanup(() => {
+      over = true;
+      clearTimeout(restartTimer);
+      clearTimeout(quietTimer);
+      clearTimeout(showTimer);
+      if (recognition) {
+        try {
+          recognition.abort();
+        } catch (e) {
+          // Already stopped
+        }
+      }
+    });
+    start();
+  }
 
   // A file loaded earlier on this page wins over the saved link
   const remembered = memory.value && memory.value.href === location.href ? memory.value : null;
@@ -225,7 +464,55 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
   }
   show(own ? showOwnSubtitles : showPageCaptions);
 
+  // Every line with its times, for stepping through them
+  const lines = () => {
+    if (own) return own.cues.map((cue) => ({ start: cue.start + delay, end: cue.end + delay, text: cue.text }));
+    if (pageSource === 'track') {
+      return [...((pageTrack && pageTrack.cues) || [])].map((cue) => ({ start: cue.startTime, end: cue.endTime, text: plainCaptionText(cue.text) }));
+    }
+    return log.lines;
+  };
+
+  // "Stop after each line" for lines with a known end: stop just before it,
+  // once per line, so carrying on plays the next line through
+  let armedFor = null;
+  let armedEnd = 0;
+  let stopTimer = null;
+  const disarm = () => {
+    armedFor = null;
+    clearTimeout(stopTimer);
+  };
+  const armStop = () => {
+    if (!pauseAfterLine || video.paused || !timed()) return;
+    const line = lineAt(lines(), video.currentTime);
+    if (!line || line.end === undefined || video.currentTime >= line.end || armedFor === line.start) return;
+    disarm();
+    armedFor = line.start;
+    armedEnd = line.end;
+    const wait = (line.end - STOP_BEFORE_END - video.currentTime) / (video.playbackRate || 1);
+    stopTimer = setTimeout(() => {
+      if (pauseAfterLine && !video.paused && armedFor === line.start) video.pause();
+    }, Math.max(0, wait * 1000));
+  };
+  session.onCleanup(disarm);
+  session.listen(video, 'timeupdate', armStop);
+  session.listen(video, 'play', armStop);
+  session.listen(video, 'seeking', disarm);
+  session.listen(video, 'ratechange', disarm);
+  // Paused by the viewer before the line was over: stop at its end after all
+  session.listen(video, 'pause', () => {
+    if (armedFor !== null && video.currentTime < armedEnd - STOP_BEFORE_END - 0.15) disarm();
+  });
+
   return {
+    get rawLine() { return rawLine; },
+    lines,
+    get pauseAfterLine() { return pauseAfterLine; },
+    setPauseAfterLine(on) {
+      pauseAfterLine = on;
+      disarm();
+      armStop();
+    },
     get translationOn() { return translationOn; },
     setTranslationOn(on) {
       translationOn = on;
@@ -236,10 +523,72 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
       captionsVisible = on;
       present();
     },
-    // Re-render after settings change (e.g. target language)
+    // Re-render after settings change (e.g. target language). Captions the
+    // viewer has just pointed at take over from the page's other captions.
     refresh() {
+      const picked = (getSettings().captionSelector || '').trim();
+      if (picked !== pickedSelector) {
+        pickedSelector = picked;
+        if (!own) show(showPageCaptions);
+      }
       lastTranslation = '';
       rerender();
+    },
+    // The page's own caption choices, for the menu: [{ id, label, selected }].
+    // Empty where there is nothing to choose between.
+    pageTracks() {
+      if (pageSource === 'site' && siteCaptions) {
+        const current = siteCaptions.current();
+        return siteCaptions.tracks().map((track) => ({ ...track, selected: track.id === current }));
+      }
+      if (pageSource !== 'track') return [];
+      return subtitleTracks(video).map((track, index) => ({ id: index, label: trackLabel(track, index), selected: track === pageTrack }));
+    },
+    // id from pageTracks(), or null for Off
+    selectPageTrack(id) {
+      if (pageSource === 'site' && siteCaptions) {
+        siteCaptions.select(id);
+      } else if (pageSource === 'track') {
+        pageTrack = id === null ? null : subtitleTracks(video)[id] || null;
+        retrack();
+      }
+    },
+    // Captions from the video's sound: { state, language } (see listenToSpeech)
+    get speech() { return { ...speech }; },
+    onSpeechChange(fn) { speechChanged = fn; },
+    async startSpeech(language) {
+      const request = ++speechRequest;
+      const SpeechRecognition = Recognition();
+      if (!SpeechRecognition || typeof SpeechRecognition.available !== 'function') {
+        setSpeech('unsupported', language);
+        return;
+      }
+      const wanted = { langs: [SPEECH_TAGS[language]], processLocally: true };
+      try {
+        let ready = await SpeechRecognition.available(wanted);
+        if (ready === 'downloadable' || ready === 'downloading') {
+          setSpeech('fetching', language);
+          await SpeechRecognition.install(wanted);
+          ready = await SpeechRecognition.available(wanted);
+        }
+        // The viewer chose something else meanwhile
+        if (request !== speechRequest) return;
+        if (ready !== 'available') {
+          setSpeech('unavailable', language);
+          return;
+        }
+      } catch (e) {
+        if (request === speechRequest) setSpeech('failed', language);
+        return;
+      }
+      setSpeech('on', language);
+      show(listenToSpeech);
+    },
+    stopSpeech() {
+      speechRequest++;
+      const listening = pageSource === 'speech';
+      setSpeech('off', null);
+      if (listening) show(own ? showOwnSubtitles : showPageCaptions);
     },
     // The user's own subtitles, or null while the page's captions are shown
     get subtitles() { return own ? { name: own.name, lines: own.cues.length } : null; },

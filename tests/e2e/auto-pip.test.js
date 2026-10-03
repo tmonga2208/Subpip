@@ -12,7 +12,7 @@ const ctx = useExtension();
 
 // A fixture tab that records every time the page script arms ('on') or
 // disarms ('off') automatic PiP
-async function videoTab() {
+async function videoTab(host = '127.0.0.1') {
   const page = await ctx.browser.newPage();
   await page.evaluateOnNewDocument(() => {
     window.__autoPip = [];
@@ -22,7 +22,7 @@ async function videoTab() {
       return original(action, handler);
     };
   });
-  await page.goto(`http://127.0.0.1:${ctx.server.port}/generic.html`);
+  await page.goto(`http://${host}:${ctx.server.port}/generic.html`);
   return page;
 }
 const history = (page) => page.evaluate(() => window.__autoPip.join(' → '));
@@ -96,5 +96,34 @@ test('a tab stops opening PiP by itself once its extension is gone, and is recon
   // ...and it listens to the new copy of the extension: off means off
   await setAutoPip(false);
   await becomes(page, 'on → off → on → off');
+  await page.close();
+});
+
+// ---- Auto PiP for one site ----
+
+test('Auto PiP chosen for one site sets up that site\'s pages and leaves other sites alone', async () => {
+  await ctx.setSettings({ autoPip: false, autoPipSites: ['chosen.localhost'] });
+  await sleep(500);
+  const chosen = await videoTab('chosen.localhost');
+  const under = await videoTab('video.chosen.localhost');
+  const other = await videoTab('other.localhost');
+  await becomes(chosen, 'on');
+  await becomes(under, 'on');
+  await sleep(800);
+  assert.equal(await history(other), '');
+  // Taking the site off the list undoes it in the open tabs
+  await ctx.setSettings({ autoPip: false, autoPipSites: [] });
+  await becomes(chosen, 'on → off');
+  await chosen.close();
+  await under.close();
+  await other.close();
+});
+
+test('choosing a site reaches its tabs that are already open', async () => {
+  const page = await videoTab('late.localhost');
+  await sleep(500);
+  assert.equal(await history(page), '');
+  await ctx.setSettings({ autoPipSites: ['late.localhost'] });
+  await becomes(page, 'on');
   await page.close();
 });

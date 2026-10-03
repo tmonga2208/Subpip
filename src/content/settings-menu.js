@@ -1,6 +1,7 @@
 // PiP settings menu: Speed (Premium), Caption size, Translate (Premium),
-// Subtitles (Premium), Fill window. Size/translation are session overrides;
-// nothing is saved. Built with DOM calls only (Trusted Types pages).
+// Subtitles (the page's caption languages, and the viewer's own file with
+// Premium), Fill window. Size/translation are session overrides; nothing is
+// saved. Built with DOM calls only (Trusted Types pages).
 
 import { createIcon } from '../shared/icons.js';
 import { CAPTION_SIZES, LANGUAGES, SPEEDS } from '../shared/settings.js';
@@ -14,7 +15,8 @@ const MAX_SUBTITLE_BYTES = 5 * 1024 * 1024;
 
 const signed = (seconds) => `${seconds > 0 ? '+' : '−'}${Math.abs(seconds)} s`;
 
-export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessionSettings, applyOverride, captions }) {
+// study: the study tools (study.js); null without Premium
+export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessionSettings, applyOverride, captions, study = null }) {
   const el = (tag, cls, text) => {
     const node = pipDoc.createElement(tag);
     if (cls) node.className = cls;
@@ -70,6 +72,20 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
   };
   const languageName = (code) => (LANGUAGES.find((lang) => lang.code === code) || { name: code }).name;
   const translateLabel = () => (captions.translationOn ? languageName(getSessionSettings().targetLanguage) : 'Off');
+  // The viewer's file, else the page's caption language, else just "Page"
+  // where the page offers no choice SubPIP can see
+  const speechLabel = () => {
+    const { state, language } = captions.speech;
+    if (state === 'on') return languageName(language);
+    return state === 'fetching' ? 'Getting…' : 'Off';
+  };
+  const subtitlesLabel = () => {
+    if (captions.subtitles) return captions.subtitles.name;
+    if (captions.speech.state === 'on') return 'From speech';
+    const tracks = captions.pageTracks();
+    if (!tracks.length) return 'Page';
+    return (tracks.find((track) => track.selected) || { label: 'Off' }).label;
+  };
 
   // One row: label, then a value / Premium tag / check mark / chevron
   function item({ label, value, premium, checked, chevron, back, onSelect }) {
@@ -97,16 +113,18 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
 
   const go = (next) => () => {
     view = next;
+    fileProblem = '';
     render();
   };
-  const backRow = () => item({ label: 'Back', back: true, onSelect: go('main') });
+  const backRow = (to = 'main') => item({ label: 'Back', back: true, onSelect: go(to) });
 
   function mainView() {
     return [
       item({ label: 'Speed', value: `${video.playbackRate}×`, premium: !isPremium, chevron: true, onSelect: go('speed') }),
       item({ label: 'Caption size', value: sizeLabel(), chevron: true, onSelect: go('size') }),
       item({ label: 'Translate', value: translateLabel(), premium: !isPremium, chevron: true, onSelect: go('translate') }),
-      item({ label: 'Subtitles', value: captions.subtitles ? captions.subtitles.name : 'Page', premium: !isPremium, chevron: true, onSelect: go('subtitles') }),
+      item({ label: 'Subtitles', value: subtitlesLabel(), chevron: true, onSelect: go('subtitles') }),
+      item({ label: 'Study tools', value: study && study.pauseAfterLine ? 'Stops after lines' : 'Off', premium: !isPremium, chevron: true, onSelect: go('study') }),
       item({
         label: 'Fill window',
         value: video.style.objectFit === 'fill' ? 'On' : 'Off',
@@ -177,11 +195,45 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
     ];
   }
 
+  // A site player may take a moment to switch language: look again shortly
+  let recheck = null;
+  session.onCleanup(() => clearTimeout(recheck));
+
   function subtitlesView() {
-    if (!isPremium) return [backRow(), el('div', 'menu-note', UPGRADE_NOTE)];
-    const rows = [backRow(), item({ label: 'Load file…', value: 'SRT or VTT', onSelect: () => fileInput.click() })];
-    if (fileProblem) rows.push(el('div', 'menu-note', fileProblem));
+    const rows = [backRow()];
     const loaded = captions.subtitles;
+    // The page's own captions, where there is a choice, while they are in use
+    const tracks = loaded ? [] : captions.pageTracks();
+    if (tracks.length) {
+      const choose = (id) => () => {
+        captions.selectPageTrack(id);
+        render();
+        clearTimeout(recheck);
+        recheck = setTimeout(() => {
+          if (!panel.hidden && view === 'subtitles') render();
+        }, 800);
+      };
+      rows.push(
+        ...tracks.map((track) => item({ label: track.label, checked: track.selected, onSelect: choose(track.id) })),
+        item({ label: 'Off', checked: !tracks.some((track) => track.selected), onSelect: choose(null) })
+      );
+    }
+    // Captions written from the video's sound, for videos that have none
+    if (!loaded) rows.push(item({ label: 'From speech', value: speechLabel(), premium: !isPremium, chevron: true, onSelect: go('speech') }));
+    rows.push(item({
+      label: 'Load file…',
+      value: 'SRT or VTT',
+      premium: !isPremium,
+      onSelect: () => {
+        if (isPremium) {
+          fileInput.click();
+          return;
+        }
+        fileProblem = UPGRADE_NOTE;
+        render();
+      }
+    }));
+    if (fileProblem) rows.push(el('div', 'menu-note', fileProblem));
     if (loaded) {
       const nudge = (seconds) => () => {
         captions.setDelay(captions.delay + seconds);
@@ -203,7 +255,60 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
     return rows;
   }
 
-  const VIEWS = { main: mainView, speed: speedView, size: sizeView, translate: translateView, subtitles: subtitlesView };
+  // Where a Premium feature outside the menu sends a free viewer
+  const premiumView = () => [backRow(), el('div', 'menu-note', UPGRADE_NOTE)];
+
+  const SPEECH_NOTES = {
+    fetching: (name) => `Getting the speech pack for ${name}. This can take a minute.`,
+    unavailable: (name) => `Chrome cannot recognise ${name} on this device.`,
+    unsupported: () => 'Captions from speech need Chrome 139 or newer.',
+    blocked: () => "This video's sound cannot be read: it is protected, or it comes from another site.",
+    failed: () => 'Speech recognition could not start.'
+  };
+  function speechView() {
+    if (!isPremium) return [backRow('subtitles'), el('div', 'menu-note', UPGRADE_NOTE)];
+    const { state, language } = captions.speech;
+    const chosen = state === 'on' || state === 'fetching' ? language : null;
+    const note = SPEECH_NOTES[state]
+      ? SPEECH_NOTES[state](languageName(language))
+      : 'Captions written from what is said in the video, on your device. Choose the language being spoken.';
+    return [
+      backRow('subtitles'),
+      el('div', 'menu-note', note),
+      item({
+        label: 'Off',
+        checked: chosen === null,
+        onSelect: () => {
+          captions.stopSpeech();
+          render();
+        }
+      }),
+      ...LANGUAGES.map((lang) => item({ label: lang.name, checked: lang.code === chosen, onSelect: () => { captions.startSpeech(lang.code); } }))
+    ];
+  }
+  // The speech pack arrives, or recognition fails, some time after the choice
+  captions.onSpeechChange(() => {
+    if (!panel.hidden) render();
+  });
+
+  function studyView() {
+    if (!study) return premiumView();
+    const stops = study.pauseAfterLine;
+    return [
+      backRow(),
+      item({
+        label: 'Stop after each line',
+        value: stops ? 'On' : 'Off',
+        onSelect: () => {
+          study.setPauseAfterLine(!stops);
+          render();
+        }
+      }),
+      el('div', 'menu-note', 'Keys: A previous line, S replay, D next line, Q stop after each line. Click a word in the captions for its meaning.')
+    ];
+  }
+
+  const VIEWS = { main: mainView, speed: speedView, size: sizeView, translate: translateView, subtitles: subtitlesView, speech: speechView, study: studyView, premium: premiumView };
 
   function render() {
     panel.replaceChildren(...VIEWS[view]());
@@ -236,7 +341,12 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
   const dropFile = (file) => {
     keyboardMode = false;
     open('subtitles');
-    if (isPremium) loadFile(file);
+    if (isPremium) {
+      loadFile(file);
+      return;
+    }
+    fileProblem = UPGRADE_NOTE;
+    render();
   };
 
   // Clicks anywhere outside the menu and gear close it
@@ -246,5 +356,15 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
     if (!path.includes(panel) && !path.includes(button)) close();
   });
 
-  return { button, panel, extras: [fileInput], isOpen: () => !panel.hidden, close, dropFile };
+  const showUpgrade = () => {
+    keyboardMode = false;
+    open('premium');
+  };
+
+  // After something the menu shows was changed from outside it (a key)
+  const refresh = () => {
+    if (!panel.hidden) render();
+  };
+
+  return { button, panel, extras: [fileInput], isOpen: () => !panel.hidden, close, dropFile, showUpgrade, refresh };
 }

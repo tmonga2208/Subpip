@@ -2,11 +2,12 @@
 
 import { getTargetTab, detectPage, describeStatus } from './status.js';
 import { togglePipInTab, injectRelay } from '../shared/inject.js';
-import { autoPipActive } from '../shared/settings.js';
+import { autoPipInForce, captionSelectorFor, saveCaptionSelector } from '../shared/settings.js';
 
 export function initHome({ doc, store, auth }) {
   const $ = (id) => doc.getElementById(id);
   const button = $('pip-btn');
+  const pick = $('pick-captions');
   const BUTTON_TEXT = { pip: 'Close Picture-in-Picture', embedded: 'Open the player in a new tab' };
   let tab = null;
   let current = { state: 'loading' };
@@ -19,6 +20,8 @@ export function initHome({ doc, store, auth }) {
     $('status-sub').textContent = sub;
     button.disabled = !['video', 'pip', 'embedded'].includes(status.state);
     button.textContent = BUTTON_TEXT[status.state] || 'Open Picture-in-Picture';
+    pick.hidden = !['video', 'pip'].includes(status.state);
+    pick.textContent = status.picked ? 'Forget the captions picked on this site' : 'Captions not showing? Pick them on the page';
   }
 
   // Inject straight from the popup: the shorter the chain, the better the
@@ -31,9 +34,12 @@ export function initHome({ doc, store, auth }) {
       window.close();
       return;
     }
-    // Auto PiP as the page should see it: only where it is in force on this browser
-    const autoPip = store.get().autoPip === true && await autoPipActive();
-    const settings = { ...store.get(), autoPip, isPremium: auth.isPremium(), uid: auth.user()?.uid };
+    // Auto PiP as the page should see it: only where it is in force on this
+    // browser, and without the list of the other sites it is on
+    const { autoPipSites, ...saved } = store.get(); // eslint-disable-line no-unused-vars
+    const autoPip = await autoPipInForce(store.get(), current.host);
+    const captionSelector = await captionSelectorFor(current.host);
+    const settings = { ...saved, autoPip, captionSelector, isPremium: auth.isPremium(), uid: auth.user()?.uid };
     try {
       await togglePipInTab(tab.id, settings);
       // Then save and add the relay (translation + live settings)
@@ -41,6 +47,25 @@ export function initHome({ doc, store, auth }) {
       await injectRelay(tab.id);
     } catch (error) {
       console.warn('[SubPIP] Could not start Picture-in-Picture:', error);
+    }
+    window.close();
+  });
+
+  // On a site SubPIP does not know, the viewer points at the captions once:
+  // the page takes over from here, so the popup gets out of the way
+  pick.addEventListener('click', async () => {
+    if (!tab) return;
+    if (current.picked) {
+      await saveCaptionSelector(current.host, '');
+      render(await detectPage(tab));
+      return;
+    }
+    try {
+      await injectRelay(tab.id);
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, world: 'MAIN', files: ['script.js'] });
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, world: 'MAIN', func: () => window.__SUBPIP__.pickCaptions() });
+    } catch (error) {
+      console.warn('[SubPIP] Could not start picking captions:', error);
     }
     window.close();
   });

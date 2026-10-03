@@ -272,3 +272,122 @@ test('captions are lifted above the bar as soon as PiP opens', async () => {
   assert.ok(shift > 30, `initial shift ${shift}px`);
   await done(page);
 });
+
+// ---- The picture itself: click, double-click, scroll; and the remaining keys ----
+
+const key = (page, init) => pipEval(page, (pip, keyInit) => pip.dispatchEvent(new pip.KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...keyInit })), init);
+const videoState = (page) => pipEval(page, (pip) => {
+  const video = pip.document.querySelector('video');
+  return { paused: video.paused, time: video.currentTime, volume: Math.round(video.volume * 100) / 100, muted: video.muted };
+});
+const seekAndWait = (page, time) => pipEval(page, async (pip, target) => {
+  const video = pip.document.querySelector('video');
+  video.currentTime = target;
+  await new Promise((resolve) => video.addEventListener('seeked', resolve, { once: true }));
+}, time);
+
+test('clicking the picture plays and pauses', async () => {
+  const page = await open();
+  const click = () => pipEval(page, (pip) => pip.document.querySelector('video').dispatchEvent(new pip.MouseEvent('click', { bubbles: true, composed: true })));
+  assert.equal((await videoState(page)).paused, true);
+  await click();
+  await sleep(200);
+  assert.equal((await videoState(page)).paused, false);
+  await click();
+  await sleep(200);
+  assert.equal((await videoState(page)).paused, true);
+  await done(page);
+});
+
+test('the click that closes the menu does not also pause or play', async () => {
+  const page = await open();
+  await shadowEval(page, (shadow) => shadow.querySelector('.btn.gear').click());
+  await pipEval(page, (pip) => {
+    const video = pip.document.querySelector('video');
+    video.dispatchEvent(new pip.PointerEvent('pointerdown', { bubbles: true, composed: true }));
+    video.dispatchEvent(new pip.MouseEvent('click', { bubbles: true, composed: true }));
+  });
+  await sleep(200);
+  assert.equal(await shadowEval(page, (shadow) => shadow.querySelector('.menu').hidden), true);
+  assert.equal((await videoState(page)).paused, true);
+  await done(page);
+});
+
+test('double-clicking the picture fits the window to the shape of the video', async () => {
+  const page = await open();
+  await pipEval(page, (pip) => pip.resizeTo(520, 520));
+  await sleep(500);
+  const before = await pipEval(page, (pip) => pip.innerWidth / pip.innerHeight);
+  assert.ok(before < 1.3, `window starts squarish (${before})`);
+  await pipEval(page, (pip) => pip.document.querySelector('video').dispatchEvent(new pip.MouseEvent('dblclick', { bubbles: true, composed: true })));
+  await sleep(500);
+  const after = await pipEval(page, (pip) => ({ ratio: pip.innerWidth / pip.innerHeight, width: pip.innerWidth }));
+  // The test video is 16:9
+  assert.ok(Math.abs(after.ratio - 16 / 9) < 0.03, `window is now ${after.ratio}`);
+  await done(page);
+});
+
+test('scrolling over the window changes the volume and unmutes', async () => {
+  const page = await open();
+  await pipEval(page, (pip) => { const video = pip.document.querySelector('video'); video.muted = false; video.volume = 0.5; });
+  const wheel = (deltaY) => pipEval(page, (pip, dy) => pip.document.querySelector('video').dispatchEvent(new pip.WheelEvent('wheel', { deltaY: dy, bubbles: true, composed: true, cancelable: true })), deltaY);
+  await wheel(-100);
+  assert.equal((await videoState(page)).volume, 0.55);
+  await wheel(100);
+  await wheel(100);
+  assert.equal((await videoState(page)).volume, 0.45);
+  await pipEval(page, (pip) => { pip.document.querySelector('video').muted = true; });
+  await wheel(-100);
+  assert.deepEqual({ muted: (await videoState(page)).muted, volume: (await videoState(page)).volume }, { muted: false, volume: 0.5 });
+  assert.equal(await shadowEval(page, (shadow) => shadow.querySelector('.root').classList.contains('visible')), true);
+  await done(page);
+});
+
+test('number keys jump to tenths of the video, Home to the start', async () => {
+  const page = await open();
+  await key(page, { code: 'Digit5', key: '5' });
+  await sleep(400);
+  assert.ok(Math.abs((await videoState(page)).time - 60) < 1, 'key 5 goes to the middle of a 2-minute video');
+  await key(page, { code: 'Numpad9', key: '9' });
+  await sleep(400);
+  assert.ok(Math.abs((await videoState(page)).time - 108) < 1);
+  await key(page, { code: 'Home', key: 'Home' });
+  await sleep(400);
+  assert.ok((await videoState(page)).time < 1);
+  await done(page);
+});
+
+test('End goes to the end of the video', async () => {
+  const page = await open();
+  await pipEval(page, (pip) => { pip.document.querySelector('video').loop = false; });
+  await key(page, { code: 'End', key: 'End' });
+  await sleep(500);
+  const duration = await pipEval(page, (pip) => pip.document.querySelector('video').duration);
+  assert.ok((await videoState(page)).time > duration - 1);
+  await done(page);
+});
+
+test('Ctrl or Cmd with an arrow moves a tenth of the video; a bare arrow still moves 10 seconds', async () => {
+  const page = await open();
+  await seekAndWait(page, 30);
+  await key(page, { code: 'ArrowRight', key: 'ArrowRight', ctrlKey: true });
+  await sleep(400);
+  assert.ok(Math.abs((await videoState(page)).time - 42) < 1, 'a tenth of 2 minutes is 12 seconds');
+  await key(page, { code: 'ArrowLeft', key: 'ArrowLeft', metaKey: true });
+  await sleep(400);
+  assert.ok(Math.abs((await videoState(page)).time - 30) < 1);
+  await key(page, { code: 'ArrowRight', key: 'ArrowRight' });
+  await sleep(400);
+  assert.ok(Math.abs((await videoState(page)).time - 40) < 1);
+  await done(page);
+});
+
+test('a number typed with Ctrl, Alt or Cmd is left to the browser', async () => {
+  const page = await open();
+  await seekAndWait(page, 30);
+  await key(page, { code: 'Digit5', key: '5', ctrlKey: true });
+  await key(page, { code: 'Digit5', key: '5', metaKey: true });
+  await sleep(300);
+  assert.ok(Math.abs((await videoState(page)).time - 30) < 1);
+  await done(page);
+});

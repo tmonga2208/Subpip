@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseVTTOrSRT, cueText, cueAt, decodeSubtitleFile } from '../../src/content/subtitles.js';
+import { parseVTTOrSRT, trackTextAt, cueAt, decodeSubtitleFile, subtitleTracks, preferredTrack, trackLabel } from '../../src/content/subtitles.js';
 
 const srt = (...blocks) => blocks.map((block, i) => `${i + 1}\n${block}`).join('\n\n');
 
@@ -64,8 +64,19 @@ test('Windows line endings and a byte-order mark are handled', () => {
 });
 
 test('text-track cues are cleaned the same way', () => {
-  const track = { activeCues: [{ text: '<v Roger>Tom &amp; Jerry</v>' }, { text: '<i>second</i>' }] };
-  assert.equal(cueText(track), 'Tom & Jerry\nsecond');
+  const track = { cues: [{ startTime: 0, endTime: 5, text: '<v Roger>Tom &amp; Jerry</v>' }, { startTime: 1, endTime: 5, text: '<i>second</i>' }] };
+  assert.equal(trackTextAt(track, 2), 'Tom & Jerry\nsecond');
+});
+
+// A track that loads while the video is paused has its cues, but the browser
+// has not marked any of them active yet
+test('a track\'s lines are read from its cues at the video\'s time', () => {
+  const track = { activeCues: [], cues: [{ startTime: 0, endTime: 10, text: 'one' }, { startTime: 10, endTime: 20, text: 'two' }] };
+  assert.equal(trackTextAt(track, 0), 'one');
+  assert.equal(trackTextAt(track, 9.99), 'one');
+  assert.equal(trackTextAt(track, 10), 'two');
+  assert.equal(trackTextAt(track, 25), '');
+  assert.equal(trackTextAt({ cues: null }, 1), '');
 });
 
 test('cueAt finds the line on screen at a given time', () => {
@@ -94,4 +105,37 @@ test('older files that are not valid UTF-8 are read as Windows-1252', () => {
 test('UTF-16 files are recognised by their byte-order mark', () => {
   assert.equal(decodeSubtitleFile(bytes(0xFF, 0xFE, 0x68, 0x00, 0xE9, 0x00)), 'hé');
   assert.equal(decodeSubtitleFile(bytes(0xFE, 0xFF, 0x00, 0x68, 0x00, 0xE9)), 'hé');
+});
+
+// ---- Choosing among a video's subtitle tracks ----
+
+const track = (language, mode = 'disabled', extra = {}) => ({ kind: 'subtitles', language, mode, label: '', ...extra });
+
+test('only subtitle and caption tracks count', () => {
+  const tracks = [track('en'), { kind: 'metadata', language: 'en', mode: 'hidden' }, { kind: 'captions', language: 'en', mode: 'disabled' }, { kind: 'chapters', mode: 'hidden' }];
+  assert.deepEqual(subtitleTracks({ textTracks: tracks }).map((t) => t.kind), ['subtitles', 'captions']);
+  assert.deepEqual(subtitleTracks({}), []);
+});
+
+test('the track the page already has on is the one to start with', () => {
+  const tracks = [track('es'), track('en'), track('fr', 'hidden')];
+  assert.equal(preferredTrack(tracks, new Map(), ['en-US']), tracks[2]);
+  // A track the page was showing counts as on, even after SubPIP took it over
+  const takenOver = [track('es'), track('de', 'hidden'), track('en')];
+  assert.equal(preferredTrack(takenOver, new Map([[takenOver[1], 'showing']]), ['en-US']), takenOver[1]);
+});
+
+test('with every track off, the viewer\'s language wins, then the first track', () => {
+  const tracks = [track('es'), track('en-GB'), track('fr')];
+  assert.equal(preferredTrack(tracks, new Map(), ['en-US', 'en']), tracks[1]);
+  assert.equal(preferredTrack(tracks, new Map(), ['fr-CA']), tracks[2]);
+  assert.equal(preferredTrack(tracks, new Map(), ['ja']), tracks[0]);
+  assert.equal(preferredTrack([], new Map(), ['en']), null);
+});
+
+test('a track is named by its label, else its language, else its place', () => {
+  assert.equal(trackLabel(track('es', 'disabled', { label: 'Español (Latinoamérica)' }), 0), 'Español (Latinoamérica)');
+  assert.equal(trackLabel(track('en'), 0), 'English');
+  assert.equal(trackLabel(track(''), 2), 'Track 3');
+  assert.equal(trackLabel(track('not a language'), 0), 'Track 1');
 });

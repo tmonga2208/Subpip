@@ -18,8 +18,10 @@ export const DEFAULT_SETTINGS = {
   // Show the original line above its translation
   dualSubtitles: false,
   externalSubtitleUrl: '',
-  // Needs the optional all-sites permission, so it is opt-in
-  autoPip: false
+  // Auto PiP on every site: needs the optional all-sites permission, so it is opt-in
+  autoPip: false,
+  // Auto PiP on single sites instead: each needs access to that site only
+  autoPipSites: []
 };
 
 // Caption size choices in the PiP settings menu
@@ -47,6 +49,13 @@ export const LANGUAGES = [
   { code: 'ar', name: 'Arabic' },
   { code: 'ru', name: 'Russian' }
 ];
+
+// The same languages as speech recognition knows them (captions written from
+// the video's sound). Which of them Chrome can do on a device, it says itself.
+export const SPEECH_TAGS = {
+  en: 'en-US', es: 'es-ES', fr: 'fr-FR', de: 'de-DE', it: 'it-IT', pt: 'pt-BR',
+  zh: 'cmn-Hans-CN', ja: 'ja-JP', ko: 'ko-KR', hi: 'hi-IN', ar: 'ar-SA', ru: 'ru-RU'
+};
 
 // Which preset the caption values match, or 'custom'
 export function detectCaptionPreset(settings) {
@@ -82,24 +91,68 @@ export async function readAuthCache() {
   return synced && firebaseAuth?.user?.uid === synced.uid ? synced : null;
 }
 
-// Whether Auto PiP is in force on this browser: the user has switched it on
-// AND this browser has granted access to all sites. The switch is saved with
-// the other settings in sync storage, shared by every browser on the profile,
-// while the permission is granted per browser - so the background works this
-// out (syncAutoPip in background.js) and pages are told this, never the saved
-// switch alone.
-export const AUTO_PIP_ACTIVE = 'subpipAutoPipActive';
+// A site, as settings are kept per site: its host name without "www."
+export const siteKey = (hostname) => (hostname || '').replace(/^www\./, '');
 
-export async function autoPipActive() {
-  return (await chrome.storage.local.get([AUTO_PIP_ACTIVE]))[AUTO_PIP_ACTIVE] === true;
+// Whether Auto PiP is in force on this browser: the user has switched it on
+// AND this browser has granted the access it needs - to all sites, or to the
+// single sites the user chose. The switches are saved with the other settings
+// in sync storage, shared by every browser on the profile, while access is
+// granted per browser - so the background works this out (syncAutoPip in
+// background.js) and pages are told this, never the saved switches alone.
+export const AUTO_PIP_ACTIVE = 'subpipAutoPipActive';
+// The single sites it is in force on: ['example.com', ...]
+export const AUTO_PIP_SITES_ACTIVE = 'subpipAutoPipSitesActive';
+
+export const isSiteName = (site) => typeof site === 'string' && /^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/i.test(site);
+
+// What Chrome is asked for access to: a site and everything under it. A bare
+// name or a numeric address has nothing under it.
+export function sitePattern(site) {
+  return /^[\d.]+$/.test(site) || !site.includes('.') ? `*://${site}/*` : `*://*.${site}/*`;
+}
+
+const isOnSite = (hostname, site) => siteKey(hostname) === site || siteKey(hostname).endsWith(`.${site}`);
+
+// For a page of this host: on every site, or on a site the user chose
+export async function autoPipInForce(settings, hostname) {
+  const { [AUTO_PIP_ACTIVE]: everywhere, [AUTO_PIP_SITES_ACTIVE]: sites } = await chrome.storage.local.get([AUTO_PIP_ACTIVE, AUTO_PIP_SITES_ACTIVE]);
+  if (settings.autoPip === true && everywhere === true) return true;
+  if (hostname === undefined) return false;
+  return (settings.autoPipSites || []).some((site) => isOnSite(hostname, site) && (sites || []).includes(site));
+}
+
+// Captions a viewer pointed at on a site SubPIP did not know (see
+// content/caption-picker.js), per site: { 'example.com': 'div.captions' }.
+// Synced, so a site fixed once is fixed in every browser on the profile.
+export const CAPTION_SELECTORS = 'subpipCaptionSelectors';
+const MAX_SELECTOR_LENGTH = 300;
+
+export async function captionSelectorFor(hostname) {
+  const { [CAPTION_SELECTORS]: selectors } = await chrome.storage.sync.get([CAPTION_SELECTORS]);
+  return (selectors && selectors[siteKey(hostname)]) || '';
+}
+
+// An empty selector forgets the site
+export async function saveCaptionSelector(hostname, selector) {
+  if (typeof selector !== 'string' || selector.length > MAX_SELECTOR_LENGTH) return;
+  const { [CAPTION_SELECTORS]: saved } = await chrome.storage.sync.get([CAPTION_SELECTORS]);
+  const selectors = { ...(saved || {}) };
+  if (selector) selectors[siteKey(hostname)] = selector;
+  else delete selectors[siteKey(hostname)];
+  await chrome.storage.sync.set({ [CAPTION_SELECTORS]: selectors });
 }
 
 // Stored settings as a page should see them: plus the auth-derived fields
-// (premium status, uid), and with Auto PiP only where it is in force
-export async function readStoredSettings() {
-  const [{ subpipSettings }, subpipAuth, active] = await Promise.all([chrome.storage.sync.get(['subpipSettings']), readAuthCache(), autoPipActive()]);
+// (premium status, uid), with Auto PiP only where it is in force, and - for
+// the page of a known site - the caption element picked for that site
+export async function readStoredSettings(hostname) {
+  const [{ subpipSettings }, subpipAuth] = await Promise.all([chrome.storage.sync.get(['subpipSettings']), readAuthCache()]);
   const settings = withDefaults(subpipSettings);
-  settings.autoPip = settings.autoPip === true && active;
+  settings.autoPip = await autoPipInForce(settings, hostname);
+  // A page learns about itself only, not which other sites the user chose
+  delete settings.autoPipSites;
+  if (hostname !== undefined) settings.captionSelector = await captionSelectorFor(hostname);
   // Premium comes from sign-in only (old versions also saved a copy in settings)
   settings.isPremium = !!subpipAuth?.isPremium;
   if (subpipAuth?.uid) settings.uid = subpipAuth.uid;
