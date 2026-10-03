@@ -130,6 +130,19 @@ export function useExtension(options) {
   ctx.setAuthCache = (auth) => ctx.worker.evaluate((value) => chrome.storage.local.set({ subpipAuth: value }), auth);
   ctx.authCache = () => ctx.worker.evaluate(async () => (await chrome.storage.local.get('subpipAuth')).subpipAuth);
   ctx.tabIdFor = (url) => ctx.worker.evaluate(async (u) => (await chrome.tabs.query({ url: u }))[0].id, url);
+  // Switches the extension off or on from Chrome's own extensions page. Its
+  // storage is kept, and tabs that stay open lose their connection to it -
+  // what disabling, reloading or updating the extension does.
+  ctx.setExtensionEnabled = async (enabled) => {
+    const before = ctx.browser.targets().find((t) => t.type() === 'service_worker' && t.url().startsWith('chrome-extension://'));
+    const admin = await ctx.browser.newPage();
+    await admin.goto('chrome://extensions');
+    await admin.evaluate((id, on) => new Promise((resolve) => chrome.management.setEnabled(id, on, resolve)), ctx.extensionId, enabled);
+    await admin.close();
+    if (!enabled) return;
+    const target = await ctx.browser.waitForTarget((t) => t.type() === 'service_worker' && t.url().startsWith('chrome-extension://') && t !== before, { timeout: 15000 });
+    ctx.worker = await target.worker();
+  };
   // Only with { shortcutViaAction: true }: the toolbar click that stands in for Alt+P
   ctx.pressShortcut = async (page) => page.triggerExtensionAction((await ctx.browser.extensions()).get(ctx.extensionId));
 

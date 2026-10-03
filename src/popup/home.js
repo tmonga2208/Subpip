@@ -2,6 +2,7 @@
 
 import { getTargetTab, detectPage, describeStatus } from './status.js';
 import { togglePipInTab, injectRelay } from '../shared/inject.js';
+import { autoPipActive } from '../shared/settings.js';
 
 export function initHome({ doc, store, auth }) {
   const $ = (id) => doc.getElementById(id);
@@ -30,7 +31,9 @@ export function initHome({ doc, store, auth }) {
       window.close();
       return;
     }
-    const settings = { ...store.get(), isPremium: auth.isPremium(), uid: auth.user()?.uid };
+    // Auto PiP as the page should see it: only where it is in force on this browser
+    const autoPip = store.get().autoPip === true && await autoPipActive();
+    const settings = { ...store.get(), autoPip, isPremium: auth.isPremium(), uid: auth.user()?.uid };
     try {
       await togglePipInTab(tab.id, settings);
       // Then save and add the relay (translation + live settings)

@@ -82,10 +82,24 @@ export async function readAuthCache() {
   return synced && firebaseAuth?.user?.uid === synced.uid ? synced : null;
 }
 
-// Stored settings plus the auth-derived fields (premium status, uid)
+// Whether Auto PiP is in force on this browser: the user has switched it on
+// AND this browser has granted access to all sites. The switch is saved with
+// the other settings in sync storage, shared by every browser on the profile,
+// while the permission is granted per browser - so the background works this
+// out (syncAutoPip in background.js) and pages are told this, never the saved
+// switch alone.
+export const AUTO_PIP_ACTIVE = 'subpipAutoPipActive';
+
+export async function autoPipActive() {
+  return (await chrome.storage.local.get([AUTO_PIP_ACTIVE]))[AUTO_PIP_ACTIVE] === true;
+}
+
+// Stored settings as a page should see them: plus the auth-derived fields
+// (premium status, uid), and with Auto PiP only where it is in force
 export async function readStoredSettings() {
-  const [{ subpipSettings }, subpipAuth] = await Promise.all([chrome.storage.sync.get(['subpipSettings']), readAuthCache()]);
+  const [{ subpipSettings }, subpipAuth, active] = await Promise.all([chrome.storage.sync.get(['subpipSettings']), readAuthCache(), autoPipActive()]);
   const settings = withDefaults(subpipSettings);
+  settings.autoPip = settings.autoPip === true && active;
   // Premium comes from sign-in only (old versions also saved a copy in settings)
   settings.isPremium = !!subpipAuth?.isPremium;
   if (subpipAuth?.uid) settings.uid = subpipAuth.uid;

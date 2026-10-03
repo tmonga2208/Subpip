@@ -82,13 +82,33 @@ function createInstance() {
   }
 
   // Settings arrive from translate-relay.js (the MAIN world has no chrome.*
-  // APIs): on request at load, then whenever they change in storage.
+  // APIs): on request at load, then whenever they change in storage. After an
+  // update a tab can have two relays for a moment; the one that introduced
+  // itself last is the live one, and only its word counts.
+  let liveRelay = null;
+  const knownRelays = new Set();
   window.addEventListener('message', (event) => {
-    if (event.source !== window || !event.data || event.data.type !== 'SUBPIP_SETTINGS_UPDATED') return;
-    currentSettings = withDefaults({ ...currentSettings, ...event.data.settings });
-    window.__SUBPIP_SETTINGS__ = currentSettings;
-    updateAutoPip();
-    if (activeSession) activeSession.onSettingsChanged();
+    if (event.source !== window || !event.data) return;
+    const { type, relay } = event.data;
+
+    if (type === 'SUBPIP_SETTINGS_UPDATED') {
+      if (relay && !knownRelays.has(relay)) {
+        knownRelays.add(relay);
+        liveRelay = relay;
+      }
+      if (relay && relay !== liveRelay) return;
+      currentSettings = withDefaults({ ...currentSettings, ...event.data.settings });
+      window.__SUBPIP_SETTINGS__ = currentSettings;
+      updateAutoPip();
+      if (activeSession) activeSession.onSettingsChanged();
+    } else if (type === 'SUBPIP_RELAY_GONE' && relay === liveRelay) {
+      // The extension went away under this page (disabled, removed, reloaded,
+      // updated): no one can tell it about "Auto PiP off" any more, so stop
+      // opening Picture-in-Picture unasked
+      currentSettings = { ...currentSettings, autoPip: false };
+      window.__SUBPIP_SETTINGS__ = currentSettings;
+      updateAutoPip();
+    }
   });
   window.postMessage({ type: 'SUBPIP_SETTINGS_REQUEST' }, '*');
   updateAutoPip();

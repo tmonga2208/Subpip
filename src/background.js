@@ -1,7 +1,7 @@
 // SubPIP background service worker: translation requests, the Alt+P
 // shortcut, auto-PiP content script registration and the uninstall page.
 
-import { ALL_SITES, readStoredSettings } from './shared/settings.js';
+import { ALL_SITES, AUTO_PIP_ACTIVE, readStoredSettings } from './shared/settings.js';
 import { TOKEN_URL, API_BASE_URL, TOKEN_MAX_AGE_MS, UNINSTALL_URL } from './shared/firebase.js';
 import { togglePipInTab, injectRelay } from './shared/inject.js';
 import { probeTab } from './popup/status.js';
@@ -125,32 +125,68 @@ const AUTO_PIP_SCRIPTS = [
   { id: 'subpip-main', matches: ['<all_urls>'], js: ['script.js'], world: 'MAIN', runAt: 'document_idle', allFrames: false }
 ];
 
-async function syncAutoPipScripts() {
-  const { subpipSettings } = await chrome.storage.sync.get(['subpipSettings']);
-  const wanted = subpipSettings?.autoPip === true && await chrome.permissions.contains(ALL_SITES);
+// Auto PiP is in force on this browser only when the user has switched it on
+// and this browser holds the all-sites permission. That is recorded for the
+// pages (see AUTO_PIP_ACTIVE) and decides whether the scripts are registered.
+async function applyAutoPip(reconnect) {
+  const [{ subpipSettings }, { [AUTO_PIP_ACTIVE]: wasActive }] = await Promise.all([
+    chrome.storage.sync.get(['subpipSettings']),
+    chrome.storage.local.get([AUTO_PIP_ACTIVE])
+  ]);
+  const active = subpipSettings?.autoPip === true && await chrome.permissions.contains(ALL_SITES);
   const ids = AUTO_PIP_SCRIPTS.map((script) => script.id);
   const registered = await chrome.scripting.getRegisteredContentScripts({ ids });
 
   if (registered.length) {
     await chrome.scripting.unregisterContentScripts({ ids: registered.map((script) => script.id) });
   }
-  if (wanted) {
+  if (active) {
     await chrome.scripting.registerContentScripts(AUTO_PIP_SCRIPTS);
   }
+  await chrome.storage.local.set({ [AUTO_PIP_ACTIVE]: active });
+
+  // Registered scripts only reach pages loaded from now on. Tabs that are
+  // already open get SubPIP directly: when Auto PiP has just come into force,
+  // and at the start of a new run of the extension, which cut open tabs off
+  // from the previous one (see the relay).
+  if (active && (reconnect || !wasActive)) await addToOpenTabs();
+}
+
+async function addToOpenTabs() {
+  const tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'], discarded: false });
+  await Promise.allSettled(tabs.map(async (tab) => {
+    await injectRelay(tab.id);
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, world: 'MAIN', files: ['script.js'] });
+  }));
+}
+
+// One at a time: these events often arrive together (a permission change and
+// the setting change behind it)
+let lastSync = Promise.resolve();
+function syncAutoPip({ reconnect = false } = {}) {
+  lastSync = lastSync.then(() => applyAutoPip(reconnect)).catch((error) => console.warn('[SubPIP] Auto PiP sync failed:', error));
+  return lastSync;
 }
 
 // Ask why, once, when SubPIP is uninstalled. The version goes along so an
 // answer can be tied to a release; nothing identifies the user.
 chrome.runtime.onInstalled.addListener(() => chrome.runtime.setUninstallURL(`${UNINSTALL_URL}?v=${chrome.runtime.getManifest().version}`));
 
-chrome.runtime.onInstalled.addListener(syncAutoPipScripts);
-chrome.runtime.onStartup.addListener(syncAutoPipScripts);
-chrome.permissions.onAdded.addListener(syncAutoPipScripts);
-chrome.permissions.onRemoved.addListener(syncAutoPipScripts);
+// Once per run of the extension - browser start, install, update, reload,
+// re-enable - and not each time the service worker wakes up: session storage
+// lasts exactly as long as a run.
+chrome.storage.session.get(['autoPipSynced']).then(({ autoPipSynced }) => {
+  if (autoPipSynced) return;
+  chrome.storage.session.set({ autoPipSynced: true });
+  syncAutoPip({ reconnect: true });
+});
+
+chrome.permissions.onAdded.addListener(() => syncAutoPip());
+chrome.permissions.onRemoved.addListener(() => syncAutoPip());
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'sync' && changes.subpipSettings) {
     const before = changes.subpipSettings.oldValue?.autoPip;
     const after = changes.subpipSettings.newValue?.autoPip;
-    if (before !== after) syncAutoPipScripts();
+    if (before !== after) syncAutoPip();
   }
 });
