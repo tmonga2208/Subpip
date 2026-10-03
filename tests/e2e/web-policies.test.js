@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { useWebsite, razorpayStub } from '../helpers/web.js';
 
 const ctx = useWebsite();
-const PAGES = ['index.html', 'premium.html', 'privacy.html', 'terms.html', 'refund.html', 'contact.html'];
+const PAGES = ['index.html', 'premium.html', 'privacy.html', 'terms.html', 'refund.html', 'contact.html', 'uninstalled.html'];
 
 test('every page links all four policy pages in its footer', async () => {
   for (const pagePath of PAGES) {

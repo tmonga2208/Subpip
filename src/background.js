@@ -1,8 +1,8 @@
 // SubPIP background service worker: translation requests, the Alt+P
-// shortcut and auto-PiP content script registration.
+// shortcut, auto-PiP content script registration and the uninstall page.
 
 import { ALL_SITES, readStoredSettings } from './shared/settings.js';
-import { TOKEN_URL, API_BASE_URL, TOKEN_MAX_AGE_MS } from './shared/firebase.js';
+import { TOKEN_URL, API_BASE_URL, TOKEN_MAX_AGE_MS, UNINSTALL_URL } from './shared/firebase.js';
 import { togglePipInTab, injectRelay } from './shared/inject.js';
 import { probeTab } from './popup/status.js';
 import { createDeviceTranslation } from './shared/device-translation.js';
@@ -138,6 +138,10 @@ async function syncAutoPipScripts() {
     await chrome.scripting.registerContentScripts(AUTO_PIP_SCRIPTS);
   }
 }
+
+// Ask why, once, when SubPIP is uninstalled. The version goes along so an
+// answer can be tied to a release; nothing identifies the user.
+chrome.runtime.onInstalled.addListener(() => chrome.runtime.setUninstallURL(`${UNINSTALL_URL}?v=${chrome.runtime.getManifest().version}`));
 
 chrome.runtime.onInstalled.addListener(syncAutoPipScripts);
 chrome.runtime.onStartup.addListener(syncAutoPipScripts);

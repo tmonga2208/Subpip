@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-const CALLABLES = ['confirmPayment', 'activateLicense', 'claimLicenseByEmail', 'translateText', 'resendLicense', 'createOrder', 'startCheckout'];
+const CALLABLES = ['confirmPayment', 'activateLicense', 'claimLicenseByEmail', 'translateText', 'resendLicense', 'createOrder', 'startCheckout', 'feedback'];
 
 function fakeRes() {
   const res = { statusCode: 200, headers: {}, body: undefined };

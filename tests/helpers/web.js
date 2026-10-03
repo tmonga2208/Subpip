@@ -111,3 +111,15 @@ export function resendStub(seen = []) {
     return true;
   };
 }
+
+// The feedback endpoint behind uninstalled.html; records what was sent
+export function feedbackStub(seen = [], { ok = true } = {}) {
+  return (request) => {
+    if (!request.url().includes('/api/feedback')) return false;
+    seen.push(JSON.parse(request.postData() || '{}').data);
+    request.respond(ok
+      ? { status: 200, contentType: 'application/json', body: JSON.stringify({ result: { ok: true } }) }
+      : { status: 500, contentType: 'application/json', body: JSON.stringify({ error: { message: 'Internal error', status: 'INTERNAL' } }) });
+    return true;
+  };
+}

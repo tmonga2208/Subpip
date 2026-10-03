@@ -12,6 +12,8 @@ export const TOKEN_URL = `https://securetoken.googleapis.com/v1/token?key=${FIRE
 export const FIRESTORE_BASE_URL = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents`;
 // SubPIP's server API (Vercel Functions in web/api/)
 export const API_BASE_URL = 'https://subpip.vercel.app/api';
+// The page Chrome opens after SubPIP is uninstalled: one anonymous question
+export const UNINSTALL_URL = 'https://subpip.vercel.app/uninstalled.html';
 
 // ID tokens last an hour; refresh a little early
 export const TOKEN_MAX_AGE_MS = 50 * 60 * 1000;

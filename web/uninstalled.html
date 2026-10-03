@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SubPIP was removed</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav">
+      <a class="brand" href="index.html"><img src="logo.svg" alt="" width="28" height="28">SubPIP</a>
+      <ul class="nav-links">
+        <li><a href="index.html#features">Features</a></li>
+        <li><a href="index.html#pricing">Pricing</a></li>
+        <li><a href="index.html#faq">FAQ</a></li>
+      </ul>
+      <a class="btn btn-ghost btn-sm" href="contact.html">Contact</a>
+    </div>
+  </header>
+
+  <main class="checkout-wrap">
+    <div class="container checkout">
+      <div class="checkout-card" id="feedbackCard">
+        <h1>Sorry to see you go</h1>
+        <p class="muted">SubPIP has been removed from your browser. If you have ten seconds, tell me why. I read every answer.</p>
+        <form id="feedbackForm" novalidate>
+          <fieldset class="reasons">
+            <legend class="field-label">Why did you uninstall?</legend>
+            <label class="reason"><input type="radio" name="reason" value="site">It didn't work on the site I use</label>
+            <label class="reason"><input type="radio" name="reason" value="captions">Captions didn't show up</label>
+            <label class="reason"><input type="radio" name="reason" value="premium">Too much needs Premium</label>
+            <label class="reason"><input type="radio" name="reason" value="done">I only needed it for a while</label>
+            <label class="reason"><input type="radio" name="reason" value="other-tool">I found something else</label>
+            <label class="reason"><input type="radio" name="reason" value="other">Something else</label>
+          </fieldset>
+          <label class="field-label" for="comment">Anything to add? <span class="muted">(optional)</span></label>
+          <textarea id="comment" class="email-input" rows="3" maxlength="1000" placeholder="Which site, what went wrong, what you expected…"></textarea>
+          <button class="btn btn-primary btn-block" type="submit">Send</button>
+          <p class="error-msg" id="feedbackError" role="alert"></p>
+        </form>
+        <p class="agree">Anonymous: only your answer and the SubPIP version are sent. If you would like a reply, <a href="mailto:tarunmonga2208@gmail.com">email me</a> instead.</p>
+      </div>
+
+      <div class="checkout-card" id="thanksCard" hidden>
+        <h1>Thank you</h1>
+        <p class="muted">That helps more than you'd think. If SubPIP gets better at this, you're welcome back any time.</p>
+        <a class="btn btn-ghost btn-block" href="https://chromewebstore.google.com/detail/subpip-picture-in-picture/cajeijlommigmipnnhemgopednbpmnjg">Add SubPIP to Chrome again</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-row">
+      <a class="brand" href="index.html"><img src="logo.svg" alt="" width="28" height="28">SubPIP</a>
+      <ul class="footer-links">
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a href="terms.html">Terms</a></li>
+        <li><a href="refund.html">Refunds</a></li>
+        <li><a href="contact.html">Contact</a></li>
+        <li>© <span data-year></span> SubPIP</li>
+      </ul>
+    </div>
+  </footer>
+
+  <script type="module">
+    // Chrome opens this page with ?v=<extension version> after an uninstall
+    const version = new URLSearchParams(window.location.search).get('v') || '';
+    const form = document.getElementById('feedbackForm');
+    const button = form.querySelector('button[type="submit"]');
+    const error = document.getElementById('feedbackError');
+
+    function showError(message) {
+      error.textContent = message;
+      error.classList.toggle('show', !!message);
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const chosen = form.querySelector('input[name="reason"]:checked');
+      if (!chosen) return showError('Please pick a reason first.');
+      showError('');
+      button.disabled = true;
+      try {
+        const response = await fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: { reason: chosen.value, comment: document.getElementById('comment').value.trim(), version } })
+        });
+        const body = await response.json();
+        if (body.error) throw new Error(body.error.message);
+        document.getElementById('feedbackCard').hidden = true;
+        document.getElementById('thanksCard').hidden = false;
+      } catch {
+        showError('That did not go through. Please try again.');
+        button.disabled = false;
+      }
+    });
+  </script>
+  <script src="script.js"></script>
+</body>
+</html>

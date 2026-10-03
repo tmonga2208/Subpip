@@ -195,3 +195,11 @@ kbd { padding: 1px 6px; border: 1px solid var(--border); border-radius: 4px; bac
 
 .agree { margin-top: 8px; color: var(--text-2); font-size: 13px; text-align: center; }
 .agree a { color: var(--text-2); }
+
+/* Uninstall feedback (uninstalled.html) */
+.reasons { display: grid; gap: 8px; margin: 18px 0; padding: 0; border: 0; }
+.reasons legend { padding: 0; }
+.reason { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; }
+.reason:has(input:checked) { border-color: var(--accent); }
+.reason input { flex: none; accent-color: var(--accent); }
+textarea.email-input { display: block; margin-bottom: 14px; font: inherit; color: inherit; resize: vertical; }

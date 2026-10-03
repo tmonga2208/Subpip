@@ -44,6 +44,10 @@
           <li><strong>Premium status</strong> – whether your account is Premium and your license key. Stored in Firebase Firestore.</li>
           <li><strong>Purchase record</strong> – when you pay, we store the Razorpay payment ID, the email used for the purchase, the amount and currency, and the license key issued. If you start the purchase from the extension while signed in, we also record which account it is for, so Premium can be turned on for that account automatically. We never receive or store your card or bank details.</li>
         </ul>
+        <p><strong>If you answer the question shown after uninstalling:</strong></p>
+        <ul>
+          <li><strong>Uninstall feedback</strong> – the reason you pick, any comment you write and the SubPIP version. It is stored in Firebase Firestore and emailed to us. It is not linked to your account or email address.</li>
+        </ul>
       </section>
 
       <section>
