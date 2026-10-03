@@ -85,7 +85,7 @@ ${payment ? receiptRows(amount, payment.id) : ''}
   const preview = active
     ? 'Premium is already active. Here is your key and your receipt.'
     : `Your license key${plural ? 's' : ''} and how to activate ${plural ? 'them' : 'it'}.`;
-  return { subject, text, html: emailLayout({ title: subject, preview, content, footer }) };
+  return { subject, text, html: emailLayout({ title: subject, preview, content, footer, logoUrl: `${SITE_URL}/logo.png` }) };
 }
 
 // Never throws; a failure is logged and alerted, and the caller carries on

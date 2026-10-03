@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { formatAmount, licenseEmail, sendLicenseEmail } from '../../web/api/_lib/emails.js';
 import { issueLicense, resendLicense, RESEND_MESSAGE } from '../../web/api/_lib/licensing.js';
 import { fakeFirestore, fakeRazorpay, fakeMailer, fixedClock, FieldValue } from '../helpers/fake-firestore.js';
@@ -20,12 +21,35 @@ test('the license email has the key, steps, receipt and refund note', () => {
   for (const part of ['SUBPIP-AAAAAAAA-1111', 'Account &amp; license', '$15', 'pay_E1', '7 days']) assert.ok(email.html.includes(part), part);
 });
 
-// Mail apps block images and strip stylesheets, so the design has to hold
-// with neither
-test('the HTML is a whole document that needs no images or outside files', () => {
+// Mail apps strip stylesheets and many hold images back until asked, so the
+// design has to stand without either
+test('the HTML is a whole document; the only outside file it needs is the logo', () => {
   const { html } = licenseEmail({ keys: ['SUBPIP-AAAAAAAA-1111'], payment });
   assert.match(html, /^<!doctype html>/i);
-  assert.doesNotMatch(html, /<img|<link|<script|url\(/i);
+  assert.doesNotMatch(html, /<link|<script|url\(/i);
+  const images = html.match(/<img[^>]*>/g) || [];
+  assert.equal(images.length, 1);
+  // The logo: a PNG on the site (mail apps do not show SVG), at a fixed size
+  assert.match(images[0], /src="https:\/\/subpip\.online\/logo\.png"/);
+  assert.match(images[0], /width="36" height="36"/);
+});
+
+test('with images held back the header still says whose email it is', () => {
+  const { html } = licenseEmail({ keys: ['K'], payment });
+  const header = html.slice(html.indexOf('<img'), html.indexOf('<h1'));
+  // The name is written next to the logo, so the logo itself needs no words
+  assert.match(header, />SubPIP</);
+  assert.match(header, /^<img[^>]* alt=""/);
+});
+
+test('the logo the email points at is on the site, as a PNG sharp enough for phone screens', () => {
+  const png = readFileSync('web/logo.png');
+  assert.equal(png.subarray(1, 4).toString('latin1'), 'PNG');
+  const width = png.readUInt32BE(16);
+  const height = png.readUInt32BE(20);
+  assert.equal(width, height);
+  assert.ok(width >= 108, `${width}px wide: three times the 36px it is shown at`);
+  assert.ok(png.length < 20000, `${png.length} bytes`);
 });
 
 test('the inbox preview says what is inside without showing the key', () => {
