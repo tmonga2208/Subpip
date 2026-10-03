@@ -15,7 +15,7 @@ async function postSettings() {
 
 function start() {
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'sync' && (changes.subpipSettings || changes.subpipAuth)) postSettings();
+    if ((area === 'sync' && changes.subpipSettings) || (area === 'local' && changes.subpipAuth)) postSettings();
   });
 
   window.addEventListener('message', (event) => {

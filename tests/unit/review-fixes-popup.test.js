@@ -2,10 +2,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-function fakeChrome({ sync = {}, activeTabs, normalTabs = [] } = {}) {
+function fakeChrome({ sync = {}, local = {}, activeTabs, normalTabs = [] } = {}) {
+  const area = (data) => ({ get: async (keys) => Object.fromEntries(keys.filter((k) => k in data).map((k) => [k, data[k]])) });
   return {
     runtime: { getURL: (p) => `chrome-extension://abc/${p}` },
-    storage: { sync: { get: async (keys) => Object.fromEntries(keys.filter((k) => k in sync).map((k) => [k, sync[k]])) } },
+    storage: { sync: area(sync), local: area(local) },
     tabs: { query: async (q) => (q.currentWindow ? activeTabs : normalTabs) }
   };
 }
@@ -14,7 +15,7 @@ test('a stale isPremium inside settings no longer unlocks Premium', async () => 
   globalThis.chrome = fakeChrome({ sync: { subpipSettings: { isPremium: true, fontSize: 20 } } });
   const { readStoredSettings } = await import('../../src/shared/settings.js');
   assert.equal((await readStoredSettings()).isPremium, false);
-  globalThis.chrome = fakeChrome({ sync: { subpipSettings: {}, subpipAuth: { uid: 'u', isPremium: true } } });
+  globalThis.chrome = fakeChrome({ sync: { subpipSettings: {} }, local: { subpipAuth: { uid: 'u', isPremium: true } } });
   assert.equal((await readStoredSettings()).isPremium, true);
 });
 

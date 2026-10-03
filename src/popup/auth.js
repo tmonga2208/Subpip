@@ -1,8 +1,9 @@
 // Who is signed in and whether they have Premium. Wraps LicenseManager and
-// mirrors the result to chrome.storage.sync (subpipAuth) for the background
-// and page scripts.
+// mirrors the result to chrome.storage.local (subpipAuth) for the background
+// and page scripts (see readAuthCache for why not sync storage).
 
 import { LicenseManager } from './license-manager.js';
+import { readAuthCache } from '../shared/settings.js';
 
 export function createAuth(manager = new LicenseManager()) {
   let user = null;
@@ -19,10 +20,10 @@ export function createAuth(manager = new LicenseManager()) {
         return;
       }
       premium = !!status.data.isPremium;
-      await chrome.storage.sync.set({ subpipAuth: { uid: user.uid, email: user.email, isPremium: premium } });
+      await chrome.storage.local.set({ subpipAuth: { uid: user.uid, email: user.email, isPremium: premium } });
     } else {
       premium = false;
-      await chrome.storage.sync.remove('subpipAuth');
+      await chrome.storage.local.remove('subpipAuth');
     }
     emit();
   }
@@ -45,7 +46,7 @@ export function createAuth(manager = new LicenseManager()) {
       await manager.init();
       user = manager.isLoggedIn() ? manager.getCurrentUser() : null;
       // Show the last known plan at once; the network check below confirms it
-      const { subpipAuth } = await chrome.storage.sync.get(['subpipAuth']);
+      const subpipAuth = await readAuthCache();
       premium = !!(user && subpipAuth && subpipAuth.uid === user.uid && subpipAuth.isPremium);
       emit();
       await refreshStatus();

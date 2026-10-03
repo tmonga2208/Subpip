@@ -35,7 +35,7 @@ test('opening the popup offline keeps a paying user Premium', async () => {
   const popup = await ctx.openPopup({ stub: firebaseStub({ status: 'fail' }) });
   await sleep(500);
   assert.equal(await popup.$eval('#plan-badge', (b) => b.textContent), 'Premium');
-  assert.equal((await ctx.storage()).subpipAuth.isPremium, true);
+  assert.equal((await ctx.authCache()).isPremium, true);
   await popup.close();
 });
 

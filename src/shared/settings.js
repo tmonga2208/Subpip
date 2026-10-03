@@ -67,9 +67,22 @@ export function withDefaults(settings) {
   return merged;
 }
 
+// Who is signed in on this browser and whether they are Premium, as last
+// confirmed by the popup. It lives in local storage, next to the sign-in
+// tokens it comes from: sync storage is shared by every browser on the Chrome
+// profile, so a signed-out one would wipe it for the others.
+export async function readAuthCache() {
+  const { subpipAuth, firebaseAuth } = await chrome.storage.local.get(['subpipAuth', 'firebaseAuth']);
+  if (subpipAuth) return subpipAuth;
+  // Versions up to 4.1 kept it in sync storage: trust that copy only for the
+  // account that is signed in here
+  const { subpipAuth: synced } = await chrome.storage.sync.get(['subpipAuth']);
+  return synced && firebaseAuth?.user?.uid === synced.uid ? synced : null;
+}
+
 // Stored settings plus the auth-derived fields (premium status, uid)
 export async function readStoredSettings() {
-  const { subpipSettings, subpipAuth } = await chrome.storage.sync.get(['subpipSettings', 'subpipAuth']);
+  const [{ subpipSettings }, subpipAuth] = await Promise.all([chrome.storage.sync.get(['subpipSettings']), readAuthCache()]);
   const settings = withDefaults(subpipSettings);
   // Premium comes from sign-in only (old versions also saved a copy in settings)
   settings.isPremium = !!subpipAuth?.isPremium;

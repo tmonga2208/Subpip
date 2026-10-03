@@ -107,7 +107,8 @@ export function useExtension() {
     (u, e) => chrome.storage.local.set({ firebaseAuth: { idToken: 't', refreshToken: 'r', user: { uid: u, email: e }, timestamp: Date.now() } }),
     uid, email
   );
-  ctx.setAuthCache = (auth) => ctx.worker.evaluate((value) => chrome.storage.sync.set({ subpipAuth: value }), auth);
+  ctx.setAuthCache = (auth) => ctx.worker.evaluate((value) => chrome.storage.local.set({ subpipAuth: value }), auth);
+  ctx.authCache = () => ctx.worker.evaluate(async () => (await chrome.storage.local.get('subpipAuth')).subpipAuth);
   ctx.tabIdFor = (url) => ctx.worker.evaluate(async (u) => (await chrome.tabs.query({ url: u }))[0].id, url);
 
   // Opens popup.html in its own popup window. The popup then targets the

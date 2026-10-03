@@ -38,7 +38,9 @@ test('signing in shows the account, Free plan and header initial', async () => {
   assert.deepEqual(await account(popup), {
     signedIn: true, email: 'tester@example.com', plan: 'Free', badge: 'Free', badgePremium: false, initial: 'T', freeActions: true
   });
-  assert.deepEqual((await ctx.storage()).subpipAuth, { uid: 'u1', email: 'tester@example.com', isPremium: false });
+  assert.deepEqual(await ctx.authCache(), { uid: 'u1', email: 'tester@example.com', isPremium: false });
+  // Sync storage is shared with the user's other browsers: the plan must not go there
+  assert.equal((await ctx.storage()).subpipAuth, undefined);
   await popup.close();
 });
 
@@ -118,6 +120,6 @@ test('sign out returns to the sign-in form and clears stored auth', async () => 
   await popup.waitForSelector('#signed-in:not([hidden])');
   await popup.click('#sign-out');
   await popup.waitForSelector('#signed-out:not([hidden])');
-  assert.equal((await ctx.storage()).subpipAuth, undefined);
+  assert.equal(await ctx.authCache(), undefined);
   await popup.close();
 });
