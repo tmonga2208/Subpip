@@ -19,26 +19,32 @@ async function launchWithExtension() {
   await writeFile(manifestPath, JSON.stringify(manifest));
 
   const userDataDir = await mkdtemp(path.join(os.tmpdir(), 'subpip-test-'));
+  // Google Chrome 137+ ignores --load-extension, so the extension is loaded
+  // over the DevTools pipe (works in Chrome, Brave and Chromium alike)
   const browser = await puppeteer.launch({
     executablePath: findBrowser(),
     headless: false,
     userDataDir,
-    ignoreDefaultArgs: ['--disable-extensions'],
-    args: [
-      '--no-first-run', '--no-default-browser-check', '--autoplay-policy=no-user-gesture-required',
-      `--disable-extensions-except=${extDir}`, `--load-extension=${extDir}`
-    ]
+    pipe: true,
+    enableExtensions: [extDir],
+    args: ['--no-first-run', '--no-default-browser-check', '--autoplay-policy=no-user-gesture-required']
   });
-  const swTarget = await browser.waitForTarget((t) => t.type() === 'service_worker' && t.url().startsWith('chrome-extension://'));
-  const worker = await swTarget.worker();
-  const extensionId = new URL(swTarget.url()).host;
   const close = browser.close.bind(browser);
   browser.close = async () => {
     await close();
     await rm(userDataDir, { recursive: true, force: true });
     await rm(extDir, { recursive: true, force: true });
   };
-  return { browser, worker, extensionId };
+  try {
+    const swTarget = await browser.waitForTarget((t) => t.type() === 'service_worker' && t.url().startsWith('chrome-extension://'), { timeout: 15000 });
+    const worker = await swTarget.worker();
+    const extensionId = new URL(swTarget.url()).host;
+    return { browser, worker, extensionId };
+  } catch (error) {
+    // Never leave the browser running: an open browser keeps the test run alive forever
+    await browser.close();
+    throw new Error(`The extension did not load in ${findBrowser()}: ${error.message}`);
+  }
 }
 
 export function json(status, body) {
