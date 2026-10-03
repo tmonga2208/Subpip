@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "SubPIP (Picture-in-Picture)",
   "description": "Picture-in-Picture with subtitles, caption customization, translation & premium features",
-  "version": "4.2",
+  "version": "4.3",
   "icons": {
     "16": "assets/icon-16.png",
     "32": "assets/icon-32.png",
