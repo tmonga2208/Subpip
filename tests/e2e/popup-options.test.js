@@ -63,6 +63,23 @@ test('premium: "Show the original line too" is saved and still on next time', as
   await again.close();
 });
 
+test('premium: choosing a language asks the background to get on-device translation ready', async () => {
+  const popup = await premiumPopup();
+  await popup.evaluate(() => {
+    window.sent = [];
+    chrome.runtime.sendMessage = async (message) => { window.sent.push(message); };
+  });
+  await popup.click('.row[data-go="translate"]');
+  await popup.click('#language-list .radio[data-value="hi"]');
+  await sleep(100);
+  assert.deepEqual(await popup.evaluate(() => window.sent), [{ type: 'PREPARE_TRANSLATION', targetLang: 'hi' }]);
+  // turning translation off prepares nothing
+  await popup.click('#translate-on');
+  await sleep(100);
+  assert.equal(await popup.evaluate(() => window.sent.length), 1);
+  await popup.close();
+});
+
 test('premium: default playback speed', async () => {
   const popup = await premiumPopup();
   await popup.click('.row[data-go="speed"]');

@@ -45,11 +45,23 @@ export function initOptions({ doc, store, auth, router }) {
   const markChecked = (container, value) => container.querySelectorAll('.radio')
     .forEach((button) => button.setAttribute('aria-checked', String(button.dataset.value === String(value))));
 
+  // Chrome can translate on the device once it has the language pack: have
+  // the background fetch it now rather than during the first video
+  const prepareTranslation = (targetLang) => {
+    Promise.resolve(chrome.runtime.sendMessage({ type: 'PREPARE_TRANSLATION', targetLang })).catch(() => {});
+  };
+
   radioList($('language-list'), LANGUAGES.map((lang) => ({ value: lang.code, label: lang.name })),
-    (code) => store.update({ targetLanguage: code, translationEnabled: true }));
+    (code) => {
+      store.update({ targetLanguage: code, translationEnabled: true });
+      prepareTranslation(code);
+    });
   radioList($('speed-list'), SPEEDS.map((speed) => ({ value: speed, label: `${speed}×` })),
     (speed) => store.update({ playbackSpeed: speed }));
-  $('translate-on').addEventListener('change', () => store.update({ translationEnabled: $('translate-on').checked }));
+  $('translate-on').addEventListener('change', () => {
+    store.update({ translationEnabled: $('translate-on').checked });
+    if ($('translate-on').checked) prepareTranslation(store.get().targetLanguage);
+  });
   $('dual-on').addEventListener('change', () => store.update({ dualSubtitles: $('dual-on').checked }));
 
   // Auto PiP needs SubPIP on every site: ask for that access only when it is

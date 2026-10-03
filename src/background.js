@@ -5,6 +5,9 @@ import { ALL_SITES, readStoredSettings } from './shared/settings.js';
 import { TOKEN_URL, API_BASE_URL, TOKEN_MAX_AGE_MS } from './shared/firebase.js';
 import { togglePipInTab, injectRelay } from './shared/inject.js';
 import { probeTab } from './popup/status.js';
+import { createDeviceTranslation } from './shared/device-translation.js';
+
+const deviceTranslation = createDeviceTranslation();
 
 // Get a fresh Firebase ID token for the signed-in user (stored by the popup)
 async function getIdToken() {
@@ -37,8 +40,14 @@ async function getIdToken() {
 }
 
 // Translate via extension context (avoids page CSP blocking fetch)
-async function translateInBackground(text, targetLang, uid) {
+async function translateInBackground(text, targetLang, uid, tabId) {
   if (!text || !targetLang) return null;
+
+  // On this device first, where Chrome can (138+): a few milliseconds per
+  // line, no quota, and the caption never leaves the browser. A line that is
+  // already in the target language comes back unchanged.
+  const onDevice = await deviceTranslation.translate(text, targetLang, tabId);
+  if (onDevice) return onDevice;
 
   // Premium Translation (Google Cloud via Firebase) - the server checks
   // premium status from the ID token, not from anything the client claims
@@ -75,11 +84,13 @@ async function translateInBackground(text, targetLang, uid) {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'TRANSLATE') {
-    translateInBackground(message.text, message.targetLang, message.uid)
+    translateInBackground(message.text, message.targetLang, message.uid, sender.tab?.id)
       .then((translation) => sendResponse({ translation }))
       .catch(() => sendResponse({ translation: null }));
     return true; // keep channel open for async sendResponse
   }
+  // The popup, when translation is switched on or its language changes
+  if (message.type === 'PREPARE_TRANSLATION') deviceTranslation.prepare(message.targetLang);
 });
 
 // Alt+P: open or close Picture-in-Picture without going through the popup
