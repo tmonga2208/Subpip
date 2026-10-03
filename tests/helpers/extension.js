@@ -68,7 +68,7 @@ export function json(status, body) {
 // checkout: the code startCheckout answers with; without one it fails (500)
 export function firebaseStub({ uid = 'u1', email = 'tester@example.com', premium = false, signIn = 'ok', status = 'ok', premiumAfterActivate = false, deviceId = null, checkout = null } = {}) {
   let isPremium = premium;
-  const STUBBED = /identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com|firestore\.googleapis\.com|subpip\.vercel\.app\/api\//;
+  const STUBBED = /identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com|firestore\.googleapis\.com|subpip\.online\/api\//;
   return (request) => {
     const url = request.url();
     if (request.method() === 'OPTIONS' && STUBBED.test(url)) {
@@ -93,11 +93,11 @@ export function firebaseStub({ uid = 'u1', email = 'tester@example.com', premium
       else answer();
       return true;
     }
-    if (url.startsWith('https://subpip.vercel.app/api/startCheckout')) {
+    if (url.startsWith('https://subpip.online/api/startCheckout')) {
       request.respond(checkout ? json(200, { result: { code: checkout } }) : json(500, { error: { message: 'Internal error', status: 'INTERNAL' } }));
       return true;
     }
-    if (url.startsWith('https://subpip.vercel.app/api/activateLicense')) {
+    if (url.startsWith('https://subpip.online/api/activateLicense')) {
       if (premiumAfterActivate) isPremium = true;
       request.respond(json(200, { result: { success: true } }));
       return true;

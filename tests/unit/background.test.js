@@ -63,7 +63,7 @@ test('after an install or update, uninstalling opens the feedback page with the 
   assert.deepEqual(browser.uninstallUrls, [], 'nothing is registered just by starting up');
   await fire('installed', { reason: 'install' });
   await settle();
-  assert.deepEqual(browser.uninstallUrls, [`https://subpip.vercel.app/uninstalled.html?v=${manifest.version}`]);
+  assert.deepEqual(browser.uninstallUrls, [`https://subpip.online/uninstalled.html?v=${manifest.version}`]);
 });
 
 test('Auto PiP is active only with the saved switch AND all-sites access on this browser', async () => {

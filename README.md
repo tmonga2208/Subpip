@@ -3,7 +3,7 @@
 Picture-in-Picture that keeps the subtitles. SubPIP pops the video you are watching into a floating window together with its captions, with real player controls, caption styling and optional translation.
 
 - **Install:** [SubPIP on the Chrome Web Store](https://chromewebstore.google.com/detail/subpip-picture-in-picture/cajeijlommigmipnnhemgopednbpmnjg)
-- **Website:** <https://subpip.vercel.app>
+- **Website:** <https://subpip.online>
 - **Browsers:** Chrome, Edge, Brave and other Chromium browsers, version 116 or newer (SubPIP is built on Document Picture-in-Picture)
 
 ## What it does
@@ -103,7 +103,7 @@ The functions run in Mumbai (`web/vercel.json`), next to the Firestore database.
 |---|---|
 | `FIREBASE_SERVICE_ACCOUNT` | Firebase service-account JSON (Admin SDK) |
 | `RAZORPAY_KEY_SECRET` | Razorpay API key secret |
-| `RAZORPAY_WEBHOOK_SECRET` | Razorpay webhook secret (events: `payment.captured`, `refund.processed`) → `https://subpip.vercel.app/api/razorpayWebhook` |
+| `RAZORPAY_WEBHOOK_SECRET` | Razorpay webhook secret (events: `payment.captured`, `refund.processed`) → `https://subpip.online/api/razorpayWebhook` |
 | `DEEPL_API_KEY` | DeepL API Free key (online Premium translation; optional — without it translation falls back to MyMemory) |
 | `RESEND_API_KEY` | [Resend](https://resend.com) API key for license emails, alerts and uninstall feedback (the free plan sends 100 emails a day) |
 | `EMAIL_FROM` | Sender on a domain verified in Resend, e.g. `SubPIP <licenses@example.com>`. Without a verified domain Resend only delivers to the account's own address |
@@ -121,7 +121,7 @@ In Razorpay, set **Payment capture → Automatic** (Settings → Payment capture
 
 ## Privacy
 
-Settings stay in the browser. Signing in stores an email address and license status with Firebase. See the [privacy policy](https://subpip.vercel.app/privacy.html) for the full list.
+Settings stay in the browser. Signing in stores an email address and license status with Firebase. See the [privacy policy](https://subpip.online/privacy.html) for the full list.
 
 ## License
 

@@ -1,6 +1,7 @@
 // Account & license page, plus the header's plan badge and account button
 
-const PREMIUM_URL = 'https://subpip.vercel.app/premium.html';
+import { PREMIUM_URL } from '../shared/firebase.js';
+
 export const NETWORK_ERROR = "Can't reach SubPIP. Check your connection and try again.";
 
 function friendly(message) {

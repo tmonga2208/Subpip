@@ -54,8 +54,9 @@ test('text from outside cannot add markup to the email', () => {
 
 test('the email says where to get the key again and how to reach support', () => {
   const email = licenseEmail({ keys: ['K'], payment });
-  assert.match(email.text, /https:\/\/subpip\.vercel\.app\/premium\.html/);
-  assert.match(email.html, /href="https:\/\/subpip\.vercel\.app\/premium\.html"/);
+  assert.match(email.text, /https:\/\/subpip\.online\/premium\.html/);
+  assert.match(email.html, /href="https:\/\/subpip\.online\/premium\.html"/);
+  assert.match(email.html, />subpip\.online\/premium\.html</);
   assert.match(email.text, /reply to this email/i);
   assert.match(email.html, /reply to this email/i);
 });

@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { useExtension, firebaseStub } from '../helpers/extension.js';
 
 const ctx = useExtension();
-const CHECKOUT = 'https://subpip.vercel.app/premium.html';
+const CHECKOUT = 'https://subpip.online/premium.html';
 
 // Record the tab the popup opens instead of opening it
 async function getPremium(popup, button) {

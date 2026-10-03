@@ -4,7 +4,7 @@ import { log } from './log.js';
 import { emailLayout, escapeHtml, FONT, MONO, TABLE } from './email-layout.js';
 
 export const SUPPORT_EMAIL = 'tarunmonga2208@gmail.com';
-const SITE_URL = 'https://subpip.vercel.app';
+const SITE_URL = 'https://subpip.online';
 const REFUND_NOTE = 'Not happy? You can get a full refund within 7 days of purchase, no questions asked.';
 
 export function formatAmount(amount, currency) {
@@ -79,7 +79,7 @@ ${payment ? receiptRows(amount, payment.id) : ''}
 <p class="soft" style="margin:24px 0 0;${type(14, '#52525b')}">${REFUND_NOTE}</p>
 <p class="soft" style="margin:8px 0 0;${type(14, '#52525b')}">Questions? Just reply to this email, or write to ${link(`mailto:${SUPPORT_EMAIL}`, SUPPORT_EMAIL)}.</p>`;
 
-  const footer = `<p class="soft" style="margin:0 0 6px;${type(12, '#71717a')}">Lost this email later? Get your key again any time at ${link(keyAgainUrl, 'subpip.vercel.app/premium.html')}.</p>
+  const footer = `<p class="soft" style="margin:0 0 6px;${type(12, '#71717a')}">Lost this email later? Get your key again any time at ${link(keyAgainUrl, 'subpip.online/premium.html')}.</p>
 <p class="soft" style="margin:0;${type(12, '#71717a')}">You are getting this email because this address was used to buy SubPIP Premium.<br>${link(`${SITE_URL}/refund.html`, 'Refunds')} &middot; ${link(`${SITE_URL}/privacy.html`, 'Privacy')} &middot; ${link(`${SITE_URL}/contact.html`, 'Contact')}</p>`;
 
   const preview = active
