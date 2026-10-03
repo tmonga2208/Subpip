@@ -16,6 +16,19 @@ function findLargestPlayingVideo() {
   return videos[0];
 }
 
+// The PiP window to ask for: 640px on the long side, in the video's shape.
+// It deliberately ignores how big the player is on the page - Chrome reuses
+// the size the user last gave the window only while the request stays the same.
+const PIP_LONG_SIDE = 640;
+
+export function pipWindowSize(video) {
+  const width = video.videoWidth || video.clientWidth;
+  const height = video.videoHeight || video.clientHeight;
+  if (!width || !height) return { width: PIP_LONG_SIDE, height: 360 };
+  const scale = PIP_LONG_SIDE / Math.max(width, height);
+  return { width: Math.round(width * scale), height: Math.round(height * scale) };
+}
+
 export function findVideo(adapter) {
   const video = adapter.videoSelector ? document.querySelector(adapter.videoSelector) : null;
   return video || findLargestPlayingVideo() || document.querySelector('video');
