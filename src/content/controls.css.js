@@ -14,7 +14,12 @@ export const CONTROLS_CSS = `
   position: absolute; inset: 0; opacity: 0; transition: opacity 0.2s;
   font: 12px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; color: #f2f2f2;
 }
-.root.visible { opacity: 1; }
+.root.visible, .root.dropping { opacity: 1; }
+.root.dropping::after {
+  content: 'Drop a subtitle file (SRT or VTT)'; position: absolute; inset: 8px; z-index: 1;
+  display: grid; place-items: center; padding: 12px; text-align: center; font-size: 14px;
+  border: 2px dashed #ff4d5e; border-radius: 12px; background: rgba(17, 18, 20, 0.85); pointer-events: none;
+}
 .root:not(.visible) .bar, .root:not(.visible) .menu { pointer-events: none; }
 .fade {
   position: absolute; left: 0; right: 0; bottom: 0; height: 120px; max-height: 60%;

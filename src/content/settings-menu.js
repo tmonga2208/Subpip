@@ -38,17 +38,10 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
   // Only move focus into the menu for keyboard users (click detail 0)
   let keyboardMode = false;
 
-  // The user's own subtitle file. The chooser has to be opened from a click
-  // in this window; the file is read here and never leaves the browser.
+  // The user's own subtitle file, picked in the chooser or dropped on the
+  // window. It is read here and never leaves the browser.
   let fileProblem = '';
-  const fileInput = el('input');
-  fileInput.type = 'file';
-  fileInput.accept = '.srt,.vtt,text/vtt';
-  fileInput.hidden = true;
-  fileInput.addEventListener('change', async () => {
-    const [file] = fileInput.files;
-    fileInput.value = '';
-    if (!file) return;
+  async function loadFile(file) {
     let lines = 0;
     try {
       if (file.size <= MAX_SUBTITLE_BYTES) lines = captions.loadSubtitles(decodeSubtitleFile(await file.arrayBuffer()), file.name);
@@ -58,6 +51,17 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
     fileProblem = lines ? '' : 'No subtitles found in that file.';
     view = 'subtitles';
     render();
+  }
+
+  // The chooser has to be opened from a click in this window
+  const fileInput = el('input');
+  fileInput.type = 'file';
+  fileInput.accept = '.srt,.vtt,text/vtt';
+  fileInput.hidden = true;
+  fileInput.addEventListener('change', () => {
+    const [file] = fileInput.files;
+    fileInput.value = '';
+    if (file) loadFile(file);
   });
 
   const sizeLabel = () => {
@@ -207,8 +211,8 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
     if (first && !panel.hidden && keyboardMode) first.focus({ preventScroll: true });
   }
 
-  const open = () => {
-    view = 'main';
+  const open = (startView = 'main') => {
+    view = startView;
     fileProblem = '';
     panel.hidden = false;
     button.setAttribute('aria-expanded', 'true');
@@ -227,6 +231,14 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
     else close();
   });
 
+  // A file dropped on the window: the menu opens on Subtitles, showing the
+  // file once it is loaded, what was wrong with it, or the Premium note
+  const dropFile = (file) => {
+    keyboardMode = false;
+    open('subtitles');
+    if (isPremium) loadFile(file);
+  };
+
   // Clicks anywhere outside the menu and gear close it
   session.listen(pipDoc, 'pointerdown', (event) => {
     if (panel.hidden) return;
@@ -234,5 +246,5 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
     if (!path.includes(panel) && !path.includes(button)) close();
   });
 
-  return { button, panel, extras: [fileInput], isOpen: () => !panel.hidden, close };
+  return { button, panel, extras: [fileInput], isOpen: () => !panel.hidden, close, dropFile };
 }

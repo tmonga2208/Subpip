@@ -225,6 +225,27 @@ export function createControls({ video, pipDoc, session, seekTo, captions }) {
       root.insertBefore(menuParts.panel, bar);
       root.append(...(menuParts.extras || []));
       trackPointer(menuParts.panel);
+
+      // A file dragged in from the desktop: show where it can be dropped, and
+      // hand it to the menu when it is
+      const carriesFiles = (event) => [...(event.dataTransfer?.types || [])].includes('Files');
+      listen(pipDoc, 'dragover', (event) => {
+        if (!carriesFiles(event)) return;
+        event.preventDefault();
+        root.classList.add('dropping');
+      });
+      listen(pipDoc, 'dragleave', (event) => {
+        if (!event.relatedTarget) root.classList.remove('dropping');
+      });
+      listen(pipDoc, 'drop', (event) => {
+        root.classList.remove('dropping');
+        if (!carriesFiles(event)) return;
+        event.preventDefault();
+        const [file] = event.dataTransfer.files;
+        if (!file) return;
+        menuParts.dropFile(file);
+        show();
+      });
     }
   };
 }

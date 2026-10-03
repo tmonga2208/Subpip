@@ -146,3 +146,57 @@ test('a subtitle link that cannot be read leaves the page captions in place', as
   await captionIs(page, 'First hidden-track cue');
   await done(page);
 });
+
+// ---- Dropping a file on the PiP window, instead of going through the menu ----
+
+// Drag a file from the desktop over the window and, unless told not to, let go
+async function dragFile(page, file, { drop = true } = {}) {
+  const pip = await pipPageOf(page);
+  const data = { items: [], files: [path.join(FIXTURES_DIR, file)], dragOperationsMask: 1 };
+  const point = { x: 200, y: 120 };
+  await pip.mouse.dragEnter(point, data);
+  await pip.mouse.dragOver(point, data);
+  if (drop) await pip.mouse.drop(point, data);
+}
+const dropHintShown = (page) => shadowEval(page, (shadow) => shadow.querySelector('.root').classList.contains('dropping'));
+const noteIs = (page, pattern) => page.waitForFunction(
+  (source) => new RegExp(source).test(window.documentPictureInPicture.window.document.querySelector('subpip-controls').shadowRoot.querySelector('.menu:not([hidden]) .menu-note')?.textContent || ''),
+  { timeout: 4000 }, pattern.source
+);
+
+test('a subtitle file dropped on the window is loaded, and the menu shows it', async () => {
+  const page = await open({ isPremium: true });
+  await dragFile(page, 'movie.srt');
+  await captionIs(page, 'File cue one');
+  await noteIs(page, /movie\.srt · Delay 0 s/);
+  assert.equal(await dropHintShown(page), false);
+  await done(page);
+});
+
+test('while a file is held over the window, it shows where to drop it', async () => {
+  const page = await open({ isPremium: true });
+  assert.equal(await dropHintShown(page), false);
+  await dragFile(page, 'movie.srt', { drop: false });
+  assert.equal(await dropHintShown(page), true);
+  await done(page);
+});
+
+test('a dropped file that has no subtitles in it is reported', async () => {
+  const page = await open({ isPremium: true });
+  await seek(page, 5);
+  await captionIs(page, 'First hidden-track cue');
+  await dragFile(page, 'empty.srt');
+  await noteIs(page, /No subtitles found/);
+  assert.equal(await caption(page), 'First hidden-track cue');
+  await done(page);
+});
+
+test('free users who drop a file are told it is a Premium feature', async () => {
+  const page = await open({ isPremium: false });
+  await seek(page, 5);
+  await captionIs(page, 'First hidden-track cue');
+  await dragFile(page, 'movie.srt');
+  await noteIs(page, /Premium feature/);
+  assert.equal(await caption(page), 'First hidden-track cue');
+  await done(page);
+});
