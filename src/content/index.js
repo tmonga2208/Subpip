@@ -35,7 +35,7 @@ function createInstance() {
     // The Activate button injects fresh settings right before running
     currentSettings = withDefaults(window.__SUBPIP_SETTINGS__);
 
-    const adapter = getSiteAdapter(window.location.hostname);
+    const adapter = getSiteAdapter(window.location.hostname, window.location.pathname);
     const video = findVideo(adapter);
     if (!video) {
       console.warn('[SubPIP] No video found on this page');

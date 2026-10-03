@@ -42,7 +42,7 @@ test('six features, two plans, supported sites listed', async () => {
   }));
   assert.equal(counts.features, 6);
   assert.equal(counts.plans, 2);
-  assert.deepEqual(counts.sites, ['YouTube', 'Netflix', 'Disney+ Hotstar', 'JioCinema', 'Crunchyroll', 'Any site with built-in captions']);
+  assert.deepEqual(counts.sites, ['YouTube', 'Netflix', 'JioHotstar', 'Crunchyroll', 'Any site with built-in captions']);
   await page.close();
 });
 

@@ -42,6 +42,34 @@ test('a page without a video disables the button', async () => {
   await page.close();
 });
 
+test('a video inside an embedded player is explained, with a way to open the player itself', async () => {
+  const page = await ctx.newPage('embed.html');
+  const popup = await ctx.openPopup();
+  assert.deepEqual(await status(popup), {
+    state: 'embedded', title: 'This video is in an embedded player', sub: 'Open the player in its own tab to use SubPIP',
+    button: 'Open the player in a new tab', disabled: false
+  });
+  await popup.evaluate(() => {
+    window.openedTabs = [];
+    chrome.tabs.create = async ({ url }) => { window.openedTabs.push(url); };
+    window.close = () => {};
+  });
+  await popup.click('#pip-btn');
+  await popup.waitForFunction(() => window.openedTabs.length > 0);
+  assert.deepEqual(await popup.evaluate(() => window.openedTabs), [`http://127.0.0.1:${ctx.server.port}/generic.html`]);
+  await popup.close();
+  await page.close();
+});
+
+test('ordinary frames are not mistaken for a player', async () => {
+  const page = await ctx.newPage('frames.html');
+  const popup = await ctx.openPopup();
+  const s = await status(popup);
+  assert.deepEqual({ state: s.state, title: s.title, disabled: s.disabled }, { state: 'none', title: 'No video on this page', disabled: true });
+  await popup.close();
+  await page.close();
+});
+
 test('chrome:// pages are off-limits', async () => {
   const page = await ctx.newPage('novideo.html');
   await page.goto('chrome://version');

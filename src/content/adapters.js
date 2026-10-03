@@ -35,16 +35,24 @@ export const SITE_ADAPTERS = [
     seek: netflixSeek
   },
   {
+    // JioCinema and Disney+ Hotstar merged into JioHotstar (hotstar.com) in 2025
     name: 'hotstar',
-    label: 'Disney+ Hotstar',
-    match: (host) => host.includes('hotstar') || host.includes('disneyplus'),
+    label: 'JioHotstar',
+    match: (host) => host.includes('hotstar'),
     subtitleSelector: '.shaka-text-container'
   },
   {
-    name: 'jiocinema',
-    label: 'JioCinema',
-    match: (host) => host.includes('jiocinema'),
-    subtitleSelector: '#subtitle-1'
+    name: 'disneyplus',
+    label: 'Disney+',
+    match: (host) => host.includes('disneyplus'),
+    subtitleSelector: '.shaka-text-container'
+  },
+  {
+    // primevideo.com, and the video pages of the Amazon shops (/gp/video/...)
+    name: 'primevideo',
+    label: 'Prime Video',
+    match: (host, path) => host.includes('primevideo') || (/(^|\.)amazon\./.test(host) && /\/gp\/video\b/.test(path)),
+    subtitleSelector: '.atvwebplayersdk-captions-overlay'
   },
   {
     name: 'crunchyroll',
@@ -55,6 +63,6 @@ export const SITE_ADAPTERS = [
   }
 ];
 
-export function getSiteAdapter(hostname) {
-  return SITE_ADAPTERS.find((adapter) => adapter.match(hostname)) || { name: 'generic' };
+export function getSiteAdapter(hostname, pathname = '') {
+  return SITE_ADAPTERS.find((adapter) => adapter.match(hostname, pathname)) || { name: 'generic' };
 }

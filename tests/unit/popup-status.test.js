@@ -14,4 +14,6 @@ test('status copy matches the spec', () => {
   assert.deepEqual(describeStatus({ state: 'restricted' }),
     { title: "SubPIP can't run on this page", sub: 'Chrome pages and the Web Store are off-limits' });
   assert.deepEqual(describeStatus({ state: 'loading' }), { title: 'Checking this page…', sub: '' });
+  assert.deepEqual(describeStatus({ state: 'embedded', host: 'blog.example' }),
+    { title: 'This video is in an embedded player', sub: 'Open the player in its own tab to use SubPIP' });
 });

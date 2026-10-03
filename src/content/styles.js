@@ -99,15 +99,15 @@ export function generateSubtitleStyles(settings) {
     left: 50% !important;
     transform: translateX(-50%) !important;
   }
-  #subtitle-1, 
-  #subtitle-1 * {
+  .atvwebplayersdk-captions-overlay,
+  .atvwebplayersdk-captions-overlay * {
     font-size: ${settings.fontSize}px !important;
     font-family: ${settings.fontFamily} !important;
     font-weight: bold !important;
     color: ${settings.textColor} !important;
     text-shadow: ${textShadow} !important;
   }
-  #subtitle-1 {
+  .atvwebplayersdk-captions-overlay {
     position: absolute !important;
     ${position} !important;
     ${shift}
