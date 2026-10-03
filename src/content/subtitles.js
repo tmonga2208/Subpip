@@ -69,3 +69,22 @@ export function parseVTTOrSRT(content) {
   }
   return cues;
 }
+
+// The line on screen at a given time ('' when there is none)
+export function cueAt(cues, time) {
+  const cue = cues.find((c) => time >= c.start && time <= c.end);
+  return cue ? cue.text : '';
+}
+
+// Subtitle files are usually UTF-8, but plenty of older ones are UTF-16 (they
+// say so with a byte-order mark) or Windows-1252
+export function decodeSubtitleFile(buffer) {
+  const bytes = new Uint8Array(buffer);
+  if (bytes[0] === 0xFF && bytes[1] === 0xFE) return new TextDecoder('utf-16le').decode(buffer);
+  if (bytes[0] === 0xFE && bytes[1] === 0xFF) return new TextDecoder('utf-16be').decode(buffer);
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+  } catch (e) {
+    return new TextDecoder('windows-1252').decode(buffer);
+  }
+}

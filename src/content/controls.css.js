@@ -75,7 +75,9 @@ export const CONTROLS_CSS = `
 .menu-item:hover { background: rgba(255, 255, 255, 0.07); }
 .menu-item:focus-visible { outline: 2px solid #ff4d5e; outline-offset: -2px; }
 .menu-item svg { display: block; width: 14px; height: 14px; flex: none; }
-.menu-item .value { margin-left: auto; color: #8b8d93; }
+.menu-item .value {
+  margin-left: auto; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #8b8d93;
+}
 .menu-item .check { color: #ff4d5e; visibility: hidden; }
 .menu-item[aria-checked="true"] .check { visibility: visible; }
 .menu-item.head { font-weight: 600; }

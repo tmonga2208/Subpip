@@ -1,14 +1,17 @@
 // Captions inside the PiP window. Sources, in priority order:
-//   1. Premium external subtitle file (VTT/SRT URL)
+//   1. The user's own subtitles (Premium): a file loaded from the PiP menu,
+//      or the VTT/SRT link saved in the popup
 //   2. The site's own caption element (adapter.subtitleSelector), mirrored
 //   3. A hidden text track the page renders itself (generic sites)
 // "showing" text tracks are drawn by the video element and need nothing here.
 
 import { translationCache, translateText } from './translation.js';
-import { findHiddenTextTrack, cueText, parseVTTOrSRT } from './subtitles.js';
+import { findHiddenTextTrack, cueText, cueAt, parseVTTOrSRT } from './subtitles.js';
+import { createSession } from './session.js';
 
-export async function setupCaptions({ video, adapter, pipDoc, session, getSettings, isPremium }) {
-  const { listen, onCleanup, every } = session;
+// memory.value outlives the PiP window, so a loaded file is still there when
+// the window is reopened on the same page
+export async function setupCaptions({ video, adapter, pipDoc, session, getSettings, isPremium, memory = { value: null } }) {
   const settings = getSettings();
 
   let translationOn = !!(isPremium && settings.translationEnabled);
@@ -27,7 +30,7 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
   let pendingTranslation = null;
   let translationTimer = null;
   const failedTranslations = new Set();
-  onCleanup(() => clearTimeout(translationTimer));
+  session.onCleanup(() => clearTimeout(translationTimer));
 
   function displayText(text) {
     const lang = getSettings().targetLanguage;
@@ -60,7 +63,22 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
     });
   }
 
-  // Plain-text captions (external subtitle file or text track)
+  // One caption source runs at a time, in its own cleanup scope
+  let retime = () => { };
+  let source = null;
+  session.onCleanup(() => source && source.dispose());
+  function show(startSource) {
+    if (source) source.dispose();
+    if (captionEl) captionEl.remove();
+    captionEl = null;
+    rerender = () => { };
+    retime = () => { };
+    lastTranslation = '';
+    source = createSession();
+    startSource(source);
+  }
+
+  // Plain-text captions (the user's subtitles or a text track)
   function useTextCaptions() {
     captionEl = document.createElement('div');
     captionEl.className = 'subpip-caption-container';
@@ -82,73 +100,68 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
     };
   }
 
-  // 1. Premium: external subtitle file (e.g. OpenSubtitles VTT link)
-  const externalSubtitleUrl = isPremium ? (settings.externalSubtitleUrl || '').trim() : '';
-  if (externalSubtitleUrl) {
-    try {
-      const resp = await fetch(externalSubtitleUrl, { mode: 'cors' });
-      const cues = parseVTTOrSRT(await resp.text());
-      const setText = useTextCaptions();
-      const update = () => {
-        const t = video.currentTime;
-        const cue = cues.find((c) => t >= c.start && t <= c.end);
-        setText(cue ? cue.text : '');
-      };
-      listen(video, 'timeupdate', update);
-      listen(video, 'seeked', update);
-      update();
-    } catch (e) {
-      console.warn('[SubPIP] External subtitles failed to load:', e?.message);
-      if (captionEl) captionEl.remove();
-      captionEl = null;
-    }
+  // 1. The user's own subtitles: { name, cues, fromFile }. A positive delay
+  // shows every line that much later.
+  let own = null;
+  let delay = 0;
+  const remember = () => {
+    memory.value = own && own.fromFile ? { href: location.href, own, delay } : null;
+  };
+  function showOwnSubtitles({ listen }) {
+    const setText = useTextCaptions();
+    retime = () => setText(cueAt(own.cues, video.currentTime - delay));
+    listen(video, 'timeupdate', retime);
+    listen(video, 'seeked', retime);
+    retime();
   }
 
-  if (!captionEl && adapter.subtitleSelector) {
-    // 2. Mirror the site's own caption element (keeps its styling). Sites often
-    // re-create this element, so re-find it whenever it gets detached.
+  // 2. Mirror the site's own caption element (keeps its styling). Sites often
+  // re-create this element, so re-find it whenever it gets detached.
+  function mirrorSiteCaptions({ onCleanup, every }) {
     captionEl = pipDoc.createElement('div');
     pipDoc.body.appendChild(captionEl);
     present();
 
-    let source = null;
-    const sourceObserver = new MutationObserver(() => rerender());
-    onCleanup(() => sourceObserver.disconnect());
+    let siteEl = null;
+    const observer = new MutationObserver(() => rerender());
+    onCleanup(() => observer.disconnect());
 
     rerender = () => {
-      if (!source) return;
-      const text = source.textContent?.trim() || '';
+      if (!siteEl) return;
+      const text = siteEl.textContent?.trim() || '';
       const shown = displayText(text);
       captionEl.replaceChildren();
 
-      if (shown !== text && source.firstElementChild) {
-        const line = source.firstElementChild.cloneNode(false);
+      if (shown !== text && siteEl.firstElementChild) {
+        const line = siteEl.firstElementChild.cloneNode(false);
         line.textContent = shown;
         captionEl.appendChild(line);
       } else {
-        for (const node of source.childNodes) captionEl.appendChild(node.cloneNode(true));
+        for (const node of siteEl.childNodes) captionEl.appendChild(node.cloneNode(true));
       }
       limitCaptionLines(captionEl);
     };
 
-    const attachSource = () => {
-      if (source && source.isConnected) return;
+    const attach = () => {
+      if (siteEl && siteEl.isConnected) return;
       const found = document.querySelector(adapter.subtitleSelector);
-      if (!found || found === source) return;
+      if (!found || found === siteEl) return;
 
-      source = found;
-      const fresh = source.cloneNode(false);
+      siteEl = found;
+      const fresh = siteEl.cloneNode(false);
       captionEl.replaceWith(fresh);
       captionEl = fresh;
       present();
-      sourceObserver.disconnect();
-      sourceObserver.observe(source, { childList: true, subtree: true, characterData: true });
+      observer.disconnect();
+      observer.observe(siteEl, { childList: true, subtree: true, characterData: true });
       rerender();
     };
-    attachSource();
-    every(1000, attachSource);
-  } else if (!captionEl) {
-    // 3. Generic sites: render cues from a text track the page draws itself
+    attach();
+    every(1000, attach);
+  }
+
+  // 3. Generic sites: render cues from a text track the page draws itself
+  function followTextTrack({ listen, onCleanup }) {
     const setText = useTextCaptions();
     let track = null;
     const onCueChange = () => setText(track ? cueText(track) : '');
@@ -169,6 +182,27 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
     pickTrack();
   }
 
+  const showPageCaptions = adapter.subtitleSelector ? mirrorSiteCaptions : followTextTrack;
+
+  // A file loaded earlier on this page wins over the saved link
+  const remembered = memory.value && memory.value.href === location.href ? memory.value : null;
+  const subtitleUrl = isPremium ? (settings.externalSubtitleUrl || '').trim() : '';
+  if (isPremium && remembered) {
+    own = remembered.own;
+    delay = remembered.delay;
+  } else if (subtitleUrl) {
+    try {
+      const response = await fetch(subtitleUrl, { mode: 'cors' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const cues = parseVTTOrSRT(await response.text());
+      if (!cues.length) throw new Error('no subtitles in the file');
+      own = { name: 'Link', cues, fromFile: false };
+    } catch (e) {
+      console.warn('[SubPIP] External subtitles failed to load:', e?.message);
+    }
+  }
+  show(own ? showOwnSubtitles : showPageCaptions);
+
   return {
     get translationOn() { return translationOn; },
     setTranslationOn(on) {
@@ -184,6 +218,30 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
     refresh() {
       lastTranslation = '';
       rerender();
+    },
+    // The user's own subtitles, or null while the page's captions are shown
+    get subtitles() { return own ? { name: own.name, lines: own.cues.length } : null; },
+    get delay() { return delay; },
+    // Returns how many lines the file had; 0 leaves the current captions alone
+    loadSubtitles(text, name) {
+      const cues = parseVTTOrSRT(text);
+      if (!cues.length) return 0;
+      own = { name, cues, fromFile: true };
+      delay = 0;
+      remember();
+      show(showOwnSubtitles);
+      return cues.length;
+    },
+    removeSubtitles() {
+      own = null;
+      delay = 0;
+      remember();
+      show(showPageCaptions);
+    },
+    setDelay(seconds) {
+      delay = Math.round(seconds * 100) / 100;
+      remember();
+      retime();
     }
   };
 }

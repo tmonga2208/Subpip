@@ -223,6 +223,7 @@ export function createControls({ video, pipDoc, session, seekTo, captions }) {
       menu = menuParts;
       row.append(menuParts.button);
       root.insertBefore(menuParts.panel, bar);
+      root.append(...(menuParts.extras || []));
       trackPointer(menuParts.panel);
     }
   };

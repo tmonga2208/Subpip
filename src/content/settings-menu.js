@@ -1,11 +1,18 @@
 // PiP settings menu: Speed (Premium), Caption size, Translate (Premium),
-// Fill window. Size/translation are session overrides; nothing is saved.
-// Built with DOM calls only (Trusted Types pages).
+// Subtitles (Premium), Fill window. Size/translation are session overrides;
+// nothing is saved. Built with DOM calls only (Trusted Types pages).
 
 import { createIcon } from '../shared/icons.js';
 import { CAPTION_SIZES, LANGUAGES, SPEEDS } from '../shared/settings.js';
+import { decodeSubtitleFile } from './subtitles.js';
 
 const UPGRADE_NOTE = 'Premium feature. Open the SubPIP popup to upgrade.';
+// Each press of Earlier / Later moves the user's subtitles this far (seconds)
+const DELAY_STEP = 0.25;
+// A feature film's subtitles are well under 1 MB; anything huge is not one
+const MAX_SUBTITLE_BYTES = 5 * 1024 * 1024;
+
+const signed = (seconds) => `${seconds > 0 ? '+' : '−'}${Math.abs(seconds)} s`;
 
 export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessionSettings, applyOverride, captions }) {
   const el = (tag, cls, text) => {
@@ -30,6 +37,28 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
   let view = 'main';
   // Only move focus into the menu for keyboard users (click detail 0)
   let keyboardMode = false;
+
+  // The user's own subtitle file. The chooser has to be opened from a click
+  // in this window; the file is read here and never leaves the browser.
+  let fileProblem = '';
+  const fileInput = el('input');
+  fileInput.type = 'file';
+  fileInput.accept = '.srt,.vtt,text/vtt';
+  fileInput.hidden = true;
+  fileInput.addEventListener('change', async () => {
+    const [file] = fileInput.files;
+    fileInput.value = '';
+    if (!file) return;
+    let lines = 0;
+    try {
+      if (file.size <= MAX_SUBTITLE_BYTES) lines = captions.loadSubtitles(decodeSubtitleFile(await file.arrayBuffer()), file.name);
+    } catch (e) {
+      lines = 0;
+    }
+    fileProblem = lines ? '' : 'No subtitles found in that file.';
+    view = 'subtitles';
+    render();
+  });
 
   const sizeLabel = () => {
     const px = getSessionSettings().fontSize;
@@ -73,6 +102,7 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
       item({ label: 'Speed', value: `${video.playbackRate}×`, premium: !isPremium, chevron: true, onSelect: go('speed') }),
       item({ label: 'Caption size', value: sizeLabel(), chevron: true, onSelect: go('size') }),
       item({ label: 'Translate', value: translateLabel(), premium: !isPremium, chevron: true, onSelect: go('translate') }),
+      item({ label: 'Subtitles', value: captions.subtitles ? captions.subtitles.name : 'Page', premium: !isPremium, chevron: true, onSelect: go('subtitles') }),
       item({
         label: 'Fill window',
         value: video.style.objectFit === 'fill' ? 'On' : 'Off',
@@ -134,7 +164,33 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
     ];
   }
 
-  const VIEWS = { main: mainView, speed: speedView, size: sizeView, translate: translateView };
+  function subtitlesView() {
+    if (!isPremium) return [backRow(), el('div', 'menu-note', UPGRADE_NOTE)];
+    const rows = [backRow(), item({ label: 'Load file…', value: 'SRT or VTT', onSelect: () => fileInput.click() })];
+    if (fileProblem) rows.push(el('div', 'menu-note', fileProblem));
+    const loaded = captions.subtitles;
+    if (loaded) {
+      const nudge = (seconds) => () => {
+        captions.setDelay(captions.delay + seconds);
+        render();
+      };
+      rows.push(
+        el('div', 'menu-note', `${loaded.name} · Delay ${captions.delay === 0 ? '0 s' : signed(captions.delay)}`),
+        item({ label: 'Earlier', value: signed(-DELAY_STEP), onSelect: nudge(-DELAY_STEP) }),
+        item({ label: 'Later', value: signed(DELAY_STEP), onSelect: nudge(DELAY_STEP) }),
+        item({
+          label: 'Use page captions',
+          onSelect: () => {
+            captions.removeSubtitles();
+            render();
+          }
+        })
+      );
+    }
+    return rows;
+  }
+
+  const VIEWS = { main: mainView, speed: speedView, size: sizeView, translate: translateView, subtitles: subtitlesView };
 
   function render() {
     panel.replaceChildren(...VIEWS[view]());
@@ -144,6 +200,7 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
 
   const open = () => {
     view = 'main';
+    fileProblem = '';
     panel.hidden = false;
     button.setAttribute('aria-expanded', 'true');
     render();
@@ -168,5 +225,5 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
     if (!path.includes(panel) && !path.includes(button)) close();
   });
 
-  return { button, panel, isOpen: () => !panel.hidden, close };
+  return { button, panel, extras: [fileInput], isOpen: () => !panel.hidden, close };
 }

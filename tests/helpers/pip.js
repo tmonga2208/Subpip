@@ -35,3 +35,13 @@ export function shadowEval(page, fn, ...args) {
     fn.toString(), args
   );
 }
+
+// The PiP window as its own puppeteer Page, for real mouse input and for
+// catching the file chooser it opens
+export async function pipPageOf(page) {
+  const target = await page.browser().waitForTarget(
+    (candidate) => candidate.type() === 'page' && candidate.url() === 'about:blank' && candidate.opener() === page.target(),
+    { timeout: 5000 }
+  );
+  return target.asPage();
+}

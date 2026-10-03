@@ -26,7 +26,7 @@ const openMenu = (page) => shadowEval(page, (shadow) => shadow.querySelector('.b
 test('gear opens the menu with current values (premium user)', async () => {
   const page = await open({ isPremium: true });
   await openMenu(page);
-  assert.deepEqual(await menuItems(page), ['Speed=1×', 'Caption size=M', 'Translate=Off', 'Fill window=Off']);
+  assert.deepEqual(await menuItems(page), ['Speed=1×', 'Caption size=M', 'Translate=Off', 'Subtitles=Page', 'Fill window=Off']);
   assert.equal(await shadowEval(page, (shadow) => shadow.querySelector('.btn.gear').getAttribute('aria-expanded')), 'true');
   await done(page);
 });
@@ -34,7 +34,7 @@ test('gear opens the menu with current values (premium user)', async () => {
 test('free users see Premium tags and an upgrade note', async () => {
   const page = await open({ isPremium: false });
   await openMenu(page);
-  assert.deepEqual(await menuItems(page), ['Speed=Premium', 'Caption size=M', 'Translate=Premium', 'Fill window=Off']);
+  assert.deepEqual(await menuItems(page), ['Speed=Premium', 'Caption size=M', 'Translate=Premium', 'Subtitles=Premium', 'Fill window=Off']);
   await clickItem(page, 'Speed');
   const note = await shadowEval(page, (shadow) => shadow.querySelector('.menu .menu-note').textContent);
   assert.match(note, /Premium feature/);
@@ -82,7 +82,7 @@ test('fill window toggles object-fit', async () => {
   await openMenu(page);
   await clickItem(page, 'Fill window');
   assert.equal(await fit(), 'fill');
-  assert.deepEqual((await menuItems(page))[3], 'Fill window=On');
+  assert.deepEqual((await menuItems(page))[4], 'Fill window=On');
   await done(page);
 });
 
@@ -92,7 +92,7 @@ test('Escape and outside clicks close the menu; Back returns to the main list', 
   await openMenu(page);
   await clickItem(page, 'Speed');
   await clickItem(page, 'Back');
-  assert.equal((await menuItems(page)).length, 4);
+  assert.equal((await menuItems(page)).length, 5);
   await pipEval(page, (pip) => pip.dispatchEvent(new pip.KeyboardEvent('keydown', { code: 'Escape' })));
   assert.equal(await isOpen(), false);
   await openMenu(page);

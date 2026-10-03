@@ -6,28 +6,7 @@ import { setupCaptions } from './captions.js';
 import { createControls, handlePipKeydown } from './controls.js';
 import { createSettingsMenu } from './settings-menu.js';
 import { pipWindowSize } from './video.js';
-
-// Everything registered during a PiP session is undone when it closes
-function createSession() {
-  const cleanups = [];
-  const onCleanup = (fn) => cleanups.push(fn);
-  return {
-    onCleanup,
-    listen(target, type, handler, options) {
-      target.addEventListener(type, handler, options);
-      onCleanup(() => target.removeEventListener(type, handler, options));
-    },
-    every(ms, fn) {
-      const id = setInterval(fn, ms);
-      onCleanup(() => clearInterval(id));
-    },
-    dispose() {
-      cleanups.forEach((fn) => {
-        try { fn(); } catch (e) { /* keep cleaning up */ }
-      });
-    }
-  };
-}
+import { createSession } from './session.js';
 
 function copyPageStyles(pipDoc) {
   [...document.styleSheets].forEach((styleSheet) => {
@@ -49,7 +28,8 @@ function copyPageStyles(pipDoc) {
 
 // Returns a handle whose onSettingsChanged() re-applies live settings.
 // onClose runs after the window closes and the video is restored.
-export async function openPipWindow({ video, adapter, getSettings, onClose }) {
+// subtitleMemory keeps a loaded subtitle file between windows on this page.
+export async function openPipWindow({ video, adapter, getSettings, onClose, subtitleMemory }) {
   const settings = getSettings();
   const isPremium = !!settings.isPremium;
 
@@ -92,7 +72,7 @@ export async function openPipWindow({ video, adapter, getSettings, onClose }) {
   subtitleStyle.textContent = generateSubtitleStyles(sessionSettings());
   pipDoc.head.appendChild(subtitleStyle);
 
-  const captions = await setupCaptions({ video, adapter, pipDoc, session, getSettings: sessionSettings, isPremium });
+  const captions = await setupCaptions({ video, adapter, pipDoc, session, getSettings: sessionSettings, isPremium, memory: subtitleMemory });
 
   const seekTo = (time) => {
     const duration = video.duration;

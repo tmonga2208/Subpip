@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseVTTOrSRT, cueText } from '../../src/content/subtitles.js';
+import { parseVTTOrSRT, cueText, cueAt, decodeSubtitleFile } from '../../src/content/subtitles.js';
 
 const srt = (...blocks) => blocks.map((block, i) => `${i + 1}\n${block}`).join('\n\n');
 
@@ -66,4 +66,32 @@ test('Windows line endings and a byte-order mark are handled', () => {
 test('text-track cues are cleaned the same way', () => {
   const track = { activeCues: [{ text: '<v Roger>Tom &amp; Jerry</v>' }, { text: '<i>second</i>' }] };
   assert.equal(cueText(track), 'Tom & Jerry\nsecond');
+});
+
+test('cueAt finds the line on screen at a given time', () => {
+  const cues = [{ start: 1, end: 2, text: 'one' }, { start: 2.5, end: 4, text: 'two' }];
+  assert.equal(cueAt(cues, 0.99), '');
+  assert.equal(cueAt(cues, 1), 'one');
+  assert.equal(cueAt(cues, 2), 'one');
+  assert.equal(cueAt(cues, 2.2), '');
+  assert.equal(cueAt(cues, 3), 'two');
+  assert.equal(cueAt(cues, 9), '');
+});
+
+const bytes = (...values) => new Uint8Array(values).buffer;
+
+test('subtitle files in UTF-8 are read as UTF-8', () => {
+  assert.equal(decodeSubtitleFile(new TextEncoder().encode('café ¿qué? 日本語').buffer), 'café ¿qué? 日本語');
+  // with a byte-order mark, which must not end up in the text
+  assert.equal(decodeSubtitleFile(bytes(0xEF, 0xBB, 0xBF, 0x68, 0x69)), 'hi');
+});
+
+test('older files that are not valid UTF-8 are read as Windows-1252', () => {
+  // "café" saved by a Windows editor: é is the single byte 0xE9
+  assert.equal(decodeSubtitleFile(bytes(0x63, 0x61, 0x66, 0xE9)), 'café');
+});
+
+test('UTF-16 files are recognised by their byte-order mark', () => {
+  assert.equal(decodeSubtitleFile(bytes(0xFF, 0xFE, 0x68, 0x00, 0xE9, 0x00)), 'hé');
+  assert.equal(decodeSubtitleFile(bytes(0xFE, 0xFF, 0x00, 0x68, 0x00, 0xE9)), 'hé');
 });

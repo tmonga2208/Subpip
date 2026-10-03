@@ -21,7 +21,7 @@ test('privacy policy uses the shared layout', async () => {
 
 test('the policy has a fixed revision date, not today\'s date', async () => {
   const html = await readFile(`${WEB_DIR}/privacy.html`, 'utf8');
-  assert.match(html, /Last updated: September 29, 2026/);
+  assert.match(html, /Last updated: October 3, 2026/);
   assert.doesNotMatch(html, /toLocaleDateString/);
 });
 

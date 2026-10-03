@@ -21,6 +21,8 @@ function createInstance() {
   let currentSettings = withDefaults(window.__SUBPIP_SETTINGS__);
   let activeSession = null;
   let autoPipRegistered = false;
+  // A subtitle file loaded in the PiP menu, kept for the next window on this page
+  const subtitleMemory = { value: null };
 
   const getSettings = () => currentSettings;
 
@@ -41,7 +43,7 @@ function createInstance() {
     }
 
     try {
-      const session = await openPipWindow({ video, adapter, getSettings, onClose: () => { activeSession = null; } });
+      const session = await openPipWindow({ video, adapter, getSettings, subtitleMemory, onClose: () => { activeSession = null; } });
       if (documentPictureInPicture.window) activeSession = session;
     } catch (error) {
       console.error('[SubPIP] PiP failed:', error?.name, error?.message);
