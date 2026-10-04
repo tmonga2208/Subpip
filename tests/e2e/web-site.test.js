@@ -44,8 +44,10 @@ test('every local link and asset exists', async () => {
   assert.deepEqual(missing, []);
 });
 
+// logo.png is not one of them any more: it is the logo emails show (mail apps
+// do not display SVG). No page of the site uses it.
 test('old images are gone', () => {
-  for (const file of ['image.png', 'img.png', 'logo.png']) {
+  for (const file of ['image.png', 'img.png']) {
     assert.equal(existsSync(path.join(WEB_DIR, file)), false, `${file} still in web/`);
   }
 });
