@@ -1,7 +1,7 @@
 // Premium price per currency (smallest unit: paise / cents). The website
-// charges ₹1000 in India and $15 elsewhere; any captured payment must match.
+// charges ₹999 in India and $15 elsewhere; any captured payment must match.
 export const PRICES = {
-  INR: 100000, // ₹1000
+  INR: 99900, // ₹999
   USD: 1500    // $15
 };
 

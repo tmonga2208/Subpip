@@ -86,7 +86,7 @@ const refundEvent = (paymentId, { refundAmount, refundStatus }) => ({
 
 test('a partial refund does not revoke the license', async () => {
   const d = deps({ webhookSecret: 'wh' });
-  d.db.docs.set('licenses/pay_P', { key: 'SUBPIP-PARTIAL1-0001', paymentId: 'pay_P', amount: 100000, verified: true, usedBy: 'u1' });
+  d.db.docs.set('licenses/pay_P', { key: 'SUBPIP-PARTIAL1-0001', paymentId: 'pay_P', amount: 99900, verified: true, usedBy: 'u1' });
   d.db.docs.set('users/u1', { isPremium: true, licenseKey: 'SUBPIP-PARTIAL1-0001' });
   await quiet(() => handleWebhook(webhookReq(refundEvent('pay_P', { refundAmount: 10000, refundStatus: 'partial' }), 'wh'), fakeRes(), d));
   assert.equal(d.db.read('licenses/pay_P').revoked, undefined);
@@ -95,9 +95,9 @@ test('a partial refund does not revoke the license', async () => {
 
 test('a full refund revokes the license', async () => {
   const d = deps({ webhookSecret: 'wh' });
-  d.db.docs.set('licenses/pay_F', { key: 'SUBPIP-FULLREF1-0001', paymentId: 'pay_F', amount: 100000, verified: true, usedBy: 'u1' });
+  d.db.docs.set('licenses/pay_F', { key: 'SUBPIP-FULLREF1-0001', paymentId: 'pay_F', amount: 99900, verified: true, usedBy: 'u1' });
   d.db.docs.set('users/u1', { isPremium: true, licenseKey: 'SUBPIP-FULLREF1-0001' });
-  await quiet(() => handleWebhook(webhookReq(refundEvent('pay_F', { refundAmount: 100000, refundStatus: 'full' }), 'wh'), fakeRes(), d));
+  await quiet(() => handleWebhook(webhookReq(refundEvent('pay_F', { refundAmount: 99900, refundStatus: 'full' }), 'wh'), fakeRes(), d));
   assert.equal(d.db.read('licenses/pay_F').revoked, true);
   assert.equal(d.db.read('users/u1').isPremium, false);
 });
@@ -127,20 +127,20 @@ test('a webhook that fails to create a license alerts the owner', async () => {
   const d = deps({ webhookSecret: 'wh' });
   d.db.collection = () => { throw new Error('Firestore unavailable'); };
   const res = fakeRes();
-  await quiet(() => handleWebhook(webhookReq({ event: 'payment.captured', payload: { payment: { entity: { id: 'pay_X', status: 'captured', currency: 'INR', amount: 100000 } } } }, 'wh'), res, d));
+  await quiet(() => handleWebhook(webhookReq({ event: 'payment.captured', payload: { payment: { entity: { id: 'pay_X', status: 'captured', currency: 'INR', amount: 99900 } } } }, 'wh'), res, d));
   assert.equal(res.statusCode, 500);
   // alertOwner itself needs Firestore for throttling, so it can't send here; the
   // failure is still logged. With Firestore up, the alert is sent:
   const d2 = deps({ webhookSecret: 'wh' });
   const realCreate = d2.db.collection.bind(d2.db);
   d2.db.collection = (name) => { const c = realCreate(name); if (name === 'licenses') { c.doc = () => { throw new Error('create failed'); }; } return c; };
-  await quiet(() => handleWebhook(webhookReq({ event: 'payment.captured', payload: { payment: { entity: { id: 'pay_Y', status: 'captured', currency: 'INR', amount: 100000 } } } }, 'wh'), fakeRes(), d2));
+  await quiet(() => handleWebhook(webhookReq({ event: 'payment.captured', payload: { payment: { entity: { id: 'pay_Y', status: 'captured', currency: 'INR', amount: 99900 } } } }, 'wh'), fakeRes(), d2));
   assert.ok(d2.mailer.sent.some((m) => /license-creation-failed/.test(m.subject) && /pay_Y/.test(m.text)));
 });
 
 // 6. Capture race
 test('if auto-capture wins the race, confirmPayment still issues the license', async () => {
-  const payments = { pay_R: { status: 'authorized', currency: 'INR', amount: 100000, order_id: 'order_1', email: 'r@example.com' } };
+  const payments = { pay_R: { status: 'authorized', currency: 'INR', amount: 99900, order_id: 'order_1', email: 'r@example.com' } };
   const razorpay = fakeRazorpay(payments);
   razorpay.payments.capture = async () => { payments.pay_R.status = 'captured'; throw new Error('This payment has already been captured'); };
   const d = deps({ razorpay });

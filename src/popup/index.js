@@ -21,7 +21,7 @@ function renderIcons(root) {
 
 document.addEventListener('DOMContentLoaded', async () => {
   renderIcons(document);
-  // ₹1000 in India, $15 elsewhere
+  // ₹999 in India, $15 elsewhere
   document.querySelectorAll('[data-price]').forEach((el) => { el.textContent = localPrice().label; });
   const router = createRouter(document);
   const store = createSettingsStore();

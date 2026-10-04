@@ -4,7 +4,7 @@ import { REGIONAL_PRICES, defaultCurrency, localPrice } from '../../src/shared/p
 
 test('regional prices match the server', () => {
   assert.deepEqual(REGIONAL_PRICES, {
-    INR: { currency: 'INR', amount: 100000, label: '₹1000' },
+    INR: { currency: 'INR', amount: 99900, label: '₹999' },
     USD: { currency: 'USD', amount: 1500, label: '$15' }
   });
 });
@@ -17,6 +17,6 @@ test('India time zones default to rupees, everything else to dollars', () => {
 });
 
 test('localPrice returns the price for a time zone', () => {
-  assert.equal(localPrice('Asia/Kolkata').label, '₹1000');
+  assert.equal(localPrice('Asia/Kolkata').label, '₹999');
   assert.equal(localPrice('Asia/Tokyo').label, '$15');
 });

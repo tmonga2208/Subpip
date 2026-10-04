@@ -1,4 +1,4 @@
-// Regional pricing on the website: ₹1000 in India, $15 elsewhere
+// Regional pricing on the website: ₹999 in India, $15 elsewhere
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { useWebsite, razorpayStub, confirmStub, both } from '../helpers/web.js';
@@ -23,17 +23,17 @@ async function payAndCapture(page) {
 
 test('landing page: rupees in India, dollars elsewhere', async () => {
   let page = await ctx.open('index.html');
-  assert.deepEqual(await landingPrices(page), { card: '₹1000 lifetime', faq: '₹1000,' });
+  assert.deepEqual(await landingPrices(page), { card: '₹999 lifetime', faq: '₹999,' });
   await page.close();
   page = await ctx.open('index.html', { timezone: NY });
   assert.deepEqual(await landingPrices(page), { card: '$15 lifetime', faq: '$15,' });
   await page.close();
 });
 
-test('checkout in India charges ₹1000 in INR', async () => {
+test('checkout in India charges ₹999 in INR', async () => {
   const page = await ctx.open('premium.html', { intercept: both(razorpayStub(), confirmStub()) });
-  assert.deepEqual(await checkout(page), { price: '₹1000 · lifetime', pay: 'Pay ₹1000' });
-  assert.deepEqual(await payAndCapture(page), { amount: 100000, currency: 'INR', orderId: 'order_INR' });
+  assert.deepEqual(await checkout(page), { price: '₹999 · lifetime', pay: 'Pay ₹999' });
+  assert.deepEqual(await payAndCapture(page), { amount: 99900, currency: 'INR', orderId: 'order_INR' });
   await page.evaluate(() => localStorage.clear());
   await page.close();
 });

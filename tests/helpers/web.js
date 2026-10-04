@@ -65,7 +65,7 @@ export function razorpayStub({ blocked = false } = {}) {
   };
 }
 
-// createOrder (server-priced: INR 100000, USD 1500) and confirmPayment
+// createOrder (server-priced: INR 99900, USD 1500) and confirmPayment
 // (requires order id + signature from the fake Razorpay). With `account`, an
 // order that carries a checkout code is for that account, and paying it
 // activates Premium there. `seen` collects what the page sent.
@@ -82,7 +82,7 @@ export function confirmStub({ ok = true, account = null, seen = [] } = {}) {
       const data = JSON.parse(request.postData() || '{}').data || {};
       seen.push({ endpoint: 'createOrder', data });
       const { currency } = data;
-      const amount = { INR: 100000, USD: 1500 }[currency];
+      const amount = { INR: 99900, USD: 1500 }[currency];
       const forAccount = account && data.checkout ? { accountEmail: account } : {};
       request.respond(amount ? json(200, { result: { orderId: `order_${currency}`, amount, currency, keyId: 'rzp_test', ...forAccount } }) : json(400, { error: { message: 'Unsupported currency', status: 'INVALID_ARGUMENT' } }));
       return true;

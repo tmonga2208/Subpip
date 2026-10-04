@@ -11,7 +11,7 @@ const deps = (extra = {}) => ({ db: fakeFirestore(), FieldValue, razorpay: fakeR
 
 test('amounts are formatted per currency', () => {
   assert.equal(formatAmount(1500, 'USD'), '$15');
-  assert.equal(formatAmount(100000, 'INR'), '₹1,000');
+  assert.equal(formatAmount(99900, 'INR'), '₹999');
 });
 
 test('the license email has the key, steps, receipt and refund note', () => {

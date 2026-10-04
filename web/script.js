@@ -1,8 +1,8 @@
-// Regional price: ₹1000 in India, $15 elsewhere. Display only; the server
+// Regional price: ₹999 in India, $15 elsewhere. Display only; the server
 // (functions/pricing.js) checks the amount actually charged.
 window.SubpipPricing = (() => {
   const REGIONAL_PRICES = {
-    INR: { currency: 'INR', amount: 100000, label: '₹1000' },
+    INR: { currency: 'INR', amount: 99900, label: '₹999' },
     USD: { currency: 'USD', amount: 1500, label: '$15' }
   };
   const INDIA_TIME_ZONES = ['Asia/Kolkata', 'Asia/Calcutta'];

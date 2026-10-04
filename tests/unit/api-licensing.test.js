@@ -5,7 +5,7 @@ import { confirmPayment, activateLicense, claimLicenseByEmail, translateText } f
 import { HttpsError } from '../../web/api/_lib/http.js';
 import { fakeFirestore, fakeRazorpay, FieldValue, signFor } from '../helpers/fake-firestore.js';
 
-const paid = { status: 'captured', currency: 'INR', amount: 100000, email: 'Buyer@Example.com', order_id: 'order_1' };
+const paid = { status: 'captured', currency: 'INR', amount: 99900, email: 'Buyer@Example.com', order_id: 'order_1' };
 const deps = (db, payments = {}, extra = {}) => ({ db, FieldValue, razorpay: fakeRazorpay(payments), keySecret: 'k', ...extra });
 const signed = (paymentId) => ({ paymentId, orderId: 'order_1', signature: signFor('order_1', paymentId, 'k') });
 const signedIn = (uid, token = {}) => ({ auth: { uid, token } });

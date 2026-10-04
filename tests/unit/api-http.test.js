@@ -95,7 +95,7 @@ test('a correctly signed payment.captured webhook creates the license', async ()
 test('a webhook with a bad signature is refused and creates nothing', async () => {
   const db = fakeFirestore();
   const res = fakeRes();
-  await handleWebhook(webhookReq(captured({ id: 'pay_W2', currency: 'INR', amount: 100000 }), 'whsec', 'deadbeef'), res,
+  await handleWebhook(webhookReq(captured({ id: 'pay_W2', currency: 'INR', amount: 99900 }), 'whsec', 'deadbeef'), res,
     { db, FieldValue, razorpay: fakeRazorpay(), webhookSecret: 'whsec' });
   assert.equal(res.statusCode, 401);
   assert.equal(db.read('licenses/pay_W2'), undefined);

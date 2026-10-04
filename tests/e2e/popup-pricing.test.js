@@ -11,7 +11,7 @@ const prices = (popup) => popup.evaluate(() => ({
 
 test('India sees rupee prices in the popup', async () => {
   const popup = await ctx.openPopup({ timezone: 'Asia/Kolkata' });
-  assert.deepEqual(await prices(popup), { upgrade: '₹1000 lifetime', button: 'Get Premium · ₹1000 lifetime' });
+  assert.deepEqual(await prices(popup), { upgrade: '₹999 lifetime', button: 'Get Premium · ₹999 lifetime' });
   await popup.close();
 });
 

@@ -28,7 +28,7 @@
 
       <div class="checkout-card payment-container" id="paymentSection">
         <h1>SubPIP Premium</h1>
-        <div class="price"><span data-price>₹1000</span> <span>· lifetime</span></div>
+        <div class="price"><span data-price>₹999</span> <span>· lifetime</span></div>
         <ul class="check-list">
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Real-time caption translation (12 languages)</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Playback speed 0.5×–3×</li>
@@ -40,7 +40,7 @@
         </ul>
         <label class="field-label" for="emailInput">Email for your receipt and license</label>
         <input type="email" id="emailInput" class="email-input" placeholder="you@example.com" autocomplete="email">
-        <button class="btn btn-primary btn-block pay-btn" id="payBtn" type="button" onclick="initiatePayment()">Pay ₹1000</button>
+        <button class="btn btn-primary btn-block pay-btn" id="payBtn" type="button" onclick="initiatePayment()">Pay ₹999</button>
         <p class="secure-badge">Secured by Razorpay</p>
         <p class="agree">By paying you agree to the <a href="terms.html">Terms</a> and <a href="refund.html">Refund Policy</a>.</p>
         <details class="lost-key">
@@ -96,7 +96,7 @@
         const FUNCTIONS_BASE_URL = '/api'; // Vercel Functions on this site (web/api/)
 
         // Razorpay Configuration
-        // Regional price from the time zone (₹1000 in India, $15 elsewhere),
+        // Regional price from the time zone (₹999 in India, $15 elsewhere),
         // via script.js; the server verifies the captured currency and amount
         const { REGIONAL_PRICES, defaultCurrency } = window.SubpipPricing;
         const price = REGIONAL_PRICES[defaultCurrency()];

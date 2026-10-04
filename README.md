@@ -19,7 +19,7 @@ Free:
 - **Alt+P** opens or closes Picture-in-Picture on the current tab; Alt+Shift+P opens the popup
 - Auto PiP when you switch tabs (optional, Chrome 134+): for single sites, asking for access to that site only, or for every site
 
-Premium (one payment: ₹1000 in India, $15 elsewhere):
+Premium (one payment: ₹999 in India, $15 elsewhere):
 
 - Caption translation into 12 languages. In Chrome 138+ it runs on your device, so lines appear in a few milliseconds and are not sent anywhere; otherwise it uses DeepL or MyMemory
 - Dual subtitles: the original line above its translation
