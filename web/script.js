@@ -27,3 +27,25 @@ document.querySelectorAll('.accordion-trigger').forEach((button) => {
 document.querySelectorAll('[data-year]').forEach((el) => {
   el.textContent = String(new Date().getFullYear());
 });
+
+// Recordings of the window: each plays while it is on screen and waits when
+// it is not. For visitors who asked their system for less motion nothing
+// plays by itself; the recordings get play controls instead.
+const clips = [...document.querySelectorAll('video.clip')];
+if (clips.length) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
+    clips.forEach((clip) => {
+      clip.removeAttribute('autoplay');
+      clip.pause();
+      clip.controls = true;
+    });
+  } else {
+    const onScreen = new IntersectionObserver((entries) => {
+      for (const { target, isIntersecting } of entries) {
+        if (isIntersecting) target.play().catch(() => {});
+        else target.pause();
+      }
+    }, { threshold: 0.35 });
+    clips.forEach((clip) => onScreen.observe(clip));
+  }
+}

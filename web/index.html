@@ -35,12 +35,33 @@
           </div>
           <p class="hero-note">Works in Chrome, Edge and Brave. Press <kbd>Alt</kbd>+<kbd>P</kbd> on any video.</p>
         </div>
-        <div class="demo" aria-hidden="true">
-          <div class="demo-page"><div class="demo-line"></div><div class="demo-line"></div><div class="demo-line"></div><div class="demo-line"></div><div class="demo-line"></div></div>
+        <div class="demo">
+          <div class="demo-page" aria-hidden="true"><div class="demo-line"></div><div class="demo-line"></div><div class="demo-line"></div><div class="demo-line"></div><div class="demo-line"></div></div>
           <div class="demo-pip">
-            <div class="demo-caption">I told you we'd make it back.</div>
-            <div class="demo-bar"><div class="demo-track"></div></div>
+            <video class="clip" autoplay muted loop playsinline preload="metadata" poster="media/demo-captions.webp" width="960" height="540" aria-label="A recording of the SubPIP window: a film plays in Picture-in-Picture with its captions on screen.">
+              <source src="media/demo-captions.mp4" type="video/mp4">
+            </video>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="demo">
+      <div class="container">
+        <div class="section-head"><h2>See it work</h2><p>Recordings of the real SubPIP window, not mock-ups.</p></div>
+        <div class="clips">
+          <figure class="clip-card">
+            <video class="clip" muted loop playsinline preload="none" poster="media/demo-translate.webp" width="960" height="540" aria-label="A recording: Translate is chosen in the window's menu, then Spanish, and each caption appears with its Spanish translation under it.">
+              <source src="media/demo-translate.mp4" type="video/mp4">
+            </video>
+            <figcaption><h3>Translate as you watch <span class="tag">Premium</span></h3><p>Pick a language in the window's menu and every line appears with its translation under it.</p></figcaption>
+          </figure>
+          <figure class="clip-card">
+            <video class="clip" muted loop playsinline preload="none" poster="media/demo-study.webp" width="960" height="540" aria-label="A recording: a word in the caption is clicked, the video waits, and a small panel shows the word's meaning and the line's translation with a Save line button.">
+              <source src="media/demo-study.mp4" type="video/mp4">
+            </video>
+            <figcaption><h3>Look up a word <span class="tag">Premium</span></h3><p>Click a word in a caption for its meaning. The video waits, and you can save the line for later.</p></figcaption>
+          </figure>
         </div>
       </div>
     </section>
@@ -93,6 +114,35 @@
             <p>Space, arrows, M to mute, C for captions, and Alt+P to open.</p>
           </article>
         </div>
+      </div>
+    </section>
+
+    <section class="section" id="screens">
+      <div class="container">
+        <div class="section-head"><h2>A closer look</h2><p>Screenshots of the window and the popup as they are today.</p></div>
+        <div class="screens">
+          <figure class="screen screen-popup">
+            <a href="media/shot-popup.webp"><img src="media/shot-popup.webp" width="680" height="1192" loading="lazy" decoding="async" alt="The SubPIP popup: the page's video and caption source, an Open Picture-in-Picture button, caption style presets and the options."></a>
+            <figcaption>The popup: one button to open, caption presets and the options.</figcaption>
+          </figure>
+          <figure class="screen">
+            <a href="media/shot-menu.webp"><img src="media/shot-menu.webp" width="1280" height="720" loading="lazy" decoding="async" alt="The window's menu open over the video: Speed, Caption size, Translate, Subtitles, Study tools and Fill window."></a>
+            <figcaption>One menu in the window for speed, captions, translation and study tools.</figcaption>
+          </figure>
+          <figure class="screen">
+            <a href="media/shot-languages.webp"><img src="media/shot-languages.webp" width="1280" height="720" loading="lazy" decoding="async" alt="The Subtitles menu listing the page's caption languages English, Español and Deutsch, then Off, From speech and Load file."></a>
+            <figcaption>Choose the caption language, write captions from speech, or load your own file.</figcaption>
+          </figure>
+          <figure class="screen">
+            <a href="media/shot-dual.webp"><img src="media/shot-dual.webp" width="1280" height="720" loading="lazy" decoding="async" alt="Dual subtitles: the English line with its Spanish translation under it, over the video."></a>
+            <figcaption>Dual subtitles: the original line with its translation.</figcaption>
+          </figure>
+          <figure class="screen">
+            <a href="media/shot-style.webp"><img src="media/shot-style.webp" width="1280" height="720" loading="lazy" decoding="async" alt="Captions in a custom style: large yellow outlined text without a background box."></a>
+            <figcaption>Captions your way: size, color, outline, background and position.</figcaption>
+          </figure>
+        </div>
+        <p class="credit">The film in the demos is <a href="https://durian.blender.org/" rel="noopener">Sintel</a>, © Blender Foundation, used under <a href="https://creativecommons.org/licenses/by/3.0/" rel="noopener">CC BY 3.0</a>.</p>
       </div>
     </section>
 

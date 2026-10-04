@@ -12,7 +12,8 @@ const TYPES = {
   '.vtt': 'text/vtt',
   '.css': 'text/css',
   '.svg': 'image/svg+xml',
-  '.png': 'image/png'
+  '.png': 'image/png',
+  '.webp': 'image/webp'
 };
 
 export async function startServer({ fixturesDir, distDir }) {
