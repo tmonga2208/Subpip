@@ -1,5 +1,6 @@
 // "Get Premium" in the popup: a signed-in buyer's checkout is tied to their
-// account, so the purchase activates by itself
+// account, so the purchase activates by itself. What the link carries goes
+// after "#", the part of an address a browser sends to no server.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { useExtension, firebaseStub } from '../helpers/extension.js';
@@ -24,7 +25,7 @@ test('signed in: the checkout opens with a code for this account and the email f
   await popup.click('#account-btn');
   await popup.waitForSelector('#signed-in:not([hidden])');
   assert.deepEqual(await getPremium(popup, '#free-actions [data-action="get-premium"]'),
-    [`${CHECKOUT}?c=CODE0123456789abcdefgh&email=tester%40example.com`]);
+    [`${CHECKOUT}#c=CODE0123456789abcdefgh&email=tester%40example.com`]);
   await popup.close();
 });
 
@@ -40,7 +41,7 @@ test('if the server cannot start a checkout, the page still opens, with the emai
   const popup = await ctx.openPopup({ stub: firebaseStub() });
   await popup.click('#account-btn');
   await popup.waitForSelector('#signed-in:not([hidden])');
-  assert.deepEqual(await getPremium(popup, '#free-actions [data-action="get-premium"]'), [`${CHECKOUT}?email=tester%40example.com`]);
+  assert.deepEqual(await getPremium(popup, '#free-actions [data-action="get-premium"]'), [`${CHECKOUT}#email=tester%40example.com`]);
   assert.equal(await popup.$eval('#free-actions [data-action="get-premium"]', (button) => button.disabled), false);
   await popup.close();
 });

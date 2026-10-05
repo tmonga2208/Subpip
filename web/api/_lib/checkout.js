@@ -1,8 +1,8 @@
 // Buying from the popup while signed in. The popup asks for a checkout code
 // and opens the checkout page with it; the order made there is then tied to
 // the account, and the captured payment activates Premium on it by itself
-// (see licensing.js). The code only says "this purchase is for that account",
-// so nothing sensitive travels in the page URL.
+// (see licensing.js). The code only says "this purchase is for that account".
+// It travels after the "#" of the page's address, which is sent to no server.
 import crypto from 'node:crypto';
 import { HttpsError } from './http.js';
 

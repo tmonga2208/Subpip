@@ -65,7 +65,8 @@ export function createAuth(manager = new LicenseManager()) {
     },
     // Where "Get Premium" goes. Signed in, the checkout is tied to this
     // account (Premium then activates without a key); if the server cannot be
-    // reached in time the page still opens, with the email filled in.
+    // reached in time the page still opens, with the email filled in. The
+    // code and the email go after "#", which no server is sent.
     async checkoutUrl(baseUrl, timeoutMs = 4000) {
       if (!user) return baseUrl;
       const params = new URLSearchParams();
@@ -79,7 +80,7 @@ export function createAuth(manager = new LicenseManager()) {
         // Fall back to an ordinary purchase; the key can be pasted afterwards
       }
       params.set('email', user.email);
-      return `${baseUrl}?${params}`;
+      return `${baseUrl}#${params}`;
     },
     async checkPayment() {
       const result = await manager.claimLicenseByEmail();

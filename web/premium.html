@@ -114,13 +114,29 @@
         const price = REGIONAL_PRICES[defaultCurrency()];
         document.getElementById('payBtn').textContent = `Pay ${price.label}`;
 
-        // Get email from URL params (if passed)
-        const urlParams = new URLSearchParams(window.location.search);
-        const prefilledEmail = urlParams.get('email') || '';
+        // Opened from the extension: the buyer's email and, when signed in, a
+        // code that ties the purchase to their account, so Premium activates
+        // by itself. Both travel after "#", the part of an address a browser
+        // sends to no server (versions up to 4.4 put them after "?"). Once
+        // read they leave the address bar and are kept for this tab, so that
+        // a reload still has them.
+        const LINK = 'subpipCheckoutLink';
+        function fromLink() {
+            const after = (part) => new URLSearchParams(part.slice(1));
+            const hash = after(window.location.hash);
+            const query = after(window.location.search);
+            const link = { c: hash.get('c') || query.get('c') || '', email: hash.get('email') || query.get('email') || '' };
+            try {
+                if (!link.c && !link.email) return JSON.parse(sessionStorage.getItem(LINK)) || link;
+                sessionStorage.setItem(LINK, JSON.stringify(link));
+                history.replaceState(null, '', window.location.pathname);
+            } catch (e) {
+                // Storage is off: the address stays as it is, so a reload still has them
+            }
+            return link;
+        }
+        const { c: checkoutCode, email: prefilledEmail } = fromLink();
         document.getElementById('emailInput').value = prefilledEmail;
-        // Opened from the extension while signed in: this code ties the
-        // purchase to that account, so Premium activates by itself
-        const checkoutCode = urlParams.get('c') || '';
 
         // Dynamically load Razorpay script
         let razorpayLoaded = false;
