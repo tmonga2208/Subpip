@@ -1,16 +1,22 @@
 // Razorpay webhook: a backup path that creates the license even if the buyer
 // closes the checkout before confirmPayment runs. The signature is checked
-// against the raw body, so it must be read before anything parses it.
+// against the raw body, byte for byte as Razorpay sent it.
 
 import crypto from 'node:crypto';
 import { isAcceptedPayment } from './pricing.js';
 import { issueLicense, revokeLicenseForRefund, alertPaymentRejected } from './licensing.js';
 import { alertOwner } from './alerts.js';
 
-async function readRawBody(req) {
-  const chunks = [];
-  for await (const chunk of req) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-  return Buffer.concat(chunks);
+// By listening, not by iterating the request: Vercel's helpers have already
+// read the body once to offer req.body, and they put it back for 'data' and
+// 'end' listeners only. A `for await` over the request finds nothing there.
+function readRawBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
 }
 
 function validSignature(rawBody, signature, secret) {
@@ -29,8 +35,9 @@ export async function handleWebhook(req, res, deps) {
 
     const rawBody = await readRawBody(req);
     if (!validSignature(rawBody, signature, deps.webhookSecret)) {
-      // A wrong or rotated RAZORPAY_WEBHOOK_SECRET would otherwise fail silently
-      await alertOwner(deps, 'webhook-signature', 'A Razorpay webhook had an invalid signature. Check RAZORPAY_WEBHOOK_SECRET matches the webhook in Razorpay.');
+      // A wrong or rotated RAZORPAY_WEBHOOK_SECRET would otherwise fail silently.
+      // The size tells that apart from a body that never reached this code.
+      await alertOwner(deps, 'webhook-signature', 'A Razorpay webhook had an invalid signature. Check RAZORPAY_WEBHOOK_SECRET matches the webhook in Razorpay.', { bytes: rawBody.length });
       return res.status(401).send('Unauthorized');
     }
 

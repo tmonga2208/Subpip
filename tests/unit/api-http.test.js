@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
-import { Readable } from 'node:stream';
+import { Readable, PassThrough } from 'node:stream';
 import { callable, HttpsError } from '../../web/api/_lib/http.js';
 import { handleWebhook } from '../../web/api/_lib/webhook.js';
 import { fakeFirestore, fakeRazorpay, FieldValue } from '../helpers/fake-firestore.js';
@@ -99,6 +99,49 @@ test('a webhook with a bad signature is refused and creates nothing', async () =
     { db, FieldValue, razorpay: fakeRazorpay(), webhookSecret: 'whsec' });
   assert.equal(res.statusCode, 401);
   assert.equal(db.read('licenses/pay_W2'), undefined);
+});
+
+// On Vercel a request has been read once by the time its handler runs: the
+// platform's helpers read the body to offer req.body, then put it back for
+// 'data' and 'end' listeners and for read() only. This does to a request what
+// they do (restoreBody in @vercel/node).
+async function asVercelHandsItOver(req) {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  const copy = new PassThrough();
+  const onCopy = copy.on.bind(copy);
+  const onRequest = req.on.bind(req);
+  req.read = copy.read.bind(copy);
+  req.on = req.addListener = (name, listener) => (name === 'data' || name === 'end' ? onCopy(name, listener) : onRequest(name, listener));
+  copy.write(Buffer.concat(chunks));
+  copy.end();
+  return req;
+}
+
+test('the webhook still reads its body after Vercel has read it once and put it back', async () => {
+  const db = fakeFirestore();
+  const res = fakeRes();
+  const { fakeMailer, fixedClock } = await import('../helpers/fake-firestore.js');
+  const req = await asVercelHandsItOver(webhookReq(captured({ id: 'pay_V1', currency: 'INR', amount: 99900, email: 'v@example.com' }), 'whsec'));
+  const log = console.error;
+  console.error = () => {};
+  await handleWebhook(req, res, { db, FieldValue, razorpay: fakeRazorpay(), webhookSecret: 'whsec', mailer: fakeMailer(), now: fixedClock('2026-09-29T10:00:00Z') });
+  console.error = log;
+  assert.equal(res.statusCode, 200);
+  assert.ok(db.read('licenses/pay_V1').key);
+});
+
+test('a refused webhook tells the owner how many bytes of it arrived', async () => {
+  const { fakeMailer, fixedClock } = await import('../helpers/fake-firestore.js');
+  const mailer = fakeMailer();
+  const payload = captured({ id: 'pay_W4', currency: 'INR', amount: 99900 });
+  const log = console.error;
+  console.error = () => {};
+  await handleWebhook(webhookReq(payload, 'whsec', 'deadbeef'), fakeRes(),
+    { db: fakeFirestore(), FieldValue, razorpay: fakeRazorpay(), webhookSecret: 'whsec', mailer, alertTo: 'owner@example.com', now: fixedClock('2026-09-29T10:00:00Z') });
+  console.error = log;
+  // An empty body and a wrong secret look the same otherwise
+  assert.match(mailer.sent[0].text, new RegExp(`"bytes": ${Buffer.byteLength(JSON.stringify(payload))}\\b`));
 });
 
 test('an underpaid webhook payment is ignored', async () => {
