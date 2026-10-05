@@ -49,8 +49,8 @@ async function translateInBackground(text, targetLang, uid, tabId) {
   const onDevice = await deviceTranslation.translate(text, targetLang, tabId);
   if (onDevice) return onDevice;
 
-  // Premium Translation (Google Cloud via Firebase) - the server checks
-  // premium status from the ID token, not from anything the client claims
+  // Otherwise our server, which translates with DeepL. It checks Premium
+  // from the ID token, not from anything the client claims
   const idToken = uid ? await getIdToken() : null;
   if (idToken) {
     try {
@@ -64,11 +64,12 @@ async function translateInBackground(text, targetLang, uid, tabId) {
         return data.result.translation;
       }
     } catch (e) {
-      console.error('Premium translation failed, falling back to free tier', e);
+      console.error('The server could not translate, falling back to MyMemory', e);
     }
   }
 
-  // Free Tier Translation (MyMemory)
+  // Last resort, when the server gave nothing: MyMemory, straight from here.
+  // The window asks for translation only for Premium users.
   try {
     const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=Autodetect|${targetLang}`;
     const response = await fetch(url);

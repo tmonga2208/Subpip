@@ -21,7 +21,7 @@ test('privacy policy uses the shared layout', async () => {
 
 test('the policy has a fixed revision date, not today\'s date', async () => {
   const html = await readFile(`${WEB_DIR}/privacy.html`, 'utf8');
-  assert.match(html, /Last updated: October 5, 2026/);
+  assert.match(html, /Last updated: October 6, 2026/);
   assert.doesNotMatch(html, /toLocaleDateString/);
 });
 
@@ -76,5 +76,28 @@ test('privacy questions go to a direct contact', async () => {
   const page = await ctx.open('privacy.html');
   const contact = await page.$eval('article.prose section:last-of-type a', (a) => a.getAttribute('href'));
   assert.equal(contact, 'mailto:tarunmonga2208@gmail.com');
+  await page.close();
+});
+
+// Translation is part of Premium, so there is no free route for caption text.
+// The policy once described one, from the time free users could translate.
+test('the policy says who can translate and where the caption text goes, as the extension does it', async () => {
+  const page = await ctx.open('privacy.html');
+  const text = await page.$eval('article.prose', (el) => el.innerText);
+  assert.doesNotMatch(text, /free users' captions/i);
+  assert.match(text, /To translate captions, which is part of Premium/);
+  // In this order: on the device, else our server with DeepL, and MyMemory only when that fails
+  assert.match(text, /translated on your device and are not sent to anyone/);
+  assert.match(text, /captions go to our server[^.]*DeepL/);
+  assert.match(text, /If the server can't translate a line, your browser sends that line to MyMemory/);
+  assert.match(text, /MyMemory \(Translated\) – translates a caption line when our server could not/);
+  await page.close();
+});
+
+test('the short answer on the home page agrees with the policy', async () => {
+  const page = await ctx.open('index.html');
+  const answer = await page.evaluate(() => [...document.querySelectorAll('.accordion-content')].map((el) => el.textContent).find((text) => text.includes('Privacy Policy')));
+  assert.match(answer, /translated on your device where Chrome can do it/);
+  assert.match(answer, /otherwise their text is sent to a translation service/);
   await page.close();
 });
