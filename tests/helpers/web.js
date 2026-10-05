@@ -6,11 +6,27 @@ import { startServer } from './server.js';
 
 export const CHROME_STORE_URL = 'https://chromewebstore.google.com/detail/subpip-picture-in-picture/cajeijlommigmipnnhemgopednbpmnjg';
 
+// On the real site Vercel serves its visit counter at this path. This stands
+// in for it. Like the real script it runs the hooks queued in window.vaq, then
+// reports the address its beforeSend hook returns: the page's own address when
+// the hook returns nothing, and no visit when it returns null or false. What
+// it would report is kept in window.__visits.
+const COUNTER_PATH = '/_vercel/insights/script.js';
+const FAKE_COUNTER = `
+(() => {
+  let beforeSend = (event) => event;
+  window.va = (name, arg) => { if (name === 'beforeSend') beforeSend = arg; };
+  (window.vaq || []).forEach(([name, arg]) => window.va(name, arg));
+  const event = beforeSend({ type: 'pageview', url: location.href });
+  window.__visits = window.__visits || [];
+  if (event !== null && event !== false) window.__visits.push(event ? event.url : location.href);
+})();`;
+
 export function useWebsite() {
   const ctx = {};
   before(async () => {
     // No distDir: web/ has its own script.js
-    ctx.server = await startServer({ fixturesDir: WEB_DIR });
+    ctx.server = await startServer({ fixturesDir: WEB_DIR, scripts: { [COUNTER_PATH]: FAKE_COUNTER } });
     ctx.browser = await launchBrowser();
   });
   after(async () => {

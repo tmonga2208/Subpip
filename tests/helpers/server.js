@@ -1,6 +1,7 @@
 // Static file server for e2e fixtures. Supports HTTP Range (Chrome needs it to
 // seek in an mp4). With a distDir, `/script.js` is served from dist/. Paths starting with
-// `/tt-` get a Trusted Types CSP header, like YouTube.
+// `/tt-` get a Trusted Types CSP header, like YouTube. `scripts` maps a path to
+// JavaScript the server answers with, for a script the real host serves itself.
 import http from 'node:http';
 import { createReadStream, statSync } from 'node:fs';
 import path from 'node:path';
@@ -16,9 +17,13 @@ const TYPES = {
   '.webp': 'image/webp'
 };
 
-export async function startServer({ fixturesDir, distDir }) {
+export async function startServer({ fixturesDir, distDir, scripts = {} }) {
   const server = http.createServer((req, res) => {
     const { pathname } = new URL(req.url, 'http://localhost');
+    if (Object.hasOwn(scripts, pathname)) {
+      res.writeHead(200, { 'Content-Type': TYPES['.js'] }).end(scripts[pathname]);
+      return;
+    }
     const safe = path.normalize(pathname).replace(/^(\.\.[/\\])+/, '');
     const file = distDir && pathname === '/script.js' ? path.join(distDir, 'script.js') : path.join(fixturesDir, safe);
 

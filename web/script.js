@@ -49,3 +49,16 @@ if (clips.length) {
     clips.forEach((clip) => onScreen.observe(clip));
   }
 }
+
+// Visits are counted with Vercel Web Analytics, which sets no cookies. Its
+// script runs the hooks queued here before it reports anything. A visit is
+// reported under the page's address alone, never what follows "?" or "#": a
+// checkout link carries a code for the account and can carry an email address.
+window.va = window.va || ((...args) => {
+  (window.vaq = window.vaq || []).push(args);
+});
+window.va('beforeSend', (event) => {
+  const address = new URL(event.url);
+  return { ...event, url: address.origin + address.pathname };
+});
+document.head.append(Object.assign(document.createElement('script'), { src: '/_vercel/insights/script.js' }));

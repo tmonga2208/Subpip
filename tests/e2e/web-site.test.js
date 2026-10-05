@@ -35,7 +35,8 @@ test('every local link and asset exists', async () => {
     const refs = await page.evaluate(() => [...document.querySelectorAll('[href], [src]')]
       .map((el) => el.getAttribute('href') || el.getAttribute('src')));
     for (const ref of refs) {
-      if (/^(https?:|mailto:|data:|#)/.test(ref)) continue;
+      // Vercel serves what is under /_vercel/ (its visit counter); it is not a file in web/
+      if (/^(https?:|mailto:|data:|#|\/_vercel\/)/.test(ref)) continue;
       const file = ref.split('#')[0];
       if (file && !existsSync(path.join(WEB_DIR, file))) missing.push(`${pagePath} → ${ref}`);
     }

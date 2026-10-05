@@ -52,6 +52,21 @@ test('the policy describes what the extension does today', async () => {
   await page.close();
 });
 
+test('the policy says visits to the website are counted, and how', async () => {
+  const page = await ctx.open('privacy.html');
+  const text = await page.$eval('article.prose', (el) => el.innerText);
+  assert.match(text, /Vercel Web Analytics/);
+  assert.match(text, /The counter sets no cookies/);
+  // The checkout page does get one, from Razorpay's script
+  assert.match(text, /Razorpay's payment script, which sets a cookie/);
+  // The address is reported without what a link carried
+  assert.match(text, /never the part after "\?"/);
+  assert.match(text, /discards it after 24 hours/);
+  // The extension is not part of it
+  assert.match(text, /The extension itself has no analytics/);
+  await page.close();
+});
+
 test('privacy questions go to a direct contact', async () => {
   const page = await ctx.open('privacy.html');
   const contact = await page.$eval('article.prose section:last-of-type a', (a) => a.getAttribute('href'));
