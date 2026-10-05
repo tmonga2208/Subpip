@@ -15,7 +15,7 @@ import { waitUntil } from '@vercel/functions';
 import { createMailer } from './mailer.js';
 import { SUPPORT_EMAIL } from './emails.js';
 
-export const RAZORPAY_KEY_ID = 'rzp_live_S9zPibMgaqE7VV';
+export const RAZORPAY_KEY_ID = 'rzp_live_TkEdq2rdbuvyYl';
 
 // Which settings are present (never their values)
 export function configStatus(env) {
