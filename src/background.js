@@ -2,7 +2,7 @@
 // shortcut, auto-PiP content script registration and the uninstall page.
 
 import { ALL_SITES, AUTO_PIP_ACTIVE, AUTO_PIP_SITES_ACTIVE, isSiteName, sitePattern, readStoredSettings } from './shared/settings.js';
-import { TOKEN_URL, API_BASE_URL, TOKEN_MAX_AGE_MS, UNINSTALL_URL } from './shared/firebase.js';
+import { TOKEN_URL, API_BASE_URL, TOKEN_MAX_AGE_MS, UNINSTALL_URL, WELCOME_URL } from './shared/firebase.js';
 import { togglePipInTab, injectRelay } from './shared/inject.js';
 import { probeTab } from './popup/status.js';
 import { createDeviceTranslation } from './shared/device-translation.js';
@@ -181,7 +181,23 @@ function syncAutoPip({ reconnect = false } = {}) {
 
 // Ask why, once, when SubPIP is uninstalled. The version goes along so an
 // answer can be tied to a release; nothing identifies the user.
-chrome.runtime.onInstalled.addListener(() => chrome.runtime.setUninstallURL(`${UNINSTALL_URL}?v=${chrome.runtime.getManifest().version}`));
+// First steps, once, for someone who has just added SubPIP from the store.
+// Not after an update, and not for a copy loaded by hand or put on the
+// computer by an administrator.
+async function welcomeAfterInstall({ reason } = {}) {
+  if (reason !== 'install') return;
+  try {
+    const { installType } = await chrome.management.getSelf();
+    if (installType === 'normal') await chrome.tabs.create({ url: WELCOME_URL });
+  } catch (e) {
+    // No first-steps page is better than an error on install
+  }
+}
+
+chrome.runtime.onInstalled.addListener((details) => {
+  chrome.runtime.setUninstallURL(`${UNINSTALL_URL}?v=${chrome.runtime.getManifest().version}`);
+  welcomeAfterInstall(details);
+});
 
 // Once per run of the extension - browser start, install, update, reload,
 // re-enable - and not each time the service worker wakes up: session storage

@@ -4,6 +4,7 @@
 
 import { readStoredSettings, saveCaptionSelector, AUTO_PIP_ACTIVE, AUTO_PIP_SITES_ACTIVE, CAPTION_SELECTORS } from './shared/settings.js';
 import { saveLine } from './shared/saved-lines.js';
+import { noteWindowOpened } from './shared/rating.js';
 
 // Tells the page script which relay is speaking: after an update a tab can
 // have the previous relay and its replacement at the same time
@@ -82,6 +83,24 @@ function start() {
 
   // The page script may have loaded first and missed its own request
   postSettings();
+  countWindowOpens();
+}
+
+// Each time this page's video goes into the window, for the one-time ask for
+// a rating (shared/rating.js). Counted here because the relay is in the page
+// however the window was opened: from the popup, by the shortcut or by itself.
+// It can arrive just after the window did, so the open window counts too.
+function countWindowOpens() {
+  const pip = window.documentPictureInPicture;
+  if (!pip) return;
+  let counted = null;
+  const note = () => {
+    if (!pip.window || pip.window === counted) return;
+    counted = pip.window;
+    noteWindowOpened().catch(() => {});
+  };
+  note();
+  pip.addEventListener('enter', note);
 }
 
 // Injected on every Activate click - only start once per page

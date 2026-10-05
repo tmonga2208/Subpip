@@ -19,6 +19,13 @@ export const API_BASE_URL = `${SITE_URL}/api`;
 export const UNINSTALL_URL = `${SITE_URL}/uninstalled.html`;
 // Where Premium is bought
 export const PREMIUM_URL = `${SITE_URL}/premium.html`;
+// Where someone says what did not work on a site (opened from the popup)
+export const REPORT_URL = `${SITE_URL}/report.html`;
+// First steps, opened once after an install
+export const WELCOME_URL = `${SITE_URL}/welcome.html`;
+// SubPIP on the Chrome Web Store
+export const STORE_URL = 'https://chromewebstore.google.com/detail/subpip-picture-in-picture/cajeijlommigmipnnhemgopednbpmnjg';
+export const STORE_REVIEWS_URL = `${STORE_URL}/reviews`;
 
 // ID tokens last an hour; refresh a little early
 export const TOKEN_MAX_AGE_MS = 50 * 60 * 1000;

@@ -21,7 +21,7 @@ test('privacy policy uses the shared layout', async () => {
 
 test('the policy has a fixed revision date, not today\'s date', async () => {
   const html = await readFile(`${WEB_DIR}/privacy.html`, 'utf8');
-  assert.match(html, /Last updated: October 4, 2026/);
+  assert.match(html, /Last updated: October 5, 2026/);
   assert.doesNotMatch(html, /toLocaleDateString/);
 });
 
@@ -49,6 +49,11 @@ test('the policy describes what the extension does today', async () => {
   assert.match(text, /cache/i);
   // Regional pricing reads the time zone locally
   assert.match(text, /time zone/i);
+  // The count behind the one-time ask for a rating never leaves the browser
+  assert.match(text, /How often you use it[^.]*kept on your computer/);
+  // A problem report carries the site's name, and only when it is sent
+  assert.match(text, /Problem report[^.]*name of the site/);
+  assert.match(text, /nothing is sent until you press Send/i);
   await page.close();
 });
 

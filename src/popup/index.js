@@ -9,6 +9,7 @@ import { initCaptions } from './captions.js';
 import { initHome } from './home.js';
 import { initOptions } from './options.js';
 import { initSaved } from './saved.js';
+import { initRatingAsk } from './rating.js';
 import { localPrice } from '../shared/pricing.js';
 
 // Extension page, so icon markup strings are fine here (unlike page scripts)
@@ -44,6 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     home.refresh(),
     store.load(),
     saved.load(),
+    initRatingAsk({ doc: document }).catch((error) => console.warn('[SubPIP] Could not prepare the rating ask:', error)),
     auth.init().catch((error) => console.warn('[SubPIP] Could not restore sign-in:', error))
   ]);
   document.body.dataset.ready = 'true';

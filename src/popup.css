@@ -72,6 +72,15 @@ button, input, select { font: inherit; color: inherit; }
 .link { position: relative; display: block; width: 100%; margin-top: 10px; padding: 4px; border: 0; background: none; color: var(--text-2); text-align: center; cursor: pointer; }
 .link:hover { color: var(--text); }
 .link.danger:hover { color: var(--danger-text); }
+
+/* The one-time ask for a store rating, under the main button where it is seen without scrolling */
+.rate-ask { margin-top: 14px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--card); }
+.rate-ask p { color: var(--text); }
+.rate-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.rate-yes, .rate-no { padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: transparent; color: var(--text-2); cursor: pointer; }
+.rate-yes { border-color: transparent; background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+.rate-yes:hover { background: var(--accent); color: #fff; }
+.rate-no:hover { color: var(--text); }
 .busy { color: transparent !important; pointer-events: none; }
 .busy::after {
   content: ""; position: absolute; top: 50%; left: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px;

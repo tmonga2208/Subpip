@@ -3,7 +3,7 @@
 // use up the Gmail allowance that license emails depend on
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sendFeedback } from '../../web/api/_lib/feedback.js';
+import { sendFeedback, siteName } from '../../web/api/_lib/feedback.js';
 import { HttpsError } from '../../web/api/_lib/http.js';
 import { fakeFirestore, fakeMailer, fixedClock, FieldValue } from '../helpers/fake-firestore.js';
 
@@ -77,4 +77,60 @@ test('the visitor is answered without waiting for the email', async () => {
   assert.equal(deferred.length, 1);
   release();
   await Promise.all(deferred);
+});
+
+// ---- problems reported from the popup ("Not working on this site?") ----
+
+test('a problem report is stored with the site, what went wrong, the comment and the version, and emailed', async () => {
+  const d = deps();
+  assert.deepEqual(await sendFeedback({ kind: 'problem', problem: 'captions', site: 'netflix.com', comment: '  Nothing shows  ', version: '4.5' }, {}, d), { ok: true });
+  assert.deepEqual(stored(d), [{ kind: 'problem', problem: 'captions', site: 'netflix.com', comment: 'Nothing shows', version: '4.5', createdAt: 'SERVER_TIMESTAMP' }]);
+  const [mail] = d.mailer.sent;
+  assert.equal(mail.to, 'owner@example.com');
+  assert.equal(mail.subject, "[SubPIP problem] netflix.com: Captions don't show in the window");
+  assert.match(mail.text, /Nothing shows/);
+  assert.match(mail.text, /4\.5/);
+});
+
+test('only the name of the site is kept, whatever was typed in the box', () => {
+  const kept = {
+    'netflix.com': 'netflix.com',
+    '  Player.Example.co.uk ': 'player.example.co.uk',
+    'www.hotstar.com': 'hotstar.com',
+    // A pasted link loses everything but the site
+    'https://www.Netflix.com/watch/8123?trackId=1#t=20': 'netflix.com',
+    'netflix.com/watch/8123': 'netflix.com',
+    'localhost:3000/player': 'localhost',
+    '127.0.0.1': '127.0.0.1'
+  };
+  for (const [typed, site] of Object.entries(kept)) assert.equal(siteName(typed), site, typed);
+  for (const typed of ['', 'not a site', '<script>alert(1)</script>', 'user:secret@example.com', `${'a'.repeat(120)}.com`, '-bad-.com', 42, null, undefined, { $gt: '' }]) {
+    assert.equal(siteName(typed), null, String(typed));
+  }
+});
+
+test('a report without a usable site still goes through, and says so', async () => {
+  const d = deps();
+  await sendFeedback({ kind: 'problem', problem: 'other', site: '<script>alert(1)</script>' }, {}, d);
+  await sendFeedback({ kind: 'problem', problem: 'window' }, {}, d);
+  assert.deepEqual(stored(d).map((doc) => doc.site), [null, null]);
+  assert.equal(d.mailer.sent[0].subject, '[SubPIP problem] no site given: Something else');
+  assert.doesNotMatch(d.mailer.sent[0].text, /script/);
+});
+
+test('a problem that is not one of the choices is refused and nothing is kept', async () => {
+  const d = deps();
+  for (const problem of [undefined, '', 'site', 'because', { $gt: '' }]) {
+    await assert.rejects(sendFeedback({ kind: 'problem', problem, site: 'example.com' }, {}, d), (e) => e instanceof HttpsError && e.status === 'invalid-argument');
+  }
+  assert.deepEqual(stored(d), []);
+  assert.equal(d.mailer.sent.length, 0);
+});
+
+test('reports and uninstall answers share the day\'s limits', async () => {
+  const d = deps();
+  for (let i = 0; i < 15; i++) await sendFeedback({ reason: 'other' }, {}, d);
+  for (let i = 0; i < 15; i++) await sendFeedback({ kind: 'problem', problem: 'other', site: 'example.com' }, {}, d);
+  assert.equal(d.mailer.sent.length, 20);
+  assert.equal(stored(d).length, 30);
 });

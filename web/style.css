@@ -221,6 +221,16 @@ kbd { padding: 1px 6px; border: 1px solid var(--border); border-radius: 4px; bac
 
 /* Uninstall feedback (uninstalled.html) */
 .reasons { display: grid; gap: 8px; margin: 18px 0; padding: 0; border: 0; }
+.report-site { margin-top: 18px; }
+
+/* First steps after installing (welcome.html) */
+.welcome { border-top: 0; padding-top: 56px; }
+.welcome .section-head h1 { font-size: 36px; line-height: 1.15; letter-spacing: -0.02em; }
+.welcome .steps { margin-bottom: 16px; }
+.welcome-clip { margin-bottom: 16px; }
+.welcome-tips ul { display: grid; gap: 10px; margin-top: 8px; padding-left: 18px; color: var(--text-2); font-size: 15px; }
+.welcome-tips strong { color: var(--text); font-weight: 600; }
+.welcome-tips a { color: var(--accent-text); }
 .reasons legend { padding: 0; }
 .reason { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; }
 .reason:has(input:checked) { border-color: var(--accent); }

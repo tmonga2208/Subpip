@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Report a problem · SubPIP</title>
+  <link rel="canonical" href="https://subpip.online/report.html">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav">
+      <a class="brand" href="index.html"><img src="logo.svg" alt="" width="28" height="28">SubPIP</a>
+      <ul class="nav-links">
+        <li><a href="index.html#features">Features</a></li>
+        <li><a href="index.html#pricing">Pricing</a></li>
+        <li><a href="index.html#faq">FAQ</a></li>
+      </ul>
+      <a class="btn btn-ghost btn-sm" href="contact.html">Contact</a>
+    </div>
+  </header>
+
+  <main class="checkout-wrap">
+    <div class="container checkout">
+      <div class="checkout-card" id="reportCard">
+        <h1>What went wrong?</h1>
+        <p class="muted">Tell me what SubPIP did not do and where. I read every report, and it is how sites get fixed.</p>
+        <form id="reportForm" novalidate>
+          <label class="field-label report-site" for="site">Site <span class="muted">(you can change or clear it)</span></label>
+          <input type="text" id="site" class="email-input" maxlength="100" inputmode="url" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="example.com">
+          <fieldset class="reasons">
+            <legend class="field-label">What happened?</legend>
+            <label class="reason"><input type="radio" name="problem" value="captions">Captions don't show in the window</label>
+            <label class="reason"><input type="radio" name="problem" value="window">The window doesn't open</label>
+            <label class="reason"><input type="radio" name="problem" value="controls">The controls don't work</label>
+            <label class="reason"><input type="radio" name="problem" value="other">Something else</label>
+          </fieldset>
+          <label class="field-label" for="comment">Anything to add? <span class="muted">(optional)</span></label>
+          <textarea id="comment" class="email-input" rows="3" maxlength="1000" placeholder="Which video, what you saw, what you expected…"></textarea>
+          <button class="btn btn-primary btn-block" type="submit">Send</button>
+          <p class="error-msg" id="reportError" role="alert"></p>
+        </form>
+        <p class="agree">Anonymous: only the site's name, your choice, your comment and the SubPIP version are sent. Nothing is sent until you press Send. If you would like a reply, <a href="mailto:tarunmonga2208@gmail.com">email me</a> instead.</p>
+      </div>
+
+      <div class="checkout-card" id="thanksCard" hidden>
+        <h1>Thank you</h1>
+        <p class="muted">I'll look into it. If captions were the problem, one thing often helps in the meantime: click the SubPIP icon and choose "Captions not showing? Pick them on the page".</p>
+        <a class="btn btn-ghost btn-block" href="index.html">Back to SubPIP</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-row">
+      <a class="brand" href="index.html"><img src="logo.svg" alt="" width="28" height="28">SubPIP</a>
+      <ul class="footer-links">
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a href="terms.html">Terms</a></li>
+        <li><a href="refund.html">Refunds</a></li>
+        <li><a href="delivery.html">Delivery</a></li>
+        <li><a href="contact.html">Contact</a></li>
+        <li>© <span data-year></span> SubPIP</li>
+      </ul>
+    </div>
+  </footer>
+
+  <script type="module">
+    // The popup opens this page with #site=<the tab's site>&v=<extension
+    // version>. What follows "#" stays in the browser: nothing of it reaches
+    // the server unless the form is sent.
+    const given = new URLSearchParams(window.location.hash.slice(1));
+    const version = given.get('v') || '';
+    const site = document.getElementById('site');
+    site.value = (given.get('site') || '').slice(0, 100);
+
+    const form = document.getElementById('reportForm');
+    const button = form.querySelector('button[type="submit"]');
+    const error = document.getElementById('reportError');
+
+    function showError(message) {
+      error.textContent = message;
+      error.classList.toggle('show', !!message);
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const chosen = form.querySelector('input[name="problem"]:checked');
+      if (!chosen) return showError('Please choose what went wrong first.');
+      showError('');
+      button.disabled = true;
+      try {
+        const response = await fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: { kind: 'problem', problem: chosen.value, site: site.value.trim(), comment: document.getElementById('comment').value.trim(), version } })
+        });
+        const body = await response.json();
+        if (body.error) throw new Error(body.error.message);
+        document.getElementById('reportCard').hidden = true;
+        document.getElementById('thanksCard').hidden = false;
+      } catch {
+        showError('That did not go through. Please try again.');
+        button.disabled = false;
+      }
+    });
+  </script>
+  <script src="script.js"></script>
+</body>
+</html>

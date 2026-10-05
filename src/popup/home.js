@@ -3,11 +3,13 @@
 import { getTargetTab, detectPage, describeStatus } from './status.js';
 import { togglePipInTab, injectRelay } from '../shared/inject.js';
 import { autoPipInForce, captionSelectorFor, saveCaptionSelector } from '../shared/settings.js';
+import { REPORT_URL } from '../shared/firebase.js';
 
 export function initHome({ doc, store, auth }) {
   const $ = (id) => doc.getElementById(id);
   const button = $('pip-btn');
   const pick = $('pick-captions');
+  const report = $('report-problem');
   const BUTTON_TEXT = { pip: 'Close Picture-in-Picture', embedded: 'Open the player in a new tab' };
   let tab = null;
   let current = { state: 'loading' };
@@ -22,6 +24,7 @@ export function initHome({ doc, store, auth }) {
     button.textContent = BUTTON_TEXT[status.state] || 'Open Picture-in-Picture';
     pick.hidden = !['video', 'pip'].includes(status.state);
     pick.textContent = status.picked ? 'Forget the captions picked on this site' : 'Captions not showing? Pick them on the page';
+    report.hidden = status.state === 'loading';
   }
 
   // Inject straight from the popup: the shorter the chain, the better the
@@ -68,6 +71,17 @@ export function initHome({ doc, store, auth }) {
       console.warn('[SubPIP] Could not start picking captions:', error);
     }
     window.close();
+  });
+
+  // The report form is on the website. The site's name and the version go
+  // along after the "#", which no server sees: the form shows the name, lets
+  // it be changed or cleared, and sends nothing until Send is pressed. Only
+  // the name ever travels, never the page's address or title.
+  report.addEventListener('click', async () => {
+    const given = new URLSearchParams();
+    if (current.host) given.set('site', current.host);
+    given.set('v', chrome.runtime.getManifest().version);
+    await chrome.tabs.create({ url: `${REPORT_URL}#${given}` });
   });
 
   render({ state: 'loading' });

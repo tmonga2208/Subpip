@@ -12,7 +12,8 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 // The browser the background runs in: what is saved, granted, registered and open
 // granted: access to single sites; matches: where the scripts are registered; queried: which tabs were looked for
-const browser = { settings: {}, local: {}, session: {}, allSites: false, granted: [], registered: [], matches: null, tabs: [], queried: null, injected: [], uninstallUrls: [] };
+// installType: how this copy got here (Chrome's word for it); opened: the tabs the background opened
+const browser = { settings: {}, local: {}, session: {}, allSites: false, granted: [], registered: [], matches: null, tabs: [], queried: null, injected: [], uninstallUrls: [], installType: 'development', opened: [] };
 const area = (name) => ({
   get: async (keys) => Object.fromEntries([].concat(keys).filter((k) => k in browser[name]).map((k) => [k, browser[name][k]])),
   set: async (items) => { Object.assign(browser[name], items); }
@@ -55,7 +56,11 @@ globalThis.chrome = {
     },
     executeScript: async ({ target, files }) => { browser.injected.push(`${target.tabId}:${files.join(',')}`); return [{}]; }
   },
-  tabs: { query: async ({ url }) => { browser.queried = url; return browser.tabs; } }
+  tabs: {
+    query: async ({ url }) => { browser.queried = url; return browser.tabs; },
+    create: async ({ url }) => { browser.opened.push(url); }
+  },
+  management: { getSelf: async () => ({ installType: browser.installType }) }
 };
 await startWorker();
 
@@ -64,6 +69,35 @@ test('after an install or update, uninstalling opens the feedback page with the 
   await fire('installed', { reason: 'install' });
   await settle();
   assert.deepEqual(browser.uninstallUrls, [`https://subpip.online/uninstalled.html?v=${manifest.version}`]);
+});
+
+test('a fresh install from the store opens the first-steps page; an update does not', async () => {
+  Object.assign(browser, { installType: 'normal', opened: [] });
+  await fire('installed', { reason: 'update', previousVersion: '4.4' });
+  await settle();
+  assert.deepEqual(browser.opened, []);
+  await fire('installed', { reason: 'install' });
+  await settle();
+  assert.deepEqual(browser.opened, ['https://subpip.online/welcome.html']);
+});
+
+test('a copy loaded by hand, or put there by an administrator, opens nothing', async () => {
+  for (const installType of ['development', 'admin', 'sideload']) {
+    Object.assign(browser, { installType, opened: [] });
+    await fire('installed', { reason: 'install' });
+    await settle();
+    assert.deepEqual(browser.opened, [], installType);
+  }
+});
+
+test('if Chrome cannot say how it was installed, nothing opens and nothing breaks', async () => {
+  Object.assign(browser, { installType: 'normal', opened: [] });
+  const { getSelf } = chrome.management;
+  chrome.management.getSelf = async () => { throw new Error('unavailable'); };
+  await fire('installed', { reason: 'install' });
+  await settle();
+  chrome.management.getSelf = getSelf;
+  assert.deepEqual(browser.opened, []);
 });
 
 test('Auto PiP is active only with the saved switch AND all-sites access on this browser', async () => {

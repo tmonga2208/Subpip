@@ -6,7 +6,7 @@ import { useWebsite, razorpayStub } from '../helpers/web.js';
 import { WEB_DIR } from '../helpers/browser.js';
 
 const ctx = useWebsite();
-const PAGES = ['index.html', 'premium.html', 'privacy.html', 'terms.html', 'refund.html', 'delivery.html', 'contact.html', 'uninstalled.html'];
+const PAGES = ['index.html', 'premium.html', 'privacy.html', 'terms.html', 'refund.html', 'delivery.html', 'contact.html', 'uninstalled.html', 'report.html', 'welcome.html'];
 
 test('no page scrolls sideways on a phone', async () => {
   for (const pagePath of PAGES) {
