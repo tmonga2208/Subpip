@@ -1,0 +1,8 @@
+# The pages are for everyone to read. The API answers only to the site and the
+# extension. Pages that only make sense coming from the extension say so
+# themselves (noindex), which needs them to stay readable here.
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://subpip.online/sitemap.xml
