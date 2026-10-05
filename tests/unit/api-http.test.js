@@ -169,9 +169,9 @@ test('unexpected errors alert the owner (when dependencies are available)', asyn
 
 test('/api/health reports config presence without values', async () => {
   const { default: health } = await import('../../web/api/health.js');
-  const KEYS = ['FIREBASE_SERVICE_ACCOUNT', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET', 'RESEND_API_KEY', 'EMAIL_FROM', 'DEEPL_API_KEY'];
+  const KEYS = ['FIREBASE_SERVICE_ACCOUNT', 'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET', 'RESEND_API_KEY', 'EMAIL_FROM', 'DEEPL_API_KEY'];
   const saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
-  Object.assign(process.env, { FIREBASE_SERVICE_ACCOUNT: '{"secret":1}', RAZORPAY_KEY_SECRET: 'rk', RAZORPAY_WEBHOOK_SECRET: 'wh', RESEND_API_KEY: 're_pw', EMAIL_FROM: 'SubPIP <a@b.c>' });
+  Object.assign(process.env, { FIREBASE_SERVICE_ACCOUNT: '{"secret":1}', RAZORPAY_KEY_ID: 'rzp_test_id', RAZORPAY_KEY_SECRET: 'rk', RAZORPAY_WEBHOOK_SECRET: 'wh', RESEND_API_KEY: 're_pw', EMAIL_FROM: 'SubPIP <a@b.c>' });
   delete process.env.DEEPL_API_KEY;
   const ok = fakeRes();
   await health({ method: 'GET', headers: {} }, ok);

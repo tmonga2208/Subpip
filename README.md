@@ -102,7 +102,8 @@ The functions run in Mumbai (`web/vercel.json`), next to the Firestore database.
 | Variable | Purpose |
 |---|---|
 | `FIREBASE_SERVICE_ACCOUNT` | Firebase service-account JSON (Admin SDK) |
-| `RAZORPAY_KEY_SECRET` | Razorpay API key secret |
+| `RAZORPAY_KEY_ID` | Razorpay API key ID (`rzp_live_…`, or `rzp_test_…` for test mode) |
+| `RAZORPAY_KEY_SECRET` | The secret of that same key. Change the two together |
 | `RAZORPAY_WEBHOOK_SECRET` | Razorpay webhook secret (events: `payment.captured`, `refund.processed`) → `https://subpip.online/api/razorpayWebhook` |
 | `DEEPL_API_KEY` | DeepL API Free key (online Premium translation; optional — without it translation falls back to MyMemory) |
 | `RESEND_API_KEY` | [Resend](https://resend.com) API key for license emails, alerts and uninstall feedback (the free plan sends 100 emails a day) |
