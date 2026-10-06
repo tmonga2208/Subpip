@@ -241,26 +241,39 @@ test('a caption that nobody adds to is taken away after a few seconds', async ()
 
 // Where captions from speech cannot run, the window keeps the captions it had
 
-test('a protected video keeps its captions, and the menu says its sound cannot be read', async () => {
+test('a protected video is not offered captions from speech', async () => {
   const page = await open(PREMIUM, { fixture: 'generic.html', mediaKeys: true });
+  await shadowEval(page, (shadow) => shadow.querySelector('.btn.gear').click());
+  await clickItem(page, 'Subtitles');
+  const offered = (await menuItems(page)).map((row) => row.split('=')[0]);
+  assert.ok(!offered.includes('From speech'), offered.join(', '));
+  assert.ok(offered.includes('Load file…'));
+  await done(page);
+});
+
+// Media keys can arrive at any moment, also while the list of languages is open
+test('a video protected after the list was opened keeps its captions, and the menu says its sound cannot be read', async () => {
+  const page = await open(PREMIUM, { fixture: 'generic.html' });
   await captionIs(page, 'First hidden-track cue');
   await shadowEval(page, (shadow) => shadow.querySelector('.btn.gear').click());
   await clickItem(page, 'Subtitles');
-  const offered = await menuItems(page);
   await clickItem(page, 'From speech');
+  await addMediaKeys(page);
   await clickItem(page, 'English');
   await noteMatches(page, /sound cannot be read/);
   assert.equal(await page.evaluate(() => window.recognitions.length), 0);
   assert.deepEqual(await checked(page), ['Off']);
   assert.equal(await captionText(page), 'First hidden-track cue');
-  await clickItem(page, 'Back');
-  assert.deepEqual(await menuItems(page), offered, 'the page\'s captions are still on offer');
   await done(page);
 });
 
 test('no speech pack is fetched for a video whose sound cannot be read', async () => {
-  const page = await open(PREMIUM, { mediaKeys: true, packs: 'downloadable', installMs: 300 });
-  await chooseSpeech(page, 'Hindi');
+  const page = await open(PREMIUM, { packs: 'downloadable', installMs: 300 });
+  await shadowEval(page, (shadow) => shadow.querySelector('.btn.gear').click());
+  await clickItem(page, 'Subtitles');
+  await clickItem(page, 'From speech');
+  await addMediaKeys(page);
+  await clickItem(page, 'Hindi');
   await noteMatches(page, /sound cannot be read/);
   await sleep(500);
   assert.equal(await page.evaluate(() => window.speech.installs), 0);

@@ -608,6 +608,9 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
     },
     // Captions from the video's sound: { state, language } (see listenToSpeech)
     get speech() { return { ...speech }; },
+    // false for a protected video. Sound from another site only shows when it
+    // is captured, so that case is still offered and then explained.
+    get speechPossible() { return !video.mediaKeys; },
     onSpeechChange(fn) { speechChanged = fn; },
     async startSpeech(language) {
       const request = ++speechRequest;

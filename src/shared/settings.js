@@ -69,12 +69,29 @@ export function applyCaptionPreset(settings, name) {
   return { ...settings, ...CAPTION_PRESETS[name], captionPreset: name };
 }
 
+// "My style": the viewer's own look, kept as settings.myStyle apart from the
+// built-in ones, so that trying Classic, Large or Outline does not lose it
+const MY_STYLE_KEYS = ['fontSize', 'fontFamily', 'textColor', 'bgColor', 'bgOpacity', 'captionOutline'];
+const lookOf = (settings) => Object.fromEntries(MY_STYLE_KEYS.map((key) => [key, settings[key]]));
+
+// A change to the look makes it My style, and is kept as such
+export function editMyStyle(settings, patch) {
+  const edited = { ...settings, ...patch, captionPreset: 'custom' };
+  return { ...edited, myStyle: lookOf(edited) };
+}
+
+export function applyMyStyle(settings) {
+  return { ...settings, ...settings.myStyle, captionPreset: 'custom' };
+}
+
 export function withDefaults(settings) {
   const merged = { ...DEFAULT_SETTINGS, ...(settings || {}) };
   // Settings saved before presets existed: keep their look, label it
   if (!settings || settings.captionPreset === undefined) {
     merged.captionPreset = detectCaptionPreset(merged);
   }
+  // A custom look saved before My style existed is My style
+  if (merged.captionPreset === 'custom' && !merged.myStyle) merged.myStyle = lookOf(merged);
   return merged;
 }
 

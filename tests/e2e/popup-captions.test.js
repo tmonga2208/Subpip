@@ -39,7 +39,7 @@ test('choosing a preset applies and saves it at once', async () => {
 test('Custom opens its page; a fast slider drag saves only the final value', async () => {
   const popup = await ctx.openPopup();
   await popup.click('.chip[data-preset="custom"]');
-  assert.equal(await popup.$eval('#page-title', (el) => el.textContent), 'Custom style');
+  assert.equal(await popup.$eval('#page-title', (el) => el.textContent), 'My style');
   await setRange(popup, 'size', [20, 22, 25, 28, 31, 33]);
   assert.equal(await previewFont(popup, 'custom-preview'), '33px');
   assert.equal((await ctx.storage()).subpipSettings, undefined);
@@ -134,5 +134,37 @@ test('the preview wraps big captions instead of cutting them off', async () => {
     };
   });
   assert.deepEqual(fit, { truncated: false, inside: true });
+  await popup.close();
+});
+
+const MINE = { fontSize: 30, fontFamily: 'serif', textColor: '#ffe14d', bgColor: '#1e3a8a', bgOpacity: 40, captionOutline: true };
+
+test('the fourth chip is My style: trying a built-in look does not lose it, one tap brings it back', async () => {
+  await ctx.setSettings({ ...MINE, captionPreset: 'custom', myStyle: MINE });
+  const popup = await ctx.openPopup();
+  assert.equal(await popup.$eval('.chip[data-preset="custom"]', (el) => el.textContent.trim()), 'My style');
+  await popup.click('.chip[data-preset="classic"]');
+  await sleep(100);
+  assert.equal(await previewFont(popup), '18px');
+  assert.deepEqual((await ctx.storage()).subpipSettings.myStyle, MINE);
+  await popup.click('.chip[data-preset="custom"]');
+  await sleep(100);
+  assert.deepEqual(await pressed(popup), ['custom']);
+  assert.equal(await previewFont(popup), '30px');
+  assert.equal(await popup.$eval('#page-title', (el) => el.textContent), '', 'it is applied at once, without leaving the first page');
+  const saved = (await ctx.storage()).subpipSettings;
+  assert.equal(saved.captionPreset, 'custom');
+  assert.equal(saved.textColor, '#ffe14d');
+  await popup.close();
+});
+
+test('My style, tapped while it is in use, opens its page; an edit there is kept as My style', async () => {
+  await ctx.setSettings({ ...MINE, captionPreset: 'custom', myStyle: MINE });
+  const popup = await ctx.openPopup();
+  await popup.click('.chip[data-preset="custom"]');
+  assert.equal(await popup.$eval('#page-title', (el) => el.textContent), 'My style');
+  await setRange(popup, 'size', [34]);
+  await sleep(500);
+  assert.deepEqual((await ctx.storage()).subpipSettings.myStyle, { ...MINE, fontSize: 34 });
   await popup.close();
 });

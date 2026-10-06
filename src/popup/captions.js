@@ -1,6 +1,6 @@
-// Caption style in the popup: live previews, preset chips and the Custom page
+// Caption style in the popup: live previews, preset chips and the My style page
 
-import { applyCaptionPreset } from '../shared/settings.js';
+import { applyCaptionPreset, editMyStyle, applyMyStyle } from '../shared/settings.js';
 import { captionTextShadow, hexToRgba } from '../content/styles.js';
 
 export const TEXT_COLORS = ['#ffffff', '#ffe14d', '#7cf0ff', '#9dff7a', '#ff9ad5', '#000000'];
@@ -27,13 +27,17 @@ export function initCaptions({ doc, store, router, auth }) {
   const outline = $('outline');
   const subsUrl = $('subs-url');
 
-  // Any caption-style edit makes the look "custom"
-  const custom = (patch, options) => store.update({ ...patch, captionPreset: 'custom' }, options);
+  // Any caption-style edit makes the look My style
+  const custom = (patch, options) => store.update(editMyStyle(store.get(), patch), options);
 
   chips.forEach((chip) => chip.addEventListener('click', () => {
     const name = chip.dataset.preset;
-    if (name === 'custom') router.go('custom');
-    else store.update(applyCaptionPreset(store.get(), name));
+    const settings = store.get();
+    if (name !== 'custom') store.update(applyCaptionPreset(settings, name));
+    // My style comes back with one tap; tapped while in use (or before there
+    // is one) it opens its page
+    else if (settings.myStyle && settings.captionPreset !== 'custom') store.update(applyMyStyle(settings));
+    else router.go('custom');
   }));
 
   function buildSwatches(container, colors, key) {

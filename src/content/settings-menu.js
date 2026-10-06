@@ -219,7 +219,8 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
       );
     }
     // Captions written from the video's sound, for videos that have none
-    if (!loaded) rows.push(item({ label: 'From speech', value: speechLabel(), premium: !isPremium, chevron: true, onSelect: go('speech') }));
+    // (not offered for a protected video, whose sound Chrome hands to nobody)
+    if (!loaded && captions.speechPossible) rows.push(item({ label: 'From speech', value: speechLabel(), premium: !isPremium, chevron: true, onSelect: go('speech') }));
     rows.push(item({
       label: 'Load file…',
       value: 'SRT or VTT',
