@@ -1,0 +1,41 @@
+[Ringkasan / Summary]
+Picture-in-Picture yang tetap menampilkan subtitle. Atur gaya teks, terjemahkan, dan ikuti video sambil bekerja di tab lain.
+
+[Deskripsi / Description]
+Tonton video di jendela mengambang tanpa kehilangan subtitle.
+
+Picture-in-Picture bawaan Chrome menghilangkan subtitle. SubPIP membuka video di jendela mengambang yang tetap menampilkannya, lengkap dengan kontrol sungguhan: putar, geser waktu, volume, dan tombol subtitle. Tetap bekerja di tab lain dan ikuti setiap baris dialog.
+
+CARA PAKAI
+1. Putar video dengan subtitle menyala.
+2. Tekan Alt+P, atau klik ikon SubPIP lalu pilih Open Picture-in-Picture.
+3. Video terbuka di jendela mengambang bersama subtitlenya.
+
+DI MANA BISA DIPAKAI
+• YouTube, Netflix, JioHotstar, dan Crunchyroll, dengan dukungan subtitle bawaan.
+• Sebagian besar situs lain, memakai subtitle dari videonya sendiri. Jika SubPIP tidak menemukan subtitle di suatu situs, tunjukkan sekali saja dan SubPIP akan mengingatnya.
+• Chrome, Edge, dan Brave di komputer.
+
+GRATIS
+• Subtitle di Picture-in-Picture
+• Gaya subtitle: Classic, Large, atau Outline, atau ukuran, warna, dan latar pilihan Anda
+• Putar, geser waktu, volume, dan subtitle nyala/mati, langsung di jendela
+• Pintasan keyboard: Spasi, tombol panah, M untuk bisu, C untuk subtitle
+• Auto PiP (opsional, Chrome 134 atau lebih baru): video otomatis keluar ke jendela saat Anda pindah tab
+
+PREMIUM (sekali bayar, tanpa langganan)
+• Terjemahan saat menonton, ke 12 bahasa, dengan baris aslinya di atas
+• Subtitle yang ditulis dari suara, untuk video yang tidak punya subtitle (Chrome 139 atau lebih baru)
+• Alat belajar: klik kata untuk melihat artinya, ulangi satu baris, simpan baris untuk nanti
+• Subtitle Anda sendiri, dari file atau tautan
+• Kecepatan putar dari 0,5× sampai 3×
+• Tombol Lewati intro dan Berikutnya di jendela
+Premium seharga ₹999 di India dan $15 di negara lain, dengan pengembalian dana penuh dalam 7 hari. Detail: https://subpip.online/#pricing
+
+PRIVASI
+Ekstensi ini tanpa iklan dan tanpa analitik, dan tidak mengumpulkan riwayat penjelajahan Anda. Pengaturan Anda tetap di browser. Teks subtitle hanya keluar dari browser saat Anda menyalakan terjemahan, dan tidak sama sekali jika Chrome bisa menerjemahkan di perangkat Anda. Kebijakan lengkap: https://subpip.online/privacy.html
+
+BANTUAN
+Ada yang tidak berfungsi di suatu situs? Kirim email ke tarunmonga2208@gmail.com dengan nama situsnya (kami membalas dalam bahasa Inggris).
+
+Film pada tangkapan layar adalah Sintel, © Blender Foundation, digunakan di bawah CC BY 3.0.

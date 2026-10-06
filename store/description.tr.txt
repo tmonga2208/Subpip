@@ -1,0 +1,41 @@
+[Özet / Summary]
+Altyazıları koruyan Pencere içinde Pencere. Altyazı stilini ayarlayın, çevirin ve başka sekmede çalışırken videoyu izleyin.
+
+[Açıklama / Description]
+Videoyu kayan bir pencerede izleyin, altyazıları da kaybetmeyin.
+
+Chrome'un kendi Pencere içinde Pencere (Picture-in-Picture) özelliği altyazıları göstermez. SubPIP, videoyu altyazıları koruyan kayan bir pencerede açar ve gerçek kontroller sunar: oynatma, ileri geri sarma, ses ve altyazı düğmesi. Başka bir sekmede çalışmaya devam ederken her satırı takip edebilirsiniz.
+
+NASIL KULLANILIR
+1. Altyazıları açık bir video oynatın.
+2. Alt+P tuşlarına basın veya SubPIP simgesine tıklayıp Open Picture-in-Picture seçeneğini seçin.
+3. Video, altyazılarıyla birlikte kayan bir pencerede açılır.
+
+NEREDE ÇALIŞIR
+• YouTube, Netflix, JioHotstar ve Crunchyroll: altyazı desteği yerleşiktir.
+• Diğer sitelerin çoğu: videonun kendi altyazıları kullanılır. SubPIP bir sitenin altyazılarını bulamazsa bir kez göstermeniz yeterlidir, sonrasında hatırlar.
+• Bilgisayarda Chrome, Edge ve Brave.
+
+ÜCRETSİZ
+• Pencere içinde Pencere'de altyazılar
+• Altyazı stilleri: Classic, Large veya Outline ya da kendi seçtiğiniz boyut, renk ve arka plan
+• Pencerenin içinde oynatma, sarma, ses ve altyazı açma kapama
+• Klavye kısayolları: Boşluk, ok tuşları, sessize almak için M, altyazılar için C
+• Auto PiP (isteğe bağlı, Chrome 134 veya üzeri): sekme değiştirdiğinizde video kendiliğinden pencereye çıkar
+
+PREMIUM (tek ödeme, abonelik yok)
+• İzlerken çeviri: 12 dile, özgün satır üstte olacak şekilde
+• Altyazısı olmayan videolar için konuşmadan yazılan altyazılar (Chrome 139 veya üzeri)
+• Çalışma araçları: anlamı için bir kelimeye tıklayın, bir satırı yeniden oynatın, satırları sonrası için kaydedin
+• Dosyadan veya bağlantıdan kendi altyazılarınız
+• 0,5× ile 3× arasında oynatma hızı
+• Pencerede Girişi atla ve Sonraki düğmeleri
+Premium Hindistan'da ₹999, diğer ülkelerde 15 $'dır ve 7 gün içinde tam iade yapılır. Ayrıntılar: https://subpip.online/#pricing
+
+GİZLİLİK
+Uzantıda reklam ve analiz aracı yoktur, tarama geçmişiniz toplanmaz. Ayarlarınız tarayıcınızda kalır. Altyazı metni yalnızca çeviriyi açtığınızda tarayıcınızdan çıkar; Chrome cihazınızda çevirebiliyorsa hiç çıkmaz. Politikanın tamamı: https://subpip.online/privacy.html
+
+YARDIM
+Bir sitede çalışmayan bir şey mi var? Sitenin adıyla birlikte tarunmonga2208@gmail.com adresine yazın (İngilizce yanıt veriyoruz).
+
+Ekran görüntülerindeki film Sintel'dir, © Blender Foundation, CC BY 3.0 kapsamında kullanılmıştır.

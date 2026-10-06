@@ -9,7 +9,7 @@ const watch = process.argv.includes('--watch');
 
 await rm(outdir, { recursive: true, force: true });
 await mkdir(outdir, { recursive: true });
-for (const file of ['manifest.json', 'popup.html', 'popup.css', 'assets']) {
+for (const file of ['manifest.json', 'popup.html', 'popup.css', 'assets', '_locales']) {
   await cp(`src/${file}`, `${outdir}/${file}`, { recursive: true });
 }
 

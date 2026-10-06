@@ -1,0 +1,41 @@
+[Tóm tắt / Summary]
+Hình trong hình (Picture-in-Picture) vẫn giữ phụ đề. Tùy chỉnh kiểu phụ đề, dịch phụ đề và theo dõi video khi làm việc ở thẻ khác.
+
+[Mô tả / Description]
+Xem video trong cửa sổ nổi mà vẫn giữ được phụ đề.
+
+Chế độ Hình trong hình (Picture-in-Picture) có sẵn của Chrome làm mất phụ đề. SubPIP mở video trong một cửa sổ nổi vẫn giữ phụ đề, với các nút điều khiển thật: phát, tua, âm lượng và nút bật tắt phụ đề. Bạn cứ làm việc ở thẻ khác mà vẫn theo kịp từng câu thoại.
+
+CÁCH DÙNG
+1. Phát một video đang bật phụ đề.
+2. Nhấn Alt+P, hoặc nhấp vào biểu tượng SubPIP rồi chọn Open Picture-in-Picture.
+3. Video mở trong cửa sổ nổi cùng với phụ đề.
+
+DÙNG ĐƯỢC Ở ĐÂU
+• YouTube, Netflix, JioHotstar và Crunchyroll, với hỗ trợ phụ đề có sẵn.
+• Hầu hết các trang khác, dùng phụ đề của chính video. Nếu SubPIP không tìm thấy phụ đề của một trang, bạn chỉ cần chỉ vào nó một lần và SubPIP sẽ ghi nhớ.
+• Chrome, Edge và Brave trên máy tính.
+
+MIỄN PHÍ
+• Phụ đề trong Hình trong hình
+• Kiểu phụ đề: Classic, Large hoặc Outline, hoặc tự chọn cỡ chữ, màu sắc và nền
+• Phát, tua, âm lượng và bật tắt phụ đề ngay trong cửa sổ
+• Phím tắt: Space, các phím mũi tên, M để tắt tiếng, C cho phụ đề
+• Auto PiP (tùy chọn, Chrome 134 trở lên): video tự bật ra cửa sổ khi bạn chuyển thẻ
+
+PREMIUM (trả một lần, không cần đăng ký định kỳ)
+• Dịch trong lúc xem, sang 12 ngôn ngữ, với câu gốc hiển thị phía trên
+• Phụ đề được viết từ giọng nói, cho video không có phụ đề (Chrome 139 trở lên)
+• Công cụ học tập: nhấp vào một từ để xem nghĩa, phát lại một câu, lưu câu để xem sau
+• Phụ đề của riêng bạn, từ tệp hoặc đường liên kết
+• Tốc độ phát từ 0,5× đến 3×
+• Nút Bỏ qua phần giới thiệu và nút Tiếp theo trong cửa sổ
+Premium có giá ₹999 tại Ấn Độ và $15 ở các nơi khác, hoàn tiền đầy đủ trong vòng 7 ngày. Chi tiết: https://subpip.online/#pricing
+
+QUYỀN RIÊNG TƯ
+Tiện ích không có quảng cáo, không có công cụ phân tích và không thu thập lịch sử duyệt web của bạn. Cài đặt của bạn nằm trong trình duyệt. Nội dung phụ đề chỉ rời khỏi trình duyệt khi bạn bật dịch, và hoàn toàn không rời khỏi nếu Chrome có thể dịch ngay trên thiết bị của bạn. Chính sách đầy đủ: https://subpip.online/privacy.html
+
+TRỢ GIÚP
+Có trang nào không hoạt động? Hãy viết thư tới tarunmonga2208@gmail.com kèm tên trang (chúng tôi trả lời bằng tiếng Anh).
+
+Bộ phim trong ảnh chụp màn hình là Sintel, © Blender Foundation, được sử dụng theo giấy phép CC BY 3.0.
