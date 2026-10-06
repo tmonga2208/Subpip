@@ -1,10 +1,11 @@
 // The one-time ask for a store rating, on the first page under the main button
 
 import { ratingState, shouldAskForRating, noteAskShown, endRatingAsk } from '../shared/rating.js';
-import { STORE_REVIEWS_URL } from '../shared/firebase.js';
+import { storeFor } from '../shared/store.js';
 
 export async function initRatingAsk({ doc }) {
-  if (!shouldAskForRating(await ratingState())) return;
+  const { reviewsUrl } = storeFor(navigator.userAgent);
+  if (!reviewsUrl || !shouldAskForRating(await ratingState())) return;
   const ask = doc.getElementById('rate-ask');
   ask.hidden = false;
   await noteAskShown();
@@ -16,6 +17,6 @@ export async function initRatingAsk({ doc }) {
   doc.getElementById('rate-no').addEventListener('click', end);
   doc.getElementById('rate-yes').addEventListener('click', async () => {
     await end();
-    await chrome.tabs.create({ url: STORE_REVIEWS_URL });
+    await chrome.tabs.create({ url: reviewsUrl });
   });
 }

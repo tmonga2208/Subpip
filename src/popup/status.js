@@ -7,8 +7,10 @@ import { captionSelectorFor } from '../shared/settings.js';
 
 const RESTRICTED = [
   /^chrome:/, /^chrome-extension:/, /^edge:/, /^about:/, /^view-source:/, /^devtools:/,
-  /^https:\/\/chromewebstore\.google\.com\//, /^https:\/\/chrome\.google\.com\/webstore/
+  /^https:\/\/chromewebstore\.google\.com\//, /^https:\/\/chrome\.google\.com\/webstore/,
+  /^https:\/\/microsoftedge\.microsoft\.com\/addons/
 ];
+export const isRestricted = (url) => RESTRICTED.some((pattern) => pattern.test(url));
 
 export async function getTargetTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -59,7 +61,7 @@ export async function probeTab(tabId) {
 }
 
 export async function detectPage(tab) {
-  if (!tab || !tab.url || RESTRICTED.some((pattern) => pattern.test(tab.url))) return { state: 'restricted' };
+  if (!tab || !tab.url || isRestricted(tab.url)) return { state: 'restricted' };
   const probe = await probeTab(tab.id);
   if (!probe) return { state: 'restricted' };
   const host = probe.host.replace(/^www\./, '');

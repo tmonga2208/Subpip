@@ -260,7 +260,7 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
 
   const SPEECH_NOTES = {
     fetching: (name) => `Getting the speech pack for ${name}. This can take a minute.`,
-    unavailable: (name) => `Chrome cannot recognise ${name} on this device.`,
+    unavailable: (name) => `Your browser cannot recognise ${name} on this device.`,
     unsupported: () => 'Captions from speech need Chrome 139 or newer.',
     blocked: () => "This video's sound cannot be read: it is protected, or it comes from another site.",
     failed: () => 'Speech recognition could not start.'

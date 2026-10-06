@@ -3,8 +3,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { useExtension } from '../helpers/extension.js';
+import { findBrowser } from '../../scripts/find-browser.mjs';
 
 const ctx = useExtension();
+// Run under Edge (CHROME_PATH), where there is no listing to send anyone to yet
+const EDGE = /Microsoft Edge/.test(findBrowser());
 const DAY = 24 * 60 * 60 * 1000;
 const REVIEWS = 'https://chromewebstore.google.com/detail/subpip-picture-in-picture/cajeijlommigmipnnhemgopednbpmnjg/reviews';
 
@@ -17,7 +20,7 @@ const ask = (popup) => popup.$eval('#rate-ask', (el) => ({
   buttons: [...el.querySelectorAll('button')].map((button) => button.textContent.trim())
 }));
 
-test('after ten opens and three days the popup asks once for a rating', async () => {
+test('after ten opens and three days the popup asks once for a rating', { skip: EDGE }, async () => {
   await longTimeUser();
   const popup = await ctx.openPopup();
   assert.deepEqual(await ask(popup), {
@@ -30,7 +33,7 @@ test('after ten opens and three days the popup asks once for a rating', async ()
   await popup.close();
 });
 
-test('before that it stays out of the way', async () => {
+test('before that it stays out of the way', { skip: EDGE }, async () => {
   for (const state of [undefined, { opens: 9, since: Date.now() - 30 * DAY }, { opens: 40, since: Date.now() - DAY }]) {
     if (state) await seed(state);
     const popup = await ctx.openPopup();
@@ -39,7 +42,7 @@ test('before that it stays out of the way', async () => {
   }
 });
 
-test('No thanks ends it for good', async () => {
+test('No thanks ends it for good', { skip: EDGE }, async () => {
   await longTimeUser();
   let popup = await ctx.openPopup();
   await popup.click('#rate-no');
@@ -51,7 +54,7 @@ test('No thanks ends it for good', async () => {
   await popup.close();
 });
 
-test('Rate SubPIP opens the store\'s reviews page, and ends it too', async () => {
+test('Rate SubPIP opens the store\'s reviews page, and ends it too', { skip: EDGE }, async () => {
   await longTimeUser();
   const popup = await ctx.openPopup();
   await popup.evaluate(() => {
@@ -66,7 +69,7 @@ test('Rate SubPIP opens the store\'s reviews page, and ends it too', async () =>
   await popup.close();
 });
 
-test('left unanswered it shows on three popup opens, then stops', async () => {
+test('left unanswered it shows on three popup opens, then stops', { skip: EDGE }, async () => {
   await longTimeUser();
   const seen = [];
   for (let i = 0; i < 4; i++) {
@@ -77,7 +80,7 @@ test('left unanswered it shows on three popup opens, then stops', async () => {
   assert.deepEqual(seen, [true, true, true, false]);
 });
 
-test('it is in view without scrolling, so being shown means being seen', async () => {
+test('it is in view without scrolling, so being shown means being seen', { skip: EDGE }, async () => {
   await longTimeUser();
   const page = await ctx.newPage('generic.html');
   const popup = await ctx.openPopup();
@@ -90,4 +93,11 @@ test('it is in view without scrolling, so being shown means being seen', async (
   assert.ok(box.top > 0 && box.bottom <= Math.min(600, box.viewBottom), JSON.stringify(box));
   await popup.close();
   await page.close();
+});
+
+test('in Edge nobody is asked to rate SubPIP on Chrome\'s store', { skip: !EDGE }, async () => {
+  await longTimeUser();
+  const popup = await ctx.openPopup();
+  assert.equal((await ask(popup)).shown, false);
+  await popup.close();
 });
