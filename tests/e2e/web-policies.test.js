@@ -57,3 +57,13 @@ test('checkout says paying means agreeing to the Terms and Refund Policy', async
   assert.deepEqual(agree.links, ['terms.html', 'refund.html']);
   await page.close();
 });
+
+test('the refund is stated next to the price, where the decision is made', async () => {
+  const home = await ctx.open('index.html');
+  assert.equal(await home.$eval('.price-card.featured .price-terms', (el) => el.textContent.replace(/\s+/g, ' ').trim()), 'One payment, no subscription. Full refund within 7 days.');
+  assert.equal(await home.$eval('.price-card.featured .price-terms a', (a) => a.getAttribute('href')), 'refund.html');
+  await home.close();
+  const checkout = await ctx.open('premium.html', { intercept: razorpayStub() });
+  assert.equal(await checkout.$eval('#paymentSection .price-terms', (el) => el.textContent.replace(/\s+/g, ' ').trim()), 'Full refund within 7 days.');
+  await checkout.close();
+});

@@ -145,6 +145,8 @@ kbd { padding: 1px 6px; border: 1px solid var(--border); border-radius: 4px; bac
 .price-card .price { margin: 8px 0 16px; font-size: 32px; font-weight: 700; }
 .price-card .price span:not([data-price]) { color: var(--text-2); font-size: 14px; font-weight: 400; }
 .price-card .btn { margin-top: auto; }
+.price-terms { margin: -8px 0 16px; color: var(--text-2); font-size: 14px; }
+.price-terms a { color: inherit; }
 .check-list { display: grid; gap: 8px; margin-bottom: 22px; list-style: none; }
 .check-list li { display: flex; align-items: flex-start; gap: 10px; color: var(--text); font-size: 15px; }
 .check-list svg { flex: none; width: 18px; height: 18px; margin-top: 3px; color: var(--accent); }
