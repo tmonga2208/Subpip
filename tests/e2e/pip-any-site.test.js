@@ -163,3 +163,35 @@ test('what the viewer pointed at is used ahead of a site\'s own adapter', async 
   await captionIs(page, 'the viewer\'s choice');
   await done(page);
 });
+
+// JW Player stops drawing captions once its video has left the page (it sends
+// no more time updates), so its caption element freezes. Its lines are read
+// from the player itself instead, by their times.
+const windowCaption = (page) => page.evaluate(() => window.documentPictureInPicture.window.document.querySelector('.subpip-caption-container')?.textContent || '');
+const windowCaptionIs = (page, text) => page.waitForFunction((want) => (window.documentPictureInPicture.window.document.querySelector('.subpip-caption-container')?.textContent || '') === want, { timeout: 4000 }, text);
+const seekTo = (page, time) => page.evaluate((t) => { window.documentPictureInPicture.window.document.querySelector('video').currentTime = t; }, time);
+
+test('JW Player captions follow the video, not the line the player froze on', async () => {
+  const page = await ctx.newPage('jwplayer.html');
+  await openPip(page);
+  await windowCaptionIs(page, 'first line & more');
+  await seekTo(page, 6);
+  await windowCaptionIs(page, 'second line');
+  await seekTo(page, 62);
+  await windowCaptionIs(page, 'a line after seeking');
+  await seekTo(page, 30);
+  await windowCaptionIs(page, '');
+  await page.close();
+});
+
+test('JW Player captions switched off on the page are off in the window, and come back', async () => {
+  const page = await ctx.newPage('jwplayer.html');
+  await openPip(page);
+  await windowCaptionIs(page, 'first line & more');
+  await page.evaluate(() => { window.jw.current = 0; });
+  await windowCaptionIs(page, '');
+  await page.evaluate(() => { window.jw.current = 1; });
+  await windowCaptionIs(page, 'first line & more');
+  assert.equal(await windowCaption(page), 'first line & more');
+  await page.close();
+});

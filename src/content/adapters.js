@@ -135,11 +135,28 @@ export const SITE_ADAPTERS = [
   }
 ];
 
+// JW Player sends no time updates once its video has left the page, so the
+// captions it draws freeze on one line. The lines it keeps itself, with their
+// times: { cues } (none while its captions are off), or null where it keeps
+// none, as for captions that come inside the stream.
+export function jwPlayerCaptions(win = window) {
+  try {
+    const player = typeof win.jwplayer === 'function' ? win.jwplayer() : null;
+    if (!player || typeof player.getConfig !== 'function') return null;
+    const track = player.getConfig().captionsTrack;
+    if (track && Array.isArray(track.data) && track.data.length) return { cues: track.data };
+    return typeof player.getCurrentCaptions === 'function' && player.getCurrentCaptions() === 0 ? { cues: [] } : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 // Players that many sites build on, recognised on any of them by the element
-// they draw captions in. The class names are the players' own.
+// they draw captions in. The class names are the players' own. timed: for a
+// player whose lines are better read from the player than from that element.
 export const PLAYER_CAPTIONS = [
   { name: 'Video.js', selector: '.vjs-text-track-display' },
-  { name: 'JW Player', selector: '.jw-captions' },
+  { name: 'JW Player', selector: '.jw-captions', timed: jwPlayerCaptions },
   { name: 'Plyr', selector: '.plyr__captions' },
   { name: 'Bitmovin', selector: '.bmpui-ui-subtitle-overlay' },
   { name: 'Shaka Player', selector: '.shaka-text-container' }

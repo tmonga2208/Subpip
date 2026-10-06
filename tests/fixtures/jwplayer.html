@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><link rel="icon" href="data:,"><title>JW Player</title></head>
+<body>
+  <div class="jwplayer"><video id="v" src="test.mp4" width="640" height="360" muted loop></video><div class="jw-captions"><div>the line it froze on</div></div></div>
+  <script>
+    // JW Player as found on goplay.su: once its video has left the page it
+    // sends no more time updates, so the captions it draws freeze on one line.
+    // The lines themselves it still has, with their times.
+    const lines = (...rows) => rows.map(([start, end, text]) => new VTTCue(start, end, text));
+    window.jw = {
+      current: 1,
+      tracks: [null, lines([0, 5, '<i>first</i> line &amp; more'], [5, 10, 'second line'], [60, 70, 'a line after seeking'])]
+    };
+    const player = {
+      getCurrentCaptions: () => window.jw.current,
+      getConfig: () => ({ captionsTrack: window.jw.tracks[window.jw.current] ? { label: 'English', data: window.jw.tracks[window.jw.current] } : undefined })
+    };
+    window.jwplayer = () => player;
+  </script>
+</body>
+</html>

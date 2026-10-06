@@ -297,11 +297,20 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
   // Captions the page keeps in an element of its own, read as text and drawn
   // in SubPIP's caption box. Sites re-create such elements, so it is looked up
   // again whenever it has gone.
-  function followElementText({ onCleanup, every }, selector, kind) {
+  function followElementText({ listen, onCleanup, every }, selector, kind, timed = null) {
     pageSource = kind;
     const setText = useTextCaptions();
     let element = null;
-    const read = () => setText(element && element.isConnected ? elementLines(element) : '');
+    const read = () => {
+      // Lines the player gives with their times come before what it has drawn
+      const known = timed && timed();
+      if (known) setText(trackTextAt(known, video.currentTime));
+      else setText(element && element.isConnected ? elementLines(element) : '');
+    };
+    if (timed) {
+      listen(video, 'timeupdate', read);
+      listen(video, 'seeked', read);
+    }
     const observer = new MutationObserver(read);
     onCleanup(() => observer.disconnect());
     const attach = () => {
@@ -338,7 +347,7 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
       const player = hasTracks ? null : findPlayerCaptions();
       if (!hasTracks && !player) return;
       started = true;
-      if (player) followElementText(scope, player.selector, 'player');
+      if (player) followElementText(scope, player.selector, 'player', player.timed);
       else followTextTrack(scope);
     };
     start();
