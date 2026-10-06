@@ -349,7 +349,8 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
   // Captions from the video's own sound (Premium). Chrome's speech
   // recognition listens to it on this device, in the language the viewer says
   // is spoken. state: off | fetching (the speech pack) | on | unsupported
-  // (browser) | unavailable (language) | blocked (the sound) | failed
+  // (browser) | unavailable (language) | blocked (the sound) | failed.
+  // Listening goes on only while it is "on" or the next language is fetched.
   const speech = { state: 'off', language: null };
   let speechChanged = () => { };
   let speechRequest = 0;
@@ -358,13 +359,48 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
     speech.language = language;
     speechChanged();
   }
+  // Captions from speech that cannot run, or cannot go on: the captions they
+  // took the place of come back, and the menu says why
+  function refuseSpeech(state, language = speech.language) {
+    if (pageSource === 'speech') show(own ? showOwnSubtitles : showPageCaptions);
+    setSpeech(state, language);
+  }
   // The PiP window's own: it stays in front, the page may be a background tab
   const Recognition = () => pipDoc.defaultView.SpeechRecognition || pipDoc.defaultView.webkitSpeechRecognition || null;
 
-  function listenToSpeech({ onCleanup }) {
+  // The video's sound, for the recogniser: one capture for as long as the
+  // window is open. Chrome gives the sound to the latest capture alone, so a
+  // second one would silence the first. A capture keeps up with the video by
+  // itself: it gets a new sound track for each video loaded into the element,
+  // and when one is played again after its end. Its sound tracks are never
+  // stopped here: that silences any later capture of the same video as well.
+  // null where Chrome keeps the sound back: a protected video, or one whose
+  // sound comes from another site.
+  let sound = null;
+  function captureSound() {
+    if (video.mediaKeys) return null;
+    if (sound) return sound;
+    try {
+      sound = video.captureStream();
+    } catch (e) {
+      return null;
+    }
+    // Only the sound is wanted
+    const dropPicture = () => sound.getVideoTracks().forEach((track) => track.stop());
+    sound.addEventListener('addtrack', dropPicture);
+    dropPicture();
+    return sound;
+  }
+
+  function listenToSpeech({ listen, onCleanup }) {
     pageSource = 'speech';
     const setText = useTextCaptions();
+    // The language it began in, whichever is being fetched meanwhile
+    const lang = SPEECH_TAGS[speech.language];
     let recognition = null;
+    // The sound track it listens to
+    let heard = null;
+    let followed = null;
     let over = false;
     let restartTimer = null;
     let quietTimer = null;
@@ -394,53 +430,70 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
         showSoon('');
       }, SPEECH_QUIET_MS);
     };
-    const start = () => {
-      if (over) return;
-      let track = null;
+    const drop = () => {
+      const old = recognition;
+      recognition = null;
+      if (!old) return;
       try {
-        track = video.captureStream().getAudioTracks()[0] || null;
+        old.abort();
       } catch (e) {
-        track = null;
-      }
-      // Protected video, or sound from another site
-      if (!track) {
-        over = true;
-        setSpeech('blocked');
-        return;
-      }
-      hidden = 0;
-      recognition = new (Recognition())();
-      Object.assign(recognition, { lang: SPEECH_TAGS[speech.language], continuous: true, interimResults: true, processLocally: true });
-      recognition.addEventListener('result', onResult);
-      // It stops by itself now and then, and when the video's sound changes
-      recognition.addEventListener('end', () => {
-        recognition = null;
-        if (!over) restartTimer = setTimeout(start, 300);
-      });
-      recognition.addEventListener('error', (event) => {
-        if (!['not-allowed', 'service-not-allowed', 'language-not-supported'].includes(event.error)) return;
-        over = true;
-        setSpeech('failed');
-      });
-      try {
-        recognition.start(track);
-      } catch (e) {
-        over = true;
-        setSpeech('failed');
+        // Already stopped
       }
     };
+    // Listens to the video's sound as it is now, in place of any listening so far
+    const start = () => {
+      clearTimeout(restartTimer);
+      if (over) return;
+      drop();
+      const stream = captureSound();
+      if (!stream) {
+        refuseSpeech('blocked');
+        return;
+      }
+      if (stream !== followed) {
+        followed = stream;
+        listen(stream, 'addtrack', onTrack);
+      }
+      // The latest: a video that was in the element before leaves its track
+      // behind, live and silent
+      heard = stream.getAudioTracks().filter((track) => track.readyState === 'live').pop() || null;
+      // Nothing to hear yet: the video is still loading, or has reached its end
+      if (!heard) return;
+      hidden = 0;
+      const mine = new (Recognition())();
+      recognition = mine;
+      Object.assign(mine, { lang, continuous: true, interimResults: true, processLocally: true });
+      mine.addEventListener('result', (event) => {
+        if (recognition === mine) onResult(event);
+      });
+      // Should it stop by itself
+      mine.addEventListener('end', () => {
+        if (recognition !== mine) return;
+        recognition = null;
+        restartTimer = setTimeout(start, 300);
+      });
+      mine.addEventListener('error', (event) => {
+        if (recognition !== mine || !['not-allowed', 'service-not-allowed', 'language-not-supported'].includes(event.error)) return;
+        refuseSpeech('failed');
+      });
+      try {
+        mine.start(heard);
+      } catch (e) {
+        refuseSpeech('failed');
+      }
+    };
+    // Nothing tells the recogniser that the sound it listens to is over (the
+    // next episode or an ad has begun, the video has ended): it goes on
+    // waiting. The capture's next sound track is the one to listen to.
+    function onTrack(event) {
+      if (event.track.kind === 'audio' && event.track !== heard) start();
+    }
     onCleanup(() => {
       over = true;
       clearTimeout(restartTimer);
       clearTimeout(quietTimer);
       clearTimeout(showTimer);
-      if (recognition) {
-        try {
-          recognition.abort();
-        } catch (e) {
-          // Already stopped
-        }
-      }
+      drop();
     });
     start();
   }
@@ -563,6 +616,12 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
         setSpeech('unsupported', language);
         return;
       }
+      // Before anything is fetched: a speech pack is no use to a video that
+      // cannot be heard
+      if (!captureSound()) {
+        refuseSpeech('blocked', language);
+        return;
+      }
       const wanted = { langs: [SPEECH_TAGS[language]], processLocally: true };
       try {
         let ready = await SpeechRecognition.available(wanted);
@@ -574,11 +633,11 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
         // The viewer chose something else meanwhile
         if (request !== speechRequest) return;
         if (ready !== 'available') {
-          setSpeech('unavailable', language);
+          refuseSpeech('unavailable', language);
           return;
         }
       } catch (e) {
-        if (request === speechRequest) setSpeech('failed', language);
+        if (request === speechRequest) refuseSpeech('failed', language);
         return;
       }
       setSpeech('on', language);
