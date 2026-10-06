@@ -25,6 +25,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ₹999 in India, $15 elsewhere
   document.querySelectorAll('[data-price]').forEach((el) => { el.textContent = localPrice().label; });
   const router = createRouter(document);
+  // Opened as a tab from a video's window, to show what Premium is
+  if (location.hash === '#upgrade') router.go('upgrade');
   const store = createSettingsStore();
   const auth = createAuth();
   const account = initAccount({ doc: document, auth });

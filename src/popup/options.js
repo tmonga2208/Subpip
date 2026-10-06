@@ -133,6 +133,8 @@ export function initOptions({ doc, store, auth, router }) {
     const premium = auth.isPremium();
     const autoPip = !!settings.autoPip && autoPipAllowed;
     const sites = chosenSites().filter((name) => allowedSites.includes(name));
+    // Offered on the first page to whoever does not have it
+    $('premium-row').hidden = premium;
     setRowValue('translate-value', premium ? (settings.translationEnabled ? languageName(settings.targetLanguage) : 'Off') : null);
     setRowValue('speed-value', premium ? `${settings.playbackSpeed}×` : null);
     setRowValue('autopip-value', autoPip ? 'On' : sites.length === 1 ? sites[0] : sites.length ? `${sites.length} sites` : 'Off');

@@ -13,7 +13,8 @@ test('the name and summary come from the language files, English by default', ()
   assert.equal(manifest.default_locale, 'en');
   assert.equal(manifest.name, '__MSG_extName__');
   assert.equal(manifest.description, '__MSG_extDescription__');
-  assert.equal(messages('en').extName.message, 'SubPIP (Picture-in-Picture)');
+  assert.equal(messages('en').extName.message, 'SubPIP: Picture-in-Picture with Subtitles');
+  assert.equal(manifest.short_name, 'SubPIP');
   assert.equal(messages('en').extDescription.message, 'Picture-in-Picture that keeps the subtitles. Style the captions, translate them, and follow a video while you work in another tab.');
 });
 
@@ -21,7 +22,8 @@ test('eight languages, each with a name and a summary the store accepts', () => 
   assert.deepEqual(readdirSync('src/_locales').sort(), LANGUAGES);
   for (const language of LANGUAGES) {
     const { extName, extDescription } = messages(language);
-    assert.equal(extName.message, 'SubPIP (Picture-in-Picture)', language);
+    // What people search for is in the name: the product, Picture-in-Picture, and subtitles in their language
+    assert.ok(extName.message.startsWith('SubPIP: ') && extName.message.includes('Picture-in-Picture') && extName.message.length <= 75, `${language}: ${extName.message}`);
     assert.ok(extDescription.message.length > 20 && extDescription.message.length <= 132, `${language}: ${extDescription.message.length} characters`);
   }
 });
@@ -35,4 +37,9 @@ test('each summary is the one drafted with that language\'s store description', 
 
 test('the build puts the language files in the package', () => {
   assert.match(readFileSync('build.mjs', 'utf8'), /'_locales'/);
+});
+
+test('each language names subtitles in its own word', () => {
+  const words = { en: 'Subtitles', id: 'Subtitle', ko: '자막', th: 'คำบรรยาย', tr: 'Altyazı', vi: 'phụ đề', zh_CN: '字幕', zh_TW: '字幕' };
+  for (const [language, word] of Object.entries(words)) assert.ok(messages(language).extName.message.includes(word), `${language}: ${messages(language).extName.message}`);
 });

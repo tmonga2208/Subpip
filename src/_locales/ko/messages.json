@@ -1,6 +1,6 @@
 {
   "extName": {
-    "message": "SubPIP (Picture-in-Picture)"
+    "message": "SubPIP: 자막이 보이는 Picture-in-Picture"
   },
   "extDescription": {
     "message": "자막이 그대로 보이는 PIP(화면 속 화면). 자막 스타일을 바꾸고, 번역하고, 다른 탭에서 작업하면서 영상을 계속 볼 수 있습니다."

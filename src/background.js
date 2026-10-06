@@ -92,6 +92,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   // The popup, when translation is switched on or its language changes
   if (message.type === 'PREPARE_TRANSLATION') deviceTranslation.prepare(message.targetLang);
+  // "See Premium" in a video's window: the popup's own page about it, in a tab
+  if (message.type === 'OPEN_PREMIUM') chrome.tabs.create({ url: chrome.runtime.getURL('popup.html#upgrade') });
 });
 
 // Alt+P: open or close Picture-in-Picture without going through the popup

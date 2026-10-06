@@ -5,9 +5,11 @@
 
 import { createIcon } from '../shared/icons.js';
 import { CAPTION_SIZES, LANGUAGES, SPEEDS } from '../shared/settings.js';
+import { localPrice } from '../shared/pricing.js';
 import { decodeSubtitleFile } from './subtitles.js';
 
-const UPGRADE_NOTE = 'Premium feature. Open the SubPIP popup to upgrade.';
+// What a free viewer is told at a Premium feature: the price where they are
+const upgradeNote = () => `Premium feature. ${localPrice().label} once, no subscription, with a full refund within 7 days.`;
 // Each press of Earlier / Later moves the user's subtitles this far (seconds)
 const DELAY_STEP = 0.25;
 // A feature film's subtitles are well under 1 MB; anything huge is not one
@@ -74,6 +76,11 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
   const translateLabel = () => (captions.translationOn ? languageName(getSessionSettings().targetLanguage) : 'Off');
   // The viewer's file, else the page's caption language, else just "Page"
   // where the page offers no choice SubPIP can see
+  // ...and a way to it: the extension opens its page about Premium
+  const upgradeRows = () => [
+    el('div', 'menu-note', upgradeNote()),
+    item({ label: 'See Premium', chevron: true, onSelect: () => window.postMessage({ type: 'SUBPIP_OPEN_PREMIUM' }, '*') })
+  ];
   const speechLabel = () => {
     const { state, language } = captions.speech;
     if (state === 'on') return languageName(language);
@@ -137,7 +144,7 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
   }
 
   function speedView() {
-    if (!isPremium) return [backRow(), el('div', 'menu-note', UPGRADE_NOTE)];
+    if (!isPremium) return [backRow(), ...upgradeRows()];
     return [backRow(), ...SPEEDS.map((speed) => item({
       label: `${speed}×`,
       checked: video.playbackRate === speed,
@@ -162,7 +169,7 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
   }
 
   function translateView() {
-    if (!isPremium) return [backRow(), el('div', 'menu-note', UPGRADE_NOTE)];
+    if (!isPremium) return [backRow(), ...upgradeRows()];
     const code = getSessionSettings().targetLanguage;
     const dual = !!getSessionSettings().dualSubtitles;
     return [
@@ -230,7 +237,7 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
           fileInput.click();
           return;
         }
-        fileProblem = UPGRADE_NOTE;
+        fileProblem = upgradeNote();
         render();
       }
     }));
@@ -257,7 +264,7 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
   }
 
   // Where a Premium feature outside the menu sends a free viewer
-  const premiumView = () => [backRow(), el('div', 'menu-note', UPGRADE_NOTE)];
+  const premiumView = () => [backRow(), ...upgradeRows()];
 
   const SPEECH_NOTES = {
     fetching: (name) => `Getting the speech pack for ${name}. This can take a minute.`,
@@ -267,7 +274,7 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
     failed: () => 'Speech recognition could not start.'
   };
   function speechView() {
-    if (!isPremium) return [backRow('subtitles'), el('div', 'menu-note', UPGRADE_NOTE)];
+    if (!isPremium) return [backRow('subtitles'), ...upgradeRows()];
     const { state, language } = captions.speech;
     const chosen = state === 'on' || state === 'fetching' ? language : null;
     const note = SPEECH_NOTES[state]
@@ -346,7 +353,7 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
       loadFile(file);
       return;
     }
-    fileProblem = UPGRADE_NOTE;
+    fileProblem = upgradeNote();
     render();
   };
 

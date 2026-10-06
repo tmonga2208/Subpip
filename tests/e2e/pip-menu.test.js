@@ -42,6 +42,21 @@ test('free users see Premium tags and an upgrade note', async () => {
   await done(page);
 });
 
+test('the upgrade note says what Premium costs, and its button asks the extension to show it', async () => {
+  const page = await open({ isPremium: false });
+  await page.emulateTimezone('America/New_York');
+  await page.evaluate(() => {
+    window.asked = [];
+    window.addEventListener('message', (event) => { if (event.data?.type === 'SUBPIP_OPEN_PREMIUM') window.asked.push(event.data.type); });
+  });
+  await openMenu(page);
+  await clickItem(page, 'Translate');
+  assert.equal(await shadowEval(page, (shadow) => shadow.querySelector('.menu .menu-note').textContent), 'Premium feature. $15 once, no subscription, with a full refund within 7 days.');
+  await clickItem(page, 'See Premium');
+  await page.waitForFunction(() => window.asked.length === 1, { timeout: 4000 });
+  await done(page);
+});
+
 test('premium speed selection changes playback rate', async () => {
   const page = await open({ isPremium: true });
   await openMenu(page);

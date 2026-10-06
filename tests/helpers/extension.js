@@ -150,7 +150,7 @@ export function useExtension(options) {
   // active tab of the normal window (see status.js getTargetTab).
   // ready: false returns as soon as the page has loaded, before sign-in settles
   // timezone drives the regional price (Kolkata → ₹, elsewhere → $)
-  ctx.openPopup = async ({ stub, ready = true, timezone = 'Asia/Kolkata' } = {}) => {
+  ctx.openPopup = async ({ stub, ready = true, timezone = 'Asia/Kolkata', at = '' } = {}) => {
     const known = new Set(ctx.browser.targets());
     await ctx.worker.evaluate(() => chrome.windows.create({ url: 'about:blank', type: 'popup', width: 360, height: 640 }));
     const target = await ctx.browser.waitForTarget((t) => t.type() === 'page' && !known.has(t));
@@ -165,7 +165,7 @@ export function useExtension(options) {
     popup.on('request', (request) => {
       if (!(stub && stub(request))) request.continue();
     });
-    await popup.goto(`chrome-extension://${ctx.extensionId}/popup.html`);
+    await popup.goto(`chrome-extension://${ctx.extensionId}/popup.html${at}`);
     if (ready) await popup.waitForSelector('body[data-ready="true"]', { timeout: 10000 });
     else await popup.waitForSelector('#plan-badge');
     popup.errors = errors;
