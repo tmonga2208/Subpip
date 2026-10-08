@@ -59,7 +59,7 @@
         <ul>
           <li><strong>Account</strong> – your email address and sign-in state, handled by Firebase Authentication.</li>
           <li><strong>Premium status</strong> – whether your account is Premium and your license key. Stored in Firebase Firestore.</li>
-          <li><strong>Purchase record</strong> – when you pay, we store the Razorpay payment ID, the email used for the purchase, the amount and currency, and the license key issued. If you start the purchase from the extension while signed in, we also record which account it is for, so Premium can be turned on for that account automatically. We never receive or store your card or bank details.</li>
+          <li><strong>Purchase record</strong> – when you pay, we store the Razorpay payment ID, the email used for the purchase, the amount and currency, the license key issued and, for a one-year license, the day it ends (so we can remind you by email about a week before, and tell you when it has ended). If you start the purchase from the extension while signed in, we also record which account it is for, so Premium can be turned on for that account automatically. We never receive or store your card or bank details.</li>
         </ul>
         <p><strong>If you answer the question shown after uninstalling:</strong></p>
         <ul>
@@ -81,7 +81,7 @@
           <li>To show videos in Picture-in-Picture with subtitles and playback controls on the sites where you use SubPIP.</li>
           <li>To translate captions, which is part of Premium, and only when you turn translation on. Where your browser can translate by itself (Chrome 138 or newer), captions are translated on your device and are not sent to anyone; Chrome downloads a language pack from Google the first time a language is used. Otherwise, and until that language pack has arrived, captions go to our server, which checks that your account is Premium and translates them with DeepL; the server keeps a shared cache of translated caption lines (the text and its translation, not who asked for it) so repeated lines are not sent again. If the server can't translate a line, your browser sends that line to MyMemory instead.</li>
           <li>To create, verify and activate your Premium license, to email it to you after purchase (and again if you use "Lost your license key?"), and to let you recover it with "Check payment".</li>
-          <li>To show the right price: our website reads your browser's time zone to show ₹999 in India or $15 elsewhere. The time zone is used only in your browser and is not sent to us.</li>
+          <li>To show the right price: our website and the extension read your browser's time zone to show the price for your region. The time zone is used only in your browser and is not sent to us.</li>
           <li>To see how many people visit our website, which pages they open and where they come from. We look at these as totals only.</li>
         </ul>
       </section>

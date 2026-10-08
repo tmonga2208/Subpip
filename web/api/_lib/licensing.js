@@ -4,12 +4,17 @@
 
 import crypto from 'node:crypto';
 import { HttpsError } from './http.js';
-import { isAcceptedPayment } from './pricing.js';
+import { isAcceptedPayment, planOfPayment, YEAR_MS } from './pricing.js';
 import { sendLicenseEmail } from './emails.js';
 import { validPaymentSignature } from './orders.js';
 import { alertOwner, day } from './alerts.js';
 import { log } from './log.js';
 import { translateForUser, MAX_TEXT_LENGTH } from './translate.js';
+
+const nowMs = (deps) => (deps.now ? deps.now() : new Date()).getTime();
+// A one-year licence whose year is over, whether or not the daily job has marked it yet
+export const passIsOver = (license, at) => license.plan === 'year' && (license.ended === true || (typeof license.expiresAt === 'number' && license.expiresAt <= at));
+export const ENDED_MESSAGE = 'This license has ended. You can get another year, or lifetime, at subpip.online';
 
 export function generateLicenseKey() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -67,6 +72,8 @@ export async function createLicenseForPayment(deps, payment) {
   const email = (payment.email || payment.notes?.email || '').toLowerCase().trim();
   const licenseKey = generateLicenseKey();
   const ref = db.collection('licenses').doc(payment.id);
+  // What the amount bought: lifetime, or one year from now (see pricing.js)
+  const plan = planOfPayment(payment) || 'lifetime';
   try {
     await ref.create({
       key: licenseKey,
@@ -78,7 +85,9 @@ export async function createLicenseForPayment(deps, payment) {
       createdAt: FieldValue.serverTimestamp(),
       usedBy: null,
       activatedAt: null,
-      verified: true
+      verified: true,
+      plan,
+      ...(plan === 'year' ? { expiresAt: nowMs(deps) + YEAR_MS } : {})
     });
   } catch (error) {
     if (error.code === 6) return { key: (await ref.get()).data().key, created: false, email: email || null, ref }; // ALREADY_EXISTS
@@ -128,16 +137,18 @@ async function emailLicenseOnce(deps, { ref, key, email, payment, activatedFor }
     log('error', 'license-email-skipped', { reason: 'mailer-not-configured', paymentId: payment.id });
     return;
   }
-  const nowMs = deps.now().getTime();
+  const sentAt = deps.now().getTime();
+  let until = null;
   const claimed = await deps.db.runTransaction(async (tx) => {
     const data = (await tx.get(ref)).data();
     if (!data || data.emailedAt) return false;
-    if (data.emailClaimedAt && nowMs - data.emailClaimedAt < EMAIL_CLAIM_MS) return false;
-    tx.update(ref, { emailClaimedAt: nowMs });
+    if (data.emailClaimedAt && sentAt - data.emailClaimedAt < EMAIL_CLAIM_MS) return false;
+    until = data.plan === 'year' ? data.expiresAt : null;
+    tx.update(ref, { emailClaimedAt: sentAt });
     return true;
   });
   if (!claimed) return;
-  if (await sendLicenseEmail(deps, { to: email, keys: [key], payment, activatedFor })) await ref.update({ emailedAt: nowMs });
+  if (await sendLicenseEmail(deps, { to: email, keys: [key], payment, activatedFor, until })) await ref.update({ emailedAt: sentAt });
 }
 
 export const RESEND_MESSAGE = "If a purchase exists for that email, we've sent the license to it.";
@@ -156,15 +167,15 @@ export async function resendLicense(data, ctx, deps) {
   const today = day(deps.now());
   const limitRef = deps.db.collection('resend').doc(crypto.createHash('sha256').update(email).digest('hex'));
   const globalRef = deps.db.collection('resend_daily').doc(today);
-  const nowMs = deps.now().getTime();
+  const askedAt = deps.now().getTime();
   const allowed = await deps.db.runTransaction(async (tx) => {
     const [limit, global] = await Promise.all([tx.get(limitRef), tx.get(globalRef)]);
     const address = limit.exists ? limit.data() : {};
     const sentToday = address.day === today ? address.count : 0;
     const globalToday = global.exists ? global.data().count : 0;
-    if (address.lastSentAt && nowMs - address.lastSentAt < RESEND_INTERVAL_MS) return false;
+    if (address.lastSentAt && askedAt - address.lastSentAt < RESEND_INTERVAL_MS) return false;
     if (sentToday >= RESEND_PER_ADDRESS_PER_DAY || globalToday >= RESEND_GLOBAL_PER_DAY) return false;
-    tx.set(limitRef, { lastSentAt: nowMs, day: today, count: sentToday + 1 });
+    tx.set(limitRef, { lastSentAt: askedAt, day: today, count: sentToday + 1 });
     tx.set(globalRef, { count: globalToday + 1 });
     return true;
   });
@@ -176,7 +187,7 @@ export async function resendLicense(data, ctx, deps) {
   ]);
   const keys = [...byEmail.docs, ...byLegacyEmail.docs]
     .map((doc) => doc.data())
-    .filter((license) => license.verified === true && !license.revoked)
+    .filter((license) => license.verified === true && !license.revoked && !passIsOver(license, nowMs(deps)))
     .map((license) => license.key);
   if (keys.length) {
     const sending = sendLicenseEmail(deps, { to: email, keys });
@@ -208,14 +219,36 @@ async function ensureLicenseVerified(deps, licenseDoc) {
 }
 
 // Bind a license to a user and mark them premium, atomically
-async function bindLicenseToUser({ db, FieldValue }, licenseRef, uid) {
+async function bindLicenseToUser(deps, licenseRef, uid) {
+  const { db, FieldValue } = deps;
+  const at = nowMs(deps);
   return db.runTransaction(async (tx) => {
     const data = (await tx.get(licenseRef)).data();
     if (data.usedBy && data.usedBy !== uid) {
       return { success: false, error: 'License already used by another account' };
     }
-    tx.update(licenseRef, { usedBy: uid, activatedAt: data.activatedAt || FieldValue.serverTimestamp() });
-    tx.set(db.collection('users').doc(uid), { isPremium: true, licenseKey: data.key }, { merge: true });
+    if (passIsOver(data, at)) return { success: false, error: ENDED_MESSAGE };
+    const userRef = db.collection('users').doc(uid);
+    const snap = await tx.get(userRef);
+    const user = snap.exists ? snap.data() : {};
+    const bound = { usedBy: uid, activatedAt: data.activatedAt || FieldValue.serverTimestamp() };
+
+    if (data.plan !== 'year') {
+      tx.update(licenseRef, bound);
+      // Lifetime ends any year that was running
+      tx.set(userRef, { isPremium: true, licenseKey: data.key, ...(user.premiumUntil ? { premiumUntil: null } : {}) }, { merge: true });
+      return { success: true, licenseKey: data.key };
+    }
+    // A year for someone who has lifetime Premium takes nothing away
+    if (user.isPremium && user.licenseKey && user.licenseKey !== data.key && !user.premiumUntil) {
+      tx.update(licenseRef, bound);
+      return { success: true, licenseKey: data.key };
+    }
+    // Bought before the year in use has ended: added on to it, once
+    const running = user.isPremium && user.licenseKey !== data.key && typeof user.premiumUntil === 'number' && user.premiumUntil > at;
+    const expiresAt = running && !data.usedBy ? user.premiumUntil + YEAR_MS : data.expiresAt;
+    tx.update(licenseRef, { ...bound, expiresAt });
+    tx.set(userRef, { isPremium: true, licenseKey: data.key, premiumUntil: expiresAt }, { merge: true });
     return { success: true, licenseKey: data.key };
   });
 }
@@ -263,6 +296,7 @@ export async function activateLicense(data, ctx, deps) {
   if (snap.empty) return { success: false, error: 'Invalid license key' };
   const licenseDoc = snap.docs[0];
   if (licenseDoc.data().revoked) return { success: false, error: 'This license was refunded' };
+  if (passIsOver(licenseDoc.data(), nowMs(deps))) return { success: false, error: ENDED_MESSAGE };
   if (!(await ensureLicenseVerified(deps, licenseDoc))) return { success: false, error: 'License payment not verified' };
   return bindLicenseToUser(deps, licenseDoc.ref, uid);
 }
@@ -279,7 +313,7 @@ export async function claimLicenseByEmail(data, ctx, deps) {
     deps.db.collection('licenses').where('purchaserEmail', '==', email).get()
   ]);
   const candidates = [...byEmail.docs, ...byLegacyEmail.docs]
-    .filter((doc) => !doc.data().revoked && (!doc.data().usedBy || doc.data().usedBy === uid))
+    .filter((doc) => !doc.data().revoked && !passIsOver(doc.data(), nowMs(deps)) && (!doc.data().usedBy || doc.data().usedBy === uid))
     .sort((a, b) => (b.data().usedBy === uid) - (a.data().usedBy === uid));
 
   for (const licenseDoc of candidates) {
@@ -297,7 +331,9 @@ export async function translateText(data, ctx, deps) {
   if (!targetLang || typeof targetLang !== 'string') throw new HttpsError('invalid-argument', 'Target language is required');
 
   const user = await deps.db.collection('users').doc(uid).get();
-  if (!user.exists || !user.data().isPremium) throw new HttpsError('permission-denied', 'Premium subscription required');
+  const account = user.exists ? user.data() : {};
+  // A year that is over counts as over from that moment, not from the daily job
+  if (!account.isPremium || (typeof account.premiumUntil === 'number' && account.premiumUntil <= nowMs(deps))) throw new HttpsError('permission-denied', 'Premium subscription required');
 
   const { translation, provider } = await translateForUser(deps, uid, text, targetLang);
   return { success: true, translation, provider, sourceText: text, targetLang };

@@ -7,6 +7,13 @@ export const SUPPORT_EMAIL = 'tarunmonga2208@gmail.com';
 const SITE_URL = 'https://subpip.online';
 const REFUND_NOTE = 'Not happy? You can get a full refund within 7 days of purchase, no questions asked.';
 
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+// 8 October 2027
+export function formatDay(ms) {
+  const date = new Date(ms);
+  return `${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
+}
+
 export function formatAmount(amount, currency) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount / 100);
 }
@@ -30,17 +37,18 @@ function stepRows(steps) {
 </tr>`).join('')}</table>`;
 }
 
-function receiptRows(amount, paymentId) {
+function receiptRows(amount, paymentId, what = 'SubPIP Premium, lifetime') {
   return `<table ${TABLE} class="rule" width="100%" style="margin:28px 0 0;border-top:1px solid #e4e4e7">
 <tr><td colspan="2" class="soft" style="padding:18px 0 8px;${LABEL}">Receipt</td></tr>
-<tr><td class="ink" style="padding:3px 0;${type(14, '#18181b')}">SubPIP Premium, lifetime</td><td align="right" class="ink" style="padding:3px 0;${type(14, '#18181b', 'font-weight:600;white-space:nowrap')}">${escapeHtml(amount)}</td></tr>
+<tr><td class="ink" style="padding:3px 0;${type(14, '#18181b')}">${escapeHtml(what)}</td><td align="right" class="ink" style="padding:3px 0;${type(14, '#18181b', 'font-weight:600;white-space:nowrap')}">${escapeHtml(amount)}</td></tr>
 <tr><td class="soft" style="padding:3px 0;${type(13, '#71717a')}">Payment ID</td><td align="right" class="soft" style="padding:3px 0;font-family:${MONO};font-size:13px;line-height:1.55;color:#71717a">${escapeHtml(paymentId)}</td></tr>
 </table>`;
 }
 
 // activatedFor: the account Premium was already activated on (a purchase
 // started from the popup), so there is nothing left to paste
-export function licenseEmail({ keys, payment, activatedFor }) {
+// until: for a one-year licence, when it ends
+export function licenseEmail({ keys, payment, activatedFor, until = null }) {
   const plural = keys.length > 1;
   const active = activatedFor
     ? `Premium is already active on ${activatedFor}: open SubPIP and it is there. Keep this key as your proof of purchase.`
@@ -62,7 +70,8 @@ export function licenseEmail({ keys, payment, activatedFor }) {
     '',
     ...(active ? [active] : ['To activate:', ...steps.map((step, i) => `  ${i + 1}. ${step}`)]),
     '',
-    payment ? `Receipt: ${amount} · lifetime Premium · payment ${payment.id}` : '',
+    payment ? `Receipt: ${amount} · ${until ? `one year of Premium, until ${formatDay(until)}` : 'lifetime Premium'} · payment ${payment.id}` : '',
+    until ? 'It will not renew by itself: nothing more is charged unless you buy again.' : '',
     REFUND_NOTE,
     '',
     `Questions? Just reply to this email, or write to ${SUPPORT_EMAIL}.`,
@@ -75,7 +84,7 @@ ${keys.map((key, i) => keyBox(key, plural ? `License key ${i + 1}` : 'Your licen
 ${active
     ? `<table ${TABLE} width="100%" style="margin:16px 0 0"><tr><td class="done" style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:14px 16px;${type(15, '#065f46')}"><strong>You are all set.</strong> ${escapeHtml(active)}</td></tr></table>`
     : `<h2 class="ink" style="margin:28px 0 14px;${type(16, '#18181b', 'font-weight:700')}">Activate it</h2>\n${stepRows(steps)}`}
-${payment ? receiptRows(amount, payment.id) : ''}
+${payment ? receiptRows(amount, payment.id, until ? `SubPIP Premium, one year (until ${formatDay(until)})` : undefined) : ''}
 <p class="soft" style="margin:24px 0 0;${type(14, '#52525b')}">${REFUND_NOTE}</p>
 <p class="soft" style="margin:8px 0 0;${type(14, '#52525b')}">Questions? Just reply to this email, or write to ${link(`mailto:${SUPPORT_EMAIL}`, SUPPORT_EMAIL)}.</p>`;
 
@@ -89,7 +98,7 @@ ${payment ? receiptRows(amount, payment.id) : ''}
 }
 
 // Never throws; a failure is logged and alerted, and the caller carries on
-export async function sendLicenseEmail(deps, { to, keys, payment, activatedFor }) {
+export async function sendLicenseEmail(deps, { to, keys, payment, activatedFor, until }) {
   if (!to) {
     log('warn', 'license-email-skipped', { reason: 'no-email', paymentId: payment?.id });
     return false;
@@ -99,11 +108,27 @@ export async function sendLicenseEmail(deps, { to, keys, payment, activatedFor }
     return false;
   }
   try {
-    await deps.mailer.send({ to, ...licenseEmail({ keys, payment, activatedFor }) });
+    await deps.mailer.send({ to, ...licenseEmail({ keys, payment, activatedFor, until }) });
     log('info', 'license-email-sent', { paymentId: payment?.id });
     return true;
   } catch (error) {
     await alertOwner(deps, 'license-email-failed', `Could not email a license: ${error.message}`, { paymentId: payment?.id });
     return false;
   }
+}
+
+// The two notes about a one-year pass: a week before it ends, and when it has
+export function passEmail({ kind, until }) {
+  const renewUrl = `${SITE_URL}/premium.html`;
+  const reminder = kind === 'reminder';
+  const subject = reminder ? `Your year of SubPIP Premium ends on ${formatDay(until)}` : 'Your year of SubPIP Premium has ended';
+  const lines = reminder
+    ? [`Your year of SubPIP Premium ends on ${formatDay(until)}.`, 'It will not renew by itself and nothing will be charged.', `If you would like another year, or lifetime Premium, you can get it here: ${renewUrl}`, 'A year bought before the end is added on to the one you have.']
+    : [`Your year of SubPIP Premium ended on ${formatDay(until)}.`, 'Nothing was charged, and SubPIP keeps working without the Premium features.', `If you would like them back, for another year or for good: ${renewUrl}`];
+  const text = [...lines, '', `Questions? Just reply to this email, or write to ${SUPPORT_EMAIL}.`].join('\n');
+  const content = `<h1 class="ink" style="margin:0 0 16px;${type(22, '#18181b', 'font-weight:700;line-height:1.3')}">${escapeHtml(subject)}</h1>
+${lines.slice(1).map((line) => `<p class="soft" style="margin:0 0 12px;${type(15, '#52525b')}">${escapeHtml(line).replace(renewUrl, link(renewUrl, 'subpip.online/premium.html'))}</p>`).join('\n')}
+<p class="soft" style="margin:16px 0 0;${type(14, '#52525b')}">Questions? Just reply to this email, or write to ${link(`mailto:${SUPPORT_EMAIL}`, SUPPORT_EMAIL)}.</p>`;
+  const footer = `<p class="soft" style="margin:0;${type(12, '#71717a')}">You are getting this email because this address was used to buy a year of SubPIP Premium.<br>${link(`${SITE_URL}/privacy.html`, 'Privacy')} &middot; ${link(`${SITE_URL}/contact.html`, 'Contact')}</p>`;
+  return { subject, text, html: emailLayout({ title: subject, preview: lines[1], content, footer, logoUrl: `${SITE_URL}/logo.png` }) };
 }

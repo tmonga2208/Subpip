@@ -4,7 +4,7 @@
   "short_name": "SubPIP",
   "description": "__MSG_extDescription__",
   "default_locale": "en",
-  "version": "4.8",
+  "version": "4.9",
   "icons": {
     "16": "assets/icon-16.png",
     "32": "assets/icon-32.png",

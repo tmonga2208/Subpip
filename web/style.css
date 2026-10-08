@@ -238,3 +238,12 @@ kbd { padding: 1px 6px; border: 1px solid var(--border); border-radius: 4px; bac
 .reason:has(input:checked) { border-color: var(--accent); }
 .reason input { flex: none; accent-color: var(--accent); }
 textarea.email-input { display: block; margin-bottom: 14px; font: inherit; color: inherit; resize: vertical; }
+
+/* Lifetime or one year */
+.price-year { margin: -10px 0 14px; color: var(--text-2); font-size: 14px; }
+.plans { margin: 0 0 16px; padding: 0; border: 0; display: grid; gap: 8px; }
+.plan { display: grid; grid-template-columns: auto 1fr auto; column-gap: 10px; align-items: center; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
+.plan:has(input:checked) { border-color: var(--accent); }
+.plan-name { font-weight: 600; }
+.plan-price { font-weight: 700; }
+.plan-note { grid-column: 2 / -1; color: var(--text-2); font-size: 13px; }

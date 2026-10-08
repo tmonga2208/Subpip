@@ -2,22 +2,26 @@
 // Razorpay processed this payment for this order.
 import crypto from 'node:crypto';
 import { HttpsError } from './http.js';
-import { PRICES } from './pricing.js';
+import { PRICES, priceFor } from './pricing.js';
 import { accountForCheckout } from './checkout.js';
 import { log } from './log.js';
 
 export async function createOrder(data, ctx, deps) {
   const currency = data.currency;
   if (!Object.hasOwn(PRICES, currency)) throw new HttpsError('invalid-argument', 'Unsupported currency');
+  // The plan and price level are the buyer's to choose; the amount never is
+  const plan = data.plan === undefined ? 'lifetime' : data.plan;
+  const amount = priceFor({ currency, plan, tier: data.tier === undefined ? 'standard' : data.tier });
+  if (amount === null) throw new HttpsError('invalid-argument', 'Unsupported plan');
   const email = typeof data.email === 'string' ? data.email.trim().toLowerCase().slice(0, 254) : '';
   const order = await deps.razorpay.orders.create({
-    amount: PRICES[currency],
+    amount,
     currency,
     receipt: `subpip_${deps.now().getTime()}`,
-    notes: email ? { email } : {}
+    notes: { plan, ...(email ? { email } : {}) }
   });
   const account = await recordAccount(deps, data.checkout, order.id);
-  return { orderId: order.id, amount: order.amount, currency: order.currency, keyId: deps.keyId, ...(account ? { accountEmail: account.email } : {}) };
+  return { orderId: order.id, amount: order.amount, currency: order.currency, keyId: deps.keyId, ...(plan === 'year' ? { plan } : {}), ...(account ? { accountEmail: account.email } : {}) };
 }
 
 // Started from the popup while signed in: the order is recorded for that

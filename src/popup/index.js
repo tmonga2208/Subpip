@@ -10,7 +10,7 @@ import { initHome } from './home.js';
 import { initOptions } from './options.js';
 import { initSaved } from './saved.js';
 import { initRatingAsk } from './rating.js';
-import { localPrice } from '../shared/pricing.js';
+import { localPrice, localPrices } from '../shared/pricing.js';
 
 // Extension page, so icon markup strings are fine here (unlike page scripts)
 function renderIcons(root) {
@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderIcons(document);
   // ₹999 in India, $15 elsewhere
   document.querySelectorAll('[data-price]').forEach((el) => { el.textContent = localPrice().label; });
+  document.querySelectorAll('[data-price-year]').forEach((el) => { el.textContent = localPrices().year; });
   const router = createRouter(document);
   // Opened as a tab from a video's window, to show what Premium is
   if (location.hash === '#upgrade') router.go('upgrade');

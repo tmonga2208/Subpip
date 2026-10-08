@@ -20,6 +20,10 @@ function say(el, text) {
   el.hidden = !text;
 }
 
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+// 8 October 2027, as the license email says it
+const endDay = (ms) => { const date = new Date(ms); return `${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]} ${date.getUTCFullYear()}`; };
+
 export function initAccount({ doc, auth }) {
   const $ = (id) => doc.getElementById(id);
   const modeTabs = [...doc.querySelectorAll('[data-mode]')];
@@ -105,6 +109,9 @@ export function initAccount({ doc, auth }) {
     $('account-email').textContent = user ? user.email : '';
     $('account-email').title = user ? user.email : '';
     $('free-actions').hidden = premium;
+    const until = auth.premiumUntil();
+    $('premium-until').hidden = !until;
+    $('premium-until').textContent = until ? `Premium until ${endDay(until)}. It ends then by itself: nothing is charged again.` : '';
     $('account-initial').textContent = user ? user.email.charAt(0).toUpperCase() : '';
     $('account-initial').hidden = !user;
     $('account-icon').hidden = !!user;

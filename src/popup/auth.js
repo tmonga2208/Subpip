@@ -3,11 +3,13 @@
 // and page scripts (see readAuthCache for why not sync storage).
 
 import { LicenseManager } from './license-manager.js';
-import { readAuthCache } from '../shared/settings.js';
+import { readAuthCache, premiumNow } from '../shared/settings.js';
 
 export function createAuth(manager = new LicenseManager()) {
   let user = null;
   let premium = false;
+  // When a year of Premium ends; null for lifetime or Free
+  let until = null;
   const listeners = new Set();
   const emit = () => listeners.forEach((fn) => fn());
 
@@ -19,10 +21,12 @@ export function createAuth(manager = new LicenseManager()) {
         emit();
         return;
       }
-      premium = !!status.data.isPremium;
-      await chrome.storage.local.set({ subpipAuth: { uid: user.uid, email: user.email, isPremium: premium } });
+      until = status.data.premiumUntil || null;
+      premium = premiumNow({ isPremium: status.data.isPremium, premiumUntil: until });
+      await chrome.storage.local.set({ subpipAuth: { uid: user.uid, email: user.email, isPremium: premium, ...(premium && until ? { premiumUntil: until } : {}) } });
     } else {
       premium = false;
+      until = null;
       await chrome.storage.local.remove('subpipAuth');
     }
     emit();
@@ -39,6 +43,7 @@ export function createAuth(manager = new LicenseManager()) {
   return {
     user: () => user,
     isPremium: () => premium,
+    premiumUntil: () => (premium ? until : null),
     onChange(fn) {
       listeners.add(fn);
     },
@@ -47,7 +52,9 @@ export function createAuth(manager = new LicenseManager()) {
       user = manager.isLoggedIn() ? manager.getCurrentUser() : null;
       // Show the last known plan at once; the network check below confirms it
       const subpipAuth = await readAuthCache();
-      premium = !!(user && subpipAuth && subpipAuth.uid === user.uid && subpipAuth.isPremium);
+      const mine = user && subpipAuth && subpipAuth.uid === user.uid ? subpipAuth : null;
+      premium = premiumNow(mine);
+      until = (premium && mine.premiumUntil) || null;
       emit();
       await refreshStatus();
     },

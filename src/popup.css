@@ -166,7 +166,8 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .features .icon { color: var(--accent); }
 .price { margin: 4px 0 12px; font-size: 22px; font-weight: 700; }
 .price span:not([data-price]) { color: var(--text-2); font-size: 12px; font-weight: 400; }
-.price-terms { margin: -8px 0 12px; color: var(--text-2); font-size: 12px; }
+.price-year { margin: -8px 0 10px; color: var(--text-2); font-size: 12px; }
+.price-terms { margin: 0 0 12px; color: var(--text-2); font-size: 12px; }
 
 /* Saved lines */
 .saved-item { padding: 9px 0; border-bottom: 1px solid var(--border); }

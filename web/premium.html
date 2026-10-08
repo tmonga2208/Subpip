@@ -50,6 +50,11 @@
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Skip intro and Next buttons in the window</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>One payment, no subscription</li>
         </ul>
+        <fieldset class="plans">
+          <legend class="field-label">Choose</legend>
+          <label class="plan"><input type="radio" name="plan" value="lifetime" checked><span class="plan-name">Lifetime</span> <span class="plan-price" data-price>₹999</span> <span class="plan-note">One payment, yours for good</span></label>
+          <label class="plan"><input type="radio" name="plan" value="year"><span class="plan-name">One year</span> <span class="plan-price" data-price-year>₹399</span> <span class="plan-note">Ends after a year. Not renewed, nothing charged again</span></label>
+        </fieldset>
         <label class="field-label" for="emailInput">Email for your receipt and license</label>
         <input type="email" id="emailInput" class="email-input" placeholder="you@example.com" autocomplete="email">
         <button class="btn btn-primary btn-block pay-btn" id="payBtn" type="button" onclick="initiatePayment()">Pay ₹999</button>
@@ -111,9 +116,12 @@
         // Razorpay Configuration
         // Regional price from the time zone (₹999 in India, $15 elsewhere),
         // via script.js; the server verifies the captured currency and amount
-        const { REGIONAL_PRICES, defaultCurrency } = window.SubpipPricing;
-        const price = REGIONAL_PRICES[defaultCurrency()];
-        document.getElementById('payBtn').textContent = `Pay ${price.label}`;
+        const price = window.SubpipPricing.local();
+        // Lifetime, or one year that ends by itself
+        const plan = () => document.querySelector('input[name="plan"]:checked').value;
+        const showPlan = () => { document.getElementById('payBtn').textContent = `Pay ${price[plan()].label}`; };
+        document.querySelectorAll('input[name="plan"]').forEach((input) => input.addEventListener('change', showPlan));
+        showPlan();
 
         // Opened from the extension: the buyer's email and, when signed in, a
         // code that ties the purchase to their account, so Premium activates
@@ -172,7 +180,7 @@
             const response = await fetch(`${FUNCTIONS_BASE_URL}/createOrder`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ data: { currency: price.currency, email, ...(checkoutCode ? { checkout: checkoutCode } : {}) } })
+                body: JSON.stringify({ data: { currency: price.currency, plan: plan(), tier: price.tier, email, ...(checkoutCode ? { checkout: checkoutCode } : {}) } })
             });
             const body = await response.json();
             if (body.error) throw new Error(body.error.message || 'Could not start the payment');
@@ -231,7 +239,7 @@
                 amount: order.amount,
                 currency: order.currency,
                 name: 'SubPIP Premium',
-                description: order.accountEmail ? `Lifetime Premium for ${order.accountEmail}` : 'Lifetime Premium License',
+                description: `${order.plan === 'year' ? 'One year of Premium' : 'Lifetime Premium'}${order.accountEmail ? ` for ${order.accountEmail}` : ''}`,
                 image: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".85em" font-size="48" fill="%23e94560" font-family="sans-serif">P</text></svg>',
                 handler: async function (response) {
                     await handlePaymentSuccess(response, email);

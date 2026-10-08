@@ -98,9 +98,11 @@ export function confirmStub({ ok = true, account = null, seen = [] } = {}) {
       const data = JSON.parse(request.postData() || '{}').data || {};
       seen.push({ endpoint: 'createOrder', data });
       const { currency } = data;
-      const amount = { INR: 99900, USD: 1500 }[currency];
+      // As the server prices it (web/api/_lib/pricing.js)
+      const levels = { INR: { standard: { lifetime: 99900, year: 39900 } }, USD: { standard: { lifetime: 1500, year: 600 }, low: { lifetime: 700, year: 300 } } }[currency];
+      const amount = levels && (levels[data.tier || 'standard'] || levels.standard)[data.plan || 'lifetime'];
       const forAccount = account && data.checkout ? { accountEmail: account } : {};
-      request.respond(amount ? json(200, { result: { orderId: `order_${currency}`, amount, currency, keyId: 'rzp_test', ...forAccount } }) : json(400, { error: { message: 'Unsupported currency', status: 'INVALID_ARGUMENT' } }));
+      request.respond(amount ? json(200, { result: { orderId: `order_${currency}`, amount, currency, keyId: 'rzp_test', ...(data.plan === 'year' ? { plan: 'year' } : {}), ...forAccount } }) : json(400, { error: { message: 'Unsupported currency', status: 'INVALID_ARGUMENT' } }));
       return true;
     }
     if (!url.includes('/api/confirmPayment')) return false;

@@ -13,7 +13,7 @@ test('createOrder sets the amount from the price table', async () => {
   const d = deps();
   assert.deepEqual(await createOrder({ currency: 'USD', email: 'b@example.com' }, {}, d), { orderId: 'order_1', amount: 1500, currency: 'USD', keyId: 'rzp_test' });
   assert.deepEqual(await createOrder({ currency: 'INR' }, {}, d), { orderId: 'order_2', amount: 99900, currency: 'INR', keyId: 'rzp_test' });
-  assert.deepEqual(d.razorpay.orders.created[0].notes, { email: 'b@example.com' });
+  assert.deepEqual(d.razorpay.orders.created[0].notes, { plan: 'lifetime', email: 'b@example.com' });
 });
 
 test('createOrder ignores any client amount and rejects unknown currencies', async () => {

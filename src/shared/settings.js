@@ -97,6 +97,10 @@ export function withDefaults(settings) {
   return merged;
 }
 
+// Premium as of now: bought for a year, it is over when the year is, whether
+// or not anything has been heard from the server since
+export const premiumNow = (account, now = Date.now()) => !!account?.isPremium && !(typeof account.premiumUntil === 'number' && account.premiumUntil <= now);
+
 // Who is signed in on this browser and whether they are Premium, as last
 // confirmed by the popup. It lives in local storage, next to the sign-in
 // tokens it comes from: sync storage is shared by every browser on the Chrome
@@ -173,7 +177,7 @@ export async function readStoredSettings(hostname) {
   delete settings.autoPipSites;
   if (hostname !== undefined) settings.captionSelector = await captionSelectorFor(hostname);
   // Premium comes from sign-in only (old versions also saved a copy in settings)
-  settings.isPremium = !!subpipAuth?.isPremium;
+  settings.isPremium = premiumNow(subpipAuth);
   if (subpipAuth?.uid) settings.uid = subpipAuth.uid;
   return settings;
 }

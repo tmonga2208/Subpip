@@ -66,7 +66,7 @@ export function json(status, body) {
 // status: 'ok' | 'slow' (answers after 2s) | 'fail' (500); premiumAfterActivate
 // flips the user to Premium once activateLicense has been called.
 // checkout: the code startCheckout answers with; without one it fails (500)
-export function firebaseStub({ uid = 'u1', email = 'tester@example.com', premium = false, signIn = 'ok', status = 'ok', premiumAfterActivate = false, deviceId = null, checkout = null } = {}) {
+export function firebaseStub({ uid = 'u1', email = 'tester@example.com', premium = false, signIn = 'ok', status = 'ok', premiumAfterActivate = false, deviceId = null, checkout = null, premiumUntil = null } = {}) {
   let isPremium = premium;
   const STUBBED = /identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com|firestore\.googleapis\.com|subpip\.online\/api\//;
   return (request) => {
@@ -88,7 +88,7 @@ export function firebaseStub({ uid = 'u1', email = 'tester@example.com', premium
     if (url.includes(`/documents/users/${uid}`)) {
       const answer = () => request.respond(status === 'fail'
         ? json(500, { error: { message: 'UNAVAILABLE' } })
-        : json(200, { fields: { email: { stringValue: email }, isPremium: { booleanValue: isPremium }, ...(deviceId ? { deviceId: { stringValue: deviceId } } : {}) } }));
+        : json(200, { fields: { email: { stringValue: email }, isPremium: { booleanValue: isPremium }, ...(premiumUntil ? { premiumUntil: { integerValue: String(premiumUntil) } } : {}), ...(deviceId ? { deviceId: { stringValue: deviceId } } : {}) } }));
       if (status === 'slow') setTimeout(answer, 2000);
       else answer();
       return true;

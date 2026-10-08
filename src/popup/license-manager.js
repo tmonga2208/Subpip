@@ -209,7 +209,9 @@ export class LicenseManager {
                 data: {
                     email: fields.email?.stringValue,
                     isPremium: fields.isPremium?.booleanValue || false,
-                    licenseKey: fields.licenseKey?.stringValue || null
+                    licenseKey: fields.licenseKey?.stringValue || null,
+                    // A year of Premium: when it ends (milliseconds); null for lifetime
+                    premiumUntil: Number(fields.premiumUntil?.integerValue ?? fields.premiumUntil?.doubleValue) || null
                 }
             };
         } catch (error) {
