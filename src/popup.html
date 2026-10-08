@@ -34,6 +34,13 @@
         <button class="primary" id="pip-btn" type="button" disabled>Open Picture-in-Picture</button>
         <button class="link" id="pick-captions" type="button" hidden>Captions not showing? Pick them on the page</button>
         <button class="link" id="report-problem" type="button" hidden>Not working on this site? Tell me</button>
+        <div class="rate-ask" id="usage-notice" hidden>
+          <p>New: SubPIP now sends anonymous counts, without your name or the pages you visit, of how often it is used and whether captions were found. They show where it fails. <a href="https://subpip.online/privacy.html#usage" target="_blank" rel="noopener">What is sent</a></p>
+          <div class="rate-actions">
+            <button class="rate-yes" id="usage-notice-ok" type="button">OK</button>
+            <button class="rate-no" id="usage-notice-off" type="button">Turn off</button>
+          </div>
+        </div>
         <div class="rate-ask" id="rate-ask" hidden>
           <p>Finding SubPIP useful? A rating on the Chrome Web Store helps others find it.</p>
           <div class="rate-actions">
@@ -58,6 +65,7 @@
           <button class="row" type="button" data-go="speed" data-premium><span class="row-label">Playback speed</span><span class="row-value" id="speed-value"></span><span data-icon="chevron-right"></span></button>
           <button class="row" type="button" data-go="autopip"><span class="row-label">Auto PiP on tab switch</span><span class="row-value" id="autopip-value"></span><span data-icon="chevron-right"></span></button>
           <button class="row" type="button" data-go="saved" data-premium><span class="row-label">Saved lines</span><span class="row-value" id="saved-value"></span><span data-icon="chevron-right"></span></button>
+          <button class="row" type="button" data-go="usage"><span class="row-label">Usage counts</span><span class="row-value" id="usage-value"></span><span data-icon="chevron-right"></span></button>
           <button class="row" type="button" data-go="account"><span class="row-label">Account &amp; license</span><span class="row-value" id="account-value"></span><span data-icon="chevron-right"></span></button>
         </div>
       </section>
@@ -110,6 +118,11 @@
           <h2 class="section-label">Sites</h2>
           <div class="rows" id="autopip-site-list"></div>
         </div>
+      </section>
+
+      <section class="view" data-view="usage" data-title="Usage counts" hidden>
+        <p class="paragraph">SubPIP counts how often its window is opened, whether captions were found, and which Premium features are tapped. The counts carry no name, no account and no page address: a site is one of six well-known names or "other". They show where SubPIP fails. <a href="https://subpip.online/privacy.html#usage" target="_blank" rel="noopener">What is sent</a></p>
+        <label class="field toggle-field"><span class="field-label">Share anonymous usage counts</span><input type="checkbox" class="switch" id="usage-on"></label>
       </section>
 
       <section class="view" data-view="saved" data-title="Saved lines" hidden>

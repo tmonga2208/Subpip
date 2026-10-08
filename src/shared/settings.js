@@ -21,7 +21,9 @@ export const DEFAULT_SETTINGS = {
   // Auto PiP on every site: needs the optional all-sites permission, so it is opt-in
   autoPip: false,
   // Auto PiP on single sites instead: each needs access to that site only
-  autoPipSites: []
+  autoPipSites: [],
+  // Anonymous usage counts (shared/usage.js): on unless switched off
+  shareUsage: true
 };
 
 // Caption size choices in the PiP settings menu

@@ -69,8 +69,12 @@ test('the policy says visits to the website are counted, and how', async () => {
   // The address is reported without what a link carried
   assert.match(text, /never the part after "\?"/);
   assert.match(text, /discards it after 24 hours/);
-  // The extension is not part of it
-  assert.match(text, /The extension itself has no analytics/);
+  // The extension's own counts are described, with what they leave out
+  assert.match(text, /Anonymous usage counts[^.]*unless you switch them off/);
+  assert.match(text, /no name, no account, nothing that identifies your device, no page address or title, and no caption text/);
+  assert.match(text, /the name of an "other" site never leaves your browser/);
+  assert.match(text, /keeps the totals only/);
+  assert.equal(await page.$eval('#usage', (el) => el.tagName), 'LI');
   await page.close();
 });
 

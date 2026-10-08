@@ -1,8 +1,9 @@
 // SubPIP background service worker: translation requests, the Alt+P
 // shortcut, auto-PiP content script registration and the uninstall page.
 
-import { ALL_SITES, AUTO_PIP_ACTIVE, AUTO_PIP_SITES_ACTIVE, isSiteName, sitePattern, readStoredSettings } from './shared/settings.js';
+import { ALL_SITES, AUTO_PIP_ACTIVE, AUTO_PIP_SITES_ACTIVE, isSiteName, sitePattern, readStoredSettings, readAuthCache } from './shared/settings.js';
 import { TOKEN_URL, API_BASE_URL, TOKEN_MAX_AGE_MS, UNINSTALL_URL, WELCOME_URL } from './shared/firebase.js';
+import { sendCount, USAGE_NOTICE } from './shared/usage.js';
 import { togglePipInTab, injectRelay } from './shared/inject.js';
 import { probeTab } from './popup/status.js';
 import { createDeviceTranslation } from './shared/device-translation.js';
@@ -94,6 +95,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'PREPARE_TRANSLATION') deviceTranslation.prepare(message.targetLang);
   // "See Premium" in a video's window: the popup's own page about it, in a tab
   if (message.type === 'OPEN_PREMIUM') chrome.tabs.create({ url: chrome.runtime.getURL('popup.html#upgrade') });
+  // An anonymous usage count, from a video's window (through the relay) or the popup
+  if (message.type === 'COUNT') readAuthCache().then((account) => sendCount(message.fact || {}, sender.tab, account?.isPremium ? 'premium' : 'free'));
 });
 
 // Alt+P: open or close Picture-in-Picture without going through the popup
@@ -200,6 +203,8 @@ async function welcomeAfterInstall({ reason } = {}) {
 chrome.runtime.onInstalled.addListener((details) => {
   chrome.runtime.setUninstallURL(`${UNINSTALL_URL}?v=${chrome.runtime.getManifest().version}`);
   welcomeAfterInstall(details);
+  // Whoever had SubPIP before it counted anything is told first, in the popup
+  if (details.reason === 'update' && parseFloat(details.previousVersion) < 4.8) chrome.storage.local.set({ [USAGE_NOTICE]: 'pending' });
 });
 
 // Once per run of the extension - browser start, install, update, reload,

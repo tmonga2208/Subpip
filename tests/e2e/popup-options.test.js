@@ -19,7 +19,7 @@ async function premiumPopup() {
 
 test('free users see Premium tags and reach the upgrade page', async () => {
   const popup = await ctx.openPopup();
-  assert.deepEqual(await rows(popup), { upgrade: '₹999 once', translate: 'Premium', speed: 'Premium', autopip: 'Off', saved: 'Premium', account: 'Sign in' });
+  assert.deepEqual(await rows(popup), { upgrade: '₹999 once', translate: 'Premium', speed: 'Premium', autopip: 'Off', saved: 'Premium', usage: 'On', account: 'Sign in' });
   await popup.click('.row[data-go="translate"]');
   assert.equal(await view(popup), 'upgrade');
   assert.equal(await popup.$eval('#page-title', (el) => el.textContent), 'SubPIP Premium');

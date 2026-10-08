@@ -28,7 +28,7 @@ PREMIUM (one payment, no subscription)
 Premium is ₹999 in India and $15 elsewhere, with a full refund within 7 days. Details: https://subpip.online/#pricing
 
 PRIVACY
-The extension has no ads and no analytics, and it does not collect your browsing history. Your settings stay in your browser. Caption text leaves your browser only when you turn translation on, and not at all where the browser can translate on your device. Full policy: https://subpip.online/privacy.html
+The extension has no ads and does not collect your browsing history. It sends anonymous usage counts (how often the window is opened and whether captions were found, with no name and no page address), which you can switch off in the popup. Your settings stay in your browser. Caption text leaves your browser only when you turn translation on, and not at all where the browser can translate on your device. Full policy: https://subpip.online/privacy.html
 
 HELP
 Something not working on a site? Write to tarunmonga2208@gmail.com with the site's name.

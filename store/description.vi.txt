@@ -33,7 +33,7 @@ PREMIUM (trả một lần, không cần đăng ký định kỳ)
 Premium có giá ₹999 tại Ấn Độ và $15 ở các nơi khác, hoàn tiền đầy đủ trong vòng 7 ngày. Chi tiết: https://subpip.online/#pricing
 
 QUYỀN RIÊNG TƯ
-Tiện ích không có quảng cáo, không có công cụ phân tích và không thu thập lịch sử duyệt web của bạn. Cài đặt của bạn nằm trong trình duyệt. Nội dung phụ đề chỉ rời khỏi trình duyệt khi bạn bật dịch, và hoàn toàn không rời khỏi nếu Chrome có thể dịch ngay trên thiết bị của bạn. Chính sách đầy đủ: https://subpip.online/privacy.html
+Tiện ích không có quảng cáo và không thu thập lịch sử duyệt web của bạn. Tiện ích gửi số liệu sử dụng ẩn danh (cửa sổ được mở bao nhiêu lần và có tìm thấy phụ đề hay không, không kèm tên và địa chỉ trang), bạn có thể tắt trong cửa sổ bật lên. Cài đặt của bạn nằm trong trình duyệt. Nội dung phụ đề chỉ rời khỏi trình duyệt khi bạn bật dịch, và hoàn toàn không rời khỏi nếu Chrome có thể dịch ngay trên thiết bị của bạn. Chính sách đầy đủ: https://subpip.online/privacy.html
 
 TRỢ GIÚP
 Có trang nào không hoạt động? Hãy viết thư tới tarunmonga2208@gmail.com kèm tên trang (chúng tôi trả lời bằng tiếng Anh).

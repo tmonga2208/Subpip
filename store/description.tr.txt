@@ -33,7 +33,7 @@ PREMIUM (tek ödeme, abonelik yok)
 Premium Hindistan'da ₹999, diğer ülkelerde 15 $'dır ve 7 gün içinde tam iade yapılır. Ayrıntılar: https://subpip.online/#pricing
 
 GİZLİLİK
-Uzantıda reklam ve analiz aracı yoktur, tarama geçmişiniz toplanmaz. Ayarlarınız tarayıcınızda kalır. Altyazı metni yalnızca çeviriyi açtığınızda tarayıcınızdan çıkar; Chrome cihazınızda çevirebiliyorsa hiç çıkmaz. Politikanın tamamı: https://subpip.online/privacy.html
+Uzantıda reklam yoktur ve tarama geçmişiniz toplanmaz. Uzantı anonim kullanım sayıları gönderir (pencerenin ne sıklıkta açıldığı ve altyazıların bulunup bulunmadığı; ad ve sayfa adresi olmadan); bunu açılır pencereden kapatabilirsiniz. Ayarlarınız tarayıcınızda kalır. Altyazı metni yalnızca çeviriyi açtığınızda tarayıcınızdan çıkar; Chrome cihazınızda çevirebiliyorsa hiç çıkmaz. Politikanın tamamı: https://subpip.online/privacy.html
 
 YARDIM
 Bir sitede çalışmayan bir şey mi var? Sitenin adıyla birlikte tarunmonga2208@gmail.com adresine yazın (İngilizce yanıt veriyoruz).

@@ -77,10 +77,26 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
   // The viewer's file, else the page's caption language, else just "Page"
   // where the page offers no choice SubPIP can see
   // ...and a way to it: the extension opens its page about Premium
-  const upgradeRows = () => [
-    el('div', 'menu-note', upgradeNote()),
-    item({ label: 'See Premium', chevron: true, onSelect: () => window.postMessage({ type: 'SUBPIP_OPEN_PREMIUM' }, '*') })
-  ];
+  // (each is one anonymous count: which feature a free viewer reached for,
+  // once per window, and that they went on)
+  const tapped = new Set();
+  const upgradeRows = (feature) => {
+    if (!tapped.has(feature)) {
+      tapped.add(feature);
+      window.postMessage({ type: 'SUBPIP_COUNT', fact: { event: 'premium_tap', feature } }, '*');
+    }
+    return [
+      el('div', 'menu-note', upgradeNote()),
+      item({
+        label: 'See Premium',
+        chevron: true,
+        onSelect: () => {
+          window.postMessage({ type: 'SUBPIP_COUNT', fact: { event: 'upgrade_click' } }, '*');
+          window.postMessage({ type: 'SUBPIP_OPEN_PREMIUM' }, '*');
+        }
+      })
+    ];
+  };
   const speechLabel = () => {
     const { state, language } = captions.speech;
     if (state === 'on') return languageName(language);
@@ -144,7 +160,7 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
   }
 
   function speedView() {
-    if (!isPremium) return [backRow(), ...upgradeRows()];
+    if (!isPremium) return [backRow(), ...upgradeRows('speed')];
     return [backRow(), ...SPEEDS.map((speed) => item({
       label: `${speed}×`,
       checked: video.playbackRate === speed,
@@ -169,7 +185,7 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
   }
 
   function translateView() {
-    if (!isPremium) return [backRow(), ...upgradeRows()];
+    if (!isPremium) return [backRow(), ...upgradeRows('translate')];
     const code = getSessionSettings().targetLanguage;
     const dual = !!getSessionSettings().dualSubtitles;
     return [
@@ -264,7 +280,7 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
   }
 
   // Where a Premium feature outside the menu sends a free viewer
-  const premiumView = () => [backRow(), ...upgradeRows()];
+  const premiumView = () => [backRow(), ...upgradeRows('study')];
 
   const SPEECH_NOTES = {
     fetching: (name) => `Getting the speech pack for ${name}. This can take a minute.`,
@@ -274,7 +290,7 @@ export function createSettingsMenu({ video, pipDoc, session, isPremium, getSessi
     failed: () => 'Speech recognition could not start.'
   };
   function speechView() {
-    if (!isPremium) return [backRow('subtitles'), ...upgradeRows()];
+    if (!isPremium) return [backRow('subtitles'), ...upgradeRows('speech')];
     const { state, language } = captions.speech;
     const chosen = state === 'on' || state === 'fetching' ? language : null;
     const note = SPEECH_NOTES[state]

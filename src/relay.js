@@ -51,6 +51,13 @@ function start() {
 
     // A line kept from the study tools. Where it came from is this page's
     // word, not the message's.
+    // An anonymous usage count: only the few answers it may hold are passed on
+    if (event.data.type === 'SUBPIP_COUNT') {
+      const { event: name, captions, feature } = event.data.fact || {};
+      Promise.resolve(chrome.runtime.sendMessage({ type: 'COUNT', fact: { event: name, captions, feature, where: 'window' } })).catch(() => {});
+      return;
+    }
+
     if (event.data.type === 'SUBPIP_OPEN_PREMIUM') {
       Promise.resolve(chrome.runtime.sendMessage({ type: 'OPEN_PREMIUM' })).catch(() => {});
       return;

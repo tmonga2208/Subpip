@@ -76,6 +76,19 @@ export async function openPipWindow({ video, adapter, getSettings, onClose, subt
 
   const captions = await setupCaptions({ video, adapter, pipDoc, session, getSettings: sessionSettings, isPremium, memory: subtitleMemory });
 
+  // One anonymous count per window (shared/usage.js): that it was opened, and
+  // whether captions were found. Told after a while, or at closing if it was
+  // open long enough to say; a window closed at once says nothing.
+  const openedAt = Date.now();
+  let counted = false;
+  const countOpened = () => {
+    if (counted) return;
+    counted = true;
+    window.postMessage({ type: 'SUBPIP_COUNT', fact: { event: 'opened', captions: captions.lines().length ? 'found' : 'none' } }, '*');
+  };
+  const countTimer = setTimeout(countOpened, 20000);
+  session.onCleanup(() => clearTimeout(countTimer));
+
   const seekTo = (time) => {
     const duration = video.duration;
     const target = Math.max(0, isFinite(duration) ? Math.min(time, duration) : time);
@@ -134,6 +147,7 @@ export async function openPipWindow({ video, adapter, getSettings, onClose, subt
   });
 
   pipWindow.addEventListener('pagehide', () => {
+    if (Date.now() - openedAt >= 5000) countOpened();
     session.dispose();
     video.style.cssText = prevStyle;
     if (isPremium && settings.playbackSpeed) video.playbackRate = prevPlaybackRate;

@@ -33,7 +33,7 @@ PREMIUM (sekali bayar, tanpa langganan)
 Premium seharga ₹999 di India dan $15 di negara lain, dengan pengembalian dana penuh dalam 7 hari. Detail: https://subpip.online/#pricing
 
 PRIVASI
-Ekstensi ini tanpa iklan dan tanpa analitik, dan tidak mengumpulkan riwayat penjelajahan Anda. Pengaturan Anda tetap di browser. Teks subtitle hanya keluar dari browser saat Anda menyalakan terjemahan, dan tidak sama sekali jika Chrome bisa menerjemahkan di perangkat Anda. Kebijakan lengkap: https://subpip.online/privacy.html
+Ekstensi ini tanpa iklan dan tidak mengumpulkan riwayat penjelajahan Anda. Ekstensi mengirim hitungan penggunaan anonim (seberapa sering jendela dibuka dan apakah subtitle ditemukan, tanpa nama dan tanpa alamat halaman), yang bisa Anda matikan di popup. Pengaturan Anda tetap di browser. Teks subtitle hanya keluar dari browser saat Anda menyalakan terjemahan, dan tidak sama sekali jika Chrome bisa menerjemahkan di perangkat Anda. Kebijakan lengkap: https://subpip.online/privacy.html
 
 BANTUAN
 Ada yang tidak berfungsi di suatu situs? Kirim email ke tarunmonga2208@gmail.com dengan nama situsnya (kami membalas dalam bahasa Inggris).

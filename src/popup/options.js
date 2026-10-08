@@ -4,6 +4,7 @@
 import { LANGUAGES, SPEEDS, ALL_SITES, siteKey, sitePattern, isSiteName } from '../shared/settings.js';
 import { iconMarkup } from '../shared/icons.js';
 import { getTargetTab } from './status.js';
+import { USAGE_NOTICE } from '../shared/usage.js';
 
 export function initOptions({ doc, store, auth, router }) {
   const $ = (id) => doc.getElementById(id);
@@ -16,9 +17,29 @@ export function initOptions({ doc, store, auth, router }) {
   const chosenSites = () => (store.get().autoPipSites || []).filter(isSiteName);
   const access = (name) => ({ origins: [sitePattern(name)] });
 
+  // One anonymous count (shared/usage.js); the background decides whether it goes
+  const count = (fact) => Promise.resolve(chrome.runtime.sendMessage({ type: 'COUNT', fact: { ...fact, where: 'popup' } })).catch(() => {});
+
   doc.querySelectorAll('.row[data-go]').forEach((row) => row.addEventListener('click', () => {
-    router.go(row.hasAttribute('data-premium') && !auth.isPremium() ? 'upgrade' : row.dataset.go);
+    const locked = row.hasAttribute('data-premium') && !auth.isPremium();
+    if (locked) count({ event: 'premium_tap', feature: row.dataset.go });
+    router.go(locked ? 'upgrade' : row.dataset.go);
   }));
+  doc.querySelectorAll('[data-action="get-premium"]').forEach((button) => button.addEventListener('click', () => count({ event: 'upgrade_click' })));
+  $('usage-on').addEventListener('change', () => store.update({ shareUsage: $('usage-on').checked }));
+
+  // Whoever had SubPIP before it counted anything is told once, and nothing
+  // is counted until they have answered
+  chrome.storage.local.get([USAGE_NOTICE]).then(({ [USAGE_NOTICE]: notice }) => {
+    $('usage-notice').hidden = notice !== 'pending';
+  });
+  const answerNotice = async (keep) => {
+    $('usage-notice').hidden = true;
+    if (!keep) store.update({ shareUsage: false });
+    await chrome.storage.local.set({ [USAGE_NOTICE]: 'seen' });
+  };
+  $('usage-notice-ok').addEventListener('click', () => answerNotice(true));
+  $('usage-notice-off').addEventListener('click', () => answerNotice(false));
 
   function setRowValue(id, text) {
     const cell = $(id);
@@ -138,6 +159,8 @@ export function initOptions({ doc, store, auth, router }) {
     setRowValue('translate-value', premium ? (settings.translationEnabled ? languageName(settings.targetLanguage) : 'Off') : null);
     setRowValue('speed-value', premium ? `${settings.playbackSpeed}×` : null);
     setRowValue('autopip-value', autoPip ? 'On' : sites.length === 1 ? sites[0] : sites.length ? `${sites.length} sites` : 'Off');
+    setRowValue('usage-value', settings.shareUsage === false ? 'Off' : 'On');
+    $('usage-on').checked = settings.shareUsage !== false;
     setRowValue('account-value', auth.user() ? auth.user().email : 'Sign in');
     $('translate-on').checked = !!settings.translationEnabled;
     $('dual-on').checked = !!settings.dualSubtitles;
