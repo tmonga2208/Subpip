@@ -39,10 +39,12 @@
           </fieldset>
           <label class="field-label" for="comment">Anything to add? <span class="muted">(optional)</span></label>
           <textarea id="comment" class="email-input" rows="3" maxlength="1000" placeholder="Which video, what you saw, what you expected…"></textarea>
+          <label class="field-label" for="email">Your email <span class="muted">(optional, if you want to hear when it is fixed)</span></label>
+          <input type="email" id="email" class="email-input" maxlength="200" autocomplete="email" placeholder="you@example.com">
           <button class="btn btn-primary btn-block" type="submit">Send</button>
           <p class="error-msg" id="reportError" role="alert"></p>
         </form>
-        <p class="agree">Anonymous: only the site's name, your choice, your comment and the SubPIP version are sent. Nothing is sent until you press Send. If you would like a reply, <a href="mailto:tarunmonga2208@gmail.com">email me</a> instead.</p>
+        <p class="agree">Only the site's name, your choice, your comment and the SubPIP version are sent. Nothing is sent until you press Send. If you leave your email, it is used only to answer you about this report; without it the report is anonymous.</p>
       </div>
 
       <div class="checkout-card" id="thanksCard" hidden>
@@ -89,13 +91,14 @@
       event.preventDefault();
       const chosen = form.querySelector('input[name="problem"]:checked');
       if (!chosen) return showError('Please choose what went wrong first.');
+      const email = document.getElementById('email').value.trim();
       showError('');
       button.disabled = true;
       try {
         const response = await fetch('/api/feedback', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: { kind: 'problem', problem: chosen.value, site: site.value.trim(), comment: document.getElementById('comment').value.trim(), version } })
+          body: JSON.stringify({ data: { kind: 'problem', problem: chosen.value, site: site.value.trim(), comment: document.getElementById('comment').value.trim(), version, ...(email ? { email } : {}) } })
         });
         const body = await response.json();
         if (body.error) throw new Error(body.error.message);

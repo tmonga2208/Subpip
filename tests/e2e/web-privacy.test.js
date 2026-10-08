@@ -21,7 +21,7 @@ test('privacy policy uses the shared layout', async () => {
 
 test('the policy has a fixed revision date, not today\'s date', async () => {
   const html = await readFile(`${WEB_DIR}/privacy.html`, 'utf8');
-  assert.match(html, /Last updated: October 6, 2026/);
+  assert.match(html, /Last updated: October 8, 2026/);
   assert.doesNotMatch(html, /toLocaleDateString/);
 });
 
@@ -53,6 +53,8 @@ test('the policy describes what the extension does today', async () => {
   assert.match(text, /How often you use it[^.]*kept on your computer/);
   // A problem report carries the site's name, and only when it is sent
   assert.match(text, /Problem report[^.]*name of the site/);
+  // ...and an email address only if the reporter leaves one
+  assert.match(text, /your email address if you choose to leave one, used only to answer you about that report/);
   assert.match(text, /nothing is sent until you press Send/i);
   await page.close();
 });

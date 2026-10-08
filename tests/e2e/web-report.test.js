@@ -107,3 +107,23 @@ test('the choices are easy to tap on a phone', async () => {
   assert.ok(heights.every((height) => height >= 40), `row heights: ${heights}`);
   await page.close();
 });
+
+test('an email is asked for as optional, and is sent only when one is given', async () => {
+  const seen = [];
+  const page = await ctx.open(FROM_POPUP, { intercept: feedbackStub(seen) });
+  assert.match(await page.$eval('label[for="email"]', (el) => el.textContent.replace(/\s+/g, ' ').trim()), /^Your email \(optional/);
+  assert.equal(await page.$eval('#email', (el) => el.required), false);
+  await page.click('input[name="problem"][value="captions"]');
+  await page.type('#email', 'viewer@example.com');
+  await send(page);
+  await thanked(page);
+  assert.deepEqual(seen, [{ kind: 'problem', problem: 'captions', site: 'netflix.com', comment: '', version: '4.5', email: 'viewer@example.com' }]);
+  await page.close();
+});
+
+test('the note says the email is only for an answer about this report', async () => {
+  const page = await ctx.open(FROM_POPUP);
+  const note = await page.$eval('#reportCard .agree', (el) => el.textContent.replace(/\s+/g, ' ').trim());
+  assert.match(note, /If you leave your email, it is used only to answer you about this report/);
+  await page.close();
+});

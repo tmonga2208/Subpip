@@ -134,3 +134,27 @@ test('reports and uninstall answers share the day\'s limits', async () => {
   assert.equal(d.mailer.sent.length, 20);
   assert.equal(stored(d).length, 30);
 });
+
+// ---- an address to answer, if the reporter leaves one ----
+
+test('an email left with a report is kept and shown to the owner, so the fix can be announced', async () => {
+  const d = deps();
+  await sendFeedback({ kind: 'problem', problem: 'captions', site: 'goplay.su', email: '  Viewer@Example.com ', version: '4.7' }, {}, d);
+  assert.equal(stored(d)[0].email, 'viewer@example.com');
+  assert.match(d.mailer.sent[0].text, /Reply to: viewer@example\.com/);
+});
+
+test('without an email a report stays anonymous, and what is not an address is dropped', async () => {
+  const d = deps();
+  for (const email of [undefined, '', 'not an address', 'a@b', { $gt: '' }, `${'x'.repeat(250)}@example.com`]) {
+    await sendFeedback({ kind: 'problem', problem: 'other', site: 'example.com', email }, {}, d);
+  }
+  for (const record of stored(d)) assert.equal('email' in record, false);
+  assert.doesNotMatch(d.mailer.sent[0].text, /Reply to/);
+});
+
+test('an uninstall answer never carries an email', async () => {
+  const d = deps();
+  await sendFeedback({ reason: 'other', email: 'viewer@example.com' }, {}, d);
+  assert.equal('email' in stored(d)[0], false);
+});

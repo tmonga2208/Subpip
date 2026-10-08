@@ -2,6 +2,7 @@
 // uninstalled SubPIP (uninstalled.html), and what did not work on a site
 // (report.html, opened from the popup). Both are anonymous: the choice, an
 // optional comment, the extension version and, for a report, the site's name.
+// A report can carry an email address, if its sender wants to hear of the fix.
 // Each one is stored and emailed to the owner, within daily caps so a flood
 // can neither fill the database nor use up the daily email allowance that
 // license emails depend on.
@@ -44,6 +45,11 @@ export function siteName(value) {
 
 const commentOf = (data) => (typeof data.comment === 'string' ? data.comment.trim().slice(0, MAX_COMMENT_LENGTH) : '');
 const versionOf = (data) => (typeof data.version === 'string' && /^\d[\d.]{0,11}$/.test(data.version) ? data.version : null);
+// An address to answer, only if it looks like one
+const emailOf = (data) => {
+  const email = typeof data.email === 'string' ? data.email.trim().toLowerCase() : '';
+  return email.length <= 200 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
+};
 const choiceOf = (value, choices) => (typeof value === 'string' && Object.hasOwn(choices, value) ? value : null);
 
 // What to keep and what to tell the owner: { record, subject, text }
@@ -65,10 +71,11 @@ function problemReport(data) {
   const site = siteName(data.site);
   const comment = commentOf(data);
   const version = versionOf(data);
+  const email = emailOf(data);
   return {
-    record: { kind: 'problem', problem, site, comment, version },
+    record: { kind: 'problem', problem, site, comment, version, ...(email ? { email } : {}) },
     subject: `[SubPIP problem] ${site || 'no site given'}: ${PROBLEMS[problem]}`,
-    text: `Someone reported a problem with SubPIP${version ? ` ${version}` : ''}.\n\nSite: ${site || '(not given)'}\nWhat: ${PROBLEMS[problem]}\n\n${comment || '(no comment)'}`
+    text: `Someone reported a problem with SubPIP${version ? ` ${version}` : ''}.\n\nSite: ${site || '(not given)'}\nWhat: ${PROBLEMS[problem]}\n\n${comment || '(no comment)'}${email ? `\n\nReply to: ${email}` : ''}`
   };
 }
 
