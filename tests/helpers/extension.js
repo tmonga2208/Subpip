@@ -37,7 +37,10 @@ async function launchWithExtension({ shortcutViaAction = false, allSites = true 
     userDataDir,
     pipe: true,
     enableExtensions: [extDir],
-    args: ['--no-first-run', '--no-default-browser-check', '--autoplay-policy=no-user-gesture-required']
+    // The live site cannot be reached from a test: what the extension's
+    // background sends it (the usage counts) would be added to the real totals.
+    // Requests a test answers itself never get as far as looking the name up.
+    args: ['--no-first-run', '--no-default-browser-check', '--autoplay-policy=no-user-gesture-required', '--host-resolver-rules=MAP subpip.online ~NOTFOUND']
   });
   const close = browser.close.bind(browser);
   browser.close = async () => {
