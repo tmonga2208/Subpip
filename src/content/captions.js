@@ -23,6 +23,8 @@ const STOP_BEFORE_END = 0.08;
 // - while they are being translated - renewed no more often than this
 const SPEECH_QUIET_MS = 4000;
 const TRANSLATED_SPEECH_GAP_MS = 1000;
+// How often a site's player is asked for captions while it lists none
+const ASKS_WITHOUT_TRACKS = 10;
 
 // The lines an element shows: none while it is not displayed
 function elementLines(element) {
@@ -191,16 +193,35 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
 
   // 2. Mirror the site's own caption element (keeps its styling). Sites often
   // re-create this element, so re-find it whenever it gets detached.
-  function mirrorSiteCaptions({ onCleanup, every }) {
+  function mirrorSiteCaptions({ listen, onCleanup, every }) {
     pageSource = 'site';
     captionEl = pipDoc.createElement('div');
     pipDoc.body.appendChild(captionEl);
     present();
 
     // Where SubPIP can work the site's caption switch, captions that are off
-    // are on for as long as they are mirrored
+    // are on for as long as they are mirrored. The player does not always
+    // take the request (an ad is on, the video is still loading), so it is
+    // asked until they are on: for as long as it lists captions, and a few
+    // times where it lists none yet. Each video loaded into the window is
+    // asked for anew; once on, the site's own button can switch them off.
     if (siteCaptions && siteCaptions.current() === null) {
-      siteCaptions.turnOn();
+      let asking = true;
+      let asked = 0;
+      const ask = () => {
+        if (!asking || siteCaptionsOff) return;
+        if (siteCaptions.current() !== null) asking = false;
+        else if (siteCaptions.tracks().length || asked < ASKS_WITHOUT_TRACKS) {
+          asked++;
+          siteCaptions.turnOn();
+        }
+      };
+      ask();
+      every(1000, ask);
+      listen(video, 'loadstart', () => {
+        asking = true;
+        asked = 0;
+      });
       onCleanup(() => siteCaptions.select(null));
     }
 
@@ -330,6 +351,8 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
   }
 
   const siteCaptions = adapter.captions || null;
+  // The viewer chose Off in the menu: the site is not asked for captions again
+  let siteCaptionsOff = false;
   // What the viewer pointed at on this site comes before anything SubPIP
   // works out by itself
   let pickedSelector = (settings.captionSelector || '').trim();
@@ -609,6 +632,7 @@ export async function setupCaptions({ video, adapter, pipDoc, session, getSettin
     // id from pageTracks(), or null for Off
     selectPageTrack(id) {
       if (pageSource === 'site' && siteCaptions) {
+        siteCaptionsOff = id === null;
         siteCaptions.select(id);
       } else if (pageSource === 'track') {
         pageTrack = id === null ? null : subtitleTracks(video)[id] || null;

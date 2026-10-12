@@ -77,14 +77,15 @@ export async function openPipWindow({ video, adapter, getSettings, onClose, subt
   const captions = await setupCaptions({ video, adapter, pipDoc, session, getSettings: sessionSettings, isPremium, memory: subtitleMemory });
 
   // One anonymous count per window (shared/usage.js): that it was opened, and
-  // whether captions were found. Told after a while, or at closing if it was
+  // whether captions were found, or were offered by the page (it lists some)
+  // without any being shown. Told after a while, or at closing if it was
   // open long enough to say; a window closed at once says nothing.
   const openedAt = Date.now();
   let counted = false;
   const countOpened = () => {
     if (counted) return;
     counted = true;
-    window.postMessage({ type: 'SUBPIP_COUNT', fact: { event: 'opened', captions: captions.lines().length ? 'found' : 'none' } }, '*');
+    window.postMessage({ type: 'SUBPIP_COUNT', fact: { event: 'opened', captions: captions.lines().length ? 'found' : captions.pageTracks().length ? 'offered' : 'none' } }, '*');
   };
   const countTimer = setTimeout(countOpened, 20000);
   session.onCleanup(() => clearTimeout(countTimer));

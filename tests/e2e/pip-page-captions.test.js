@@ -2,7 +2,7 @@
 // menu chooses between the languages the page offers
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { useBrowser } from '../helpers/browser.js';
+import { useBrowser, sleep } from '../helpers/browser.js';
 import { openPip, togglePip, shadowEval } from '../helpers/pip.js';
 
 const ctx = useBrowser();
@@ -125,6 +125,54 @@ test('YouTube captions that were already on are left on', async () => {
   await close(page);
   assert.equal(await page.evaluate(() => window.playerState.on), true);
   await page.close();
+});
+
+test('YouTube captions are asked for again when the player did not take the first request', async () => {
+  const page = await open('youtube-player.html?stuck', {}, 'youtube.localhost');
+  await sleep(1500);
+  assert.equal(await page.evaluate(() => window.playerState.on), false);
+  // The ad is over, or the video has loaded
+  await page.evaluate(() => { window.playerState.stuck = false; });
+  await siteCaptionIs(page, 'captions in en');
+  await close(page);
+  assert.equal(await page.evaluate(() => window.playerState.on), false);
+  await page.close();
+});
+
+test('once they are on, YouTube is not asked again for the same video, so the viewer can switch them off there', async () => {
+  const page = await open('youtube-player.html', {}, 'youtube.localhost');
+  await siteCaptionIs(page, 'captions in en');
+  await sleep(1200);
+  await page.evaluate(() => document.getElementById('movie_player').unloadModule('captions'));
+  await sleep(2500);
+  assert.equal(await page.evaluate(() => window.playerState.on), false);
+  await done(page);
+});
+
+test('the next video in the same window gets its captions switched on too', async () => {
+  const page = await open('youtube-player.html', {}, 'youtube.localhost');
+  await siteCaptionIs(page, 'captions in en');
+  await sleep(1200);
+  // YouTube loads the next video into the same element, captions off again
+  await page.evaluate(() => {
+    document.getElementById('movie_player').unloadModule('captions');
+    window.documentPictureInPicture.window.document.querySelector('video').load();
+  });
+  await siteCaptionIs(page, 'captions in en');
+  await done(page);
+});
+
+test('Off chosen in the menu stays off, for the next video as well', async () => {
+  const page = await open('youtube-player.html', {}, 'youtube.localhost');
+  await siteCaptionIs(page, 'captions in en');
+  await openMenu(page);
+  await clickItem(page, 'Subtitles');
+  await clickItem(page, 'Off');
+  await siteCaptionIs(page, '');
+  await page.evaluate(() => window.documentPictureInPicture.window.document.querySelector('video').load());
+  await sleep(2500);
+  assert.equal(await page.evaluate(() => window.playerState.on), false);
+  await done(page);
 });
 
 test('the menu lists YouTube\'s caption languages once each and switches the player', async () => {

@@ -58,6 +58,17 @@ test('a video with no captions is counted as such', async () => {
   await page.close();
 });
 
+test('captions the page offered that never showed are counted as offered, not as none', async () => {
+  await listen();
+  const page = await ctx.newPage('youtube-player.html?stuck', 'youtube.localhost');
+  await ctx.pressShortcut(page);
+  await pipOpens(page);
+  await sleep(5200);
+  await closeWindow(page);
+  assert.equal((await countedBecomes(1))[0].body.captions, 'offered');
+  await page.close();
+});
+
 test('a window closed at once says nothing about captions, so it is not counted', async () => {
   await listen();
   const page = await ctx.newPage('generic.html');

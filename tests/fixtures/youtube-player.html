@@ -9,12 +9,15 @@
   <script>
     // A stand-in for YouTube's player object and its captions module.
     // ?on starts with captions on, as a viewer who keeps them on would have.
+    // ?stuck: the player takes no request for captions (an ad is on, or the
+    // video is still loading) until playerState.stuck is set to false.
     const TRACKS = [
       { languageCode: 'en', displayName: 'English (auto-generated)', kind: 'asr' },
       { languageCode: 'en', displayName: 'English', kind: '' },
       { languageCode: 'fr', displayName: 'French', kind: '' }
     ];
-    const state = { on: new URLSearchParams(location.search).has('on'), lang: 'en', calls: [] };
+    const params = new URLSearchParams(location.search);
+    const state = { on: params.has('on'), stuck: params.has('stuck'), lang: 'en', calls: [] };
     const player = document.getElementById('movie_player');
     function paint() {
       const container = document.getElementById('ytp-caption-window-container');
@@ -28,7 +31,7 @@
     }
     Object.assign(player, {
       isSubtitlesOn: () => state.on,
-      loadModule(name) { state.calls.push(`load ${name}`); if (name === 'captions') { state.on = true; paint(); } },
+      loadModule(name) { state.calls.push(`load ${name}`); if (name === 'captions' && !state.stuck) { state.on = true; paint(); } },
       unloadModule(name) { state.calls.push(`unload ${name}`); if (name === 'captions') { state.on = false; paint(); } },
       getOption(module, option) {
         if (option === 'tracklist') return TRACKS;
@@ -36,6 +39,7 @@
       },
       setOption(module, option, value) {
         state.calls.push(`set ${value && value.languageCode ? value.languageCode : 'off'}`);
+        if (state.stuck) return;
         if (value && value.languageCode) { state.on = true; state.lang = value.languageCode; } else state.on = false;
         paint();
       },

@@ -80,6 +80,18 @@ test('the summary covers the seven days before today and says where captions wer
   assert.doesNotMatch(mail.text, /99/, 'the day eight days back is left out');
 });
 
+test('captions a video offered that did not show are counted apart from a video with none, and the summary tells them apart', async () => {
+  const d = deps();
+  await countUsage({ ...OPENED, captions: 'offered' }, {}, d);
+  assert.deepEqual(dayOf(d).counts, { 'opened|youtube|offered|free|4.8|154': 1 });
+  d.db.docs.set('stats/2026-10-07', { total: 10, counts: { 'opened|youtube|found|free|4.10|154': 4, 'opened|youtube|none|free|4.10|154': 3, 'opened|youtube|offered|free|4.10|154': 2, 'opened|youtube|offered|premium|4.10|155': 1, 'opened|netflix|none|free|4.10|154': 1 } });
+  await weeklySummary({}, {}, d);
+  const [mail] = d.mailer.sent;
+  assert.equal(mail.subject, '[SubPIP week] 11 windows opened, 7 without captions');
+  assert.match(mail.text, /youtube +10 opened, 6 without captions \(60%\), 3 of them on a video that offered some\n/);
+  assert.match(mail.text, /netflix +1 opened, 1 without captions \(100%\)\n/);
+});
+
 test('it is sent once a day at most, however often it is asked for', async () => {
   const d = deps();
   week(d);

@@ -17,6 +17,10 @@ const KNOWN_SITES = [
   ['crunchyroll', /(^|\.)crunchyroll\.com$/]
 ];
 
+// What an opened window says about captions: some were shown; the page
+// offered some but none showed; or neither
+const CAPTIONS = ['found', 'offered', 'none'];
+
 export function siteCategory(hostname) {
   const known = KNOWN_SITES.find(([, pattern]) => pattern.test(hostname || ''));
   return known ? known[0] : 'other';
@@ -41,7 +45,7 @@ export function countedFact(asked, { tab, plan, version, browser }) {
     } catch (e) {
       // A tab without an address SubPIP may see
     }
-    return { event: 'opened', site: siteCategory(host), captions: asked.captions === 'found' ? 'found' : 'none', plan: plan === 'premium' ? 'premium' : 'free', ...tail };
+    return { event: 'opened', site: siteCategory(host), captions: CAPTIONS.includes(asked.captions) ? asked.captions : 'none', plan: plan === 'premium' ? 'premium' : 'free', ...tail };
   }
   if (asked.event === 'premium_tap') return { event: 'premium_tap', feature: String(asked.feature), where: asked.where === 'popup' ? 'popup' : 'window', ...tail };
   if (asked.event === 'upgrade_click') return { event: 'upgrade_click', where: asked.where === 'popup' ? 'popup' : 'window', ...tail };

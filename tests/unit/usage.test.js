@@ -25,6 +25,11 @@ test('a fact carries the known answers and nothing that came with the request', 
   assert.equal(countedFact({ event: 'watched' }, { version: '4.8', browser: 154 }), null);
 });
 
+test('an opened window says one of three things about captions: found, offered but not shown, or none', () => {
+  const said = (captions) => countedFact({ event: 'opened', captions }, { tab: { url: 'https://www.youtube.com/watch?v=1' }, plan: 'free', version: '4.9', browser: 154 }).captions;
+  assert.deepEqual(['found', 'offered', 'none', 'maybe', undefined].map(said), ['found', 'offered', 'none', 'none', 'none']);
+});
+
 test('counting is on unless switched off, and waits until someone who updated has been told', () => {
   assert.equal(DEFAULT_SETTINGS.shareUsage, true);
   assert.equal(mayCount({ shareUsage: true }, undefined), true);

@@ -9,7 +9,8 @@ import { log } from './log.js';
 
 // Sites known by name. Any other is "other": its name is never sent or kept.
 export const SITES = ['youtube', 'netflix', 'hotstar', 'primevideo', 'disneyplus', 'crunchyroll', 'other'];
-const CAPTIONS = ['found', 'none'];
+// 'offered': the page offered captions but none were shown
+const CAPTIONS = ['found', 'offered', 'none'];
 const PLANS = ['free', 'premium'];
 const FEATURES = ['translate', 'speed', 'speech', 'study', 'subtitles', 'saved'];
 const PLACES = ['popup', 'window'];
@@ -68,6 +69,7 @@ export async function weeklySummary(data, ctx, deps) {
   const days = [7, 6, 5, 4, 3, 2, 1].map((back) => new Date(now.getTime() - back * 24 * 60 * 60 * 1000));
   const opened = {};
   const without = {};
+  const offered = {};
   const plans = { free: 0, premium: 0 };
   const taps = {};
   const clicks = {};
@@ -77,7 +79,8 @@ export async function weeklySummary(data, ctx, deps) {
       const [event, a, b, c] = key.split('|');
       if (event === 'opened') {
         add(opened, a, count);
-        if (b === 'none') add(without, a, count);
+        if (b !== 'found') add(without, a, count);
+        if (b === 'offered') add(offered, a, count);
         add(plans, c, count);
       } else if (event === 'premium_tap') add(taps, a, count);
       else if (event === 'upgrade_click') add(clicks, a, count);
@@ -90,7 +93,7 @@ export async function weeklySummary(data, ctx, deps) {
   if (!windows && !sum(taps) && !sum(clicks)) lines.push('Nothing was counted.');
   else {
     lines.push('Windows opened, by site:');
-    lines.push(...rows(opened, (site, count) => `  ${site.padEnd(12)} ${count} opened, ${without[site] || 0} without captions (${Math.round(((without[site] || 0) / count) * 100)}%)`));
+    lines.push(...rows(opened, (site, count) => `  ${site.padEnd(12)} ${count} opened, ${without[site] || 0} without captions (${Math.round(((without[site] || 0) / count) * 100)}%)${offered[site] ? `, ${offered[site]} of them on a video that offered some` : ''}`));
     lines.push('', `Opened by: free ${plans.free}, Premium ${plans.premium}`, '');
     lines.push('Premium features tapped by free users:');
     lines.push(...(sum(taps) ? rows(taps, (feature, count) => `  ${feature.padEnd(12)} ${count}`) : ['  none']));
