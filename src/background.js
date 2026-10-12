@@ -204,7 +204,9 @@ chrome.runtime.onInstalled.addListener((details) => {
   chrome.runtime.setUninstallURL(`${UNINSTALL_URL}?v=${chrome.runtime.getManifest().version}`);
   welcomeAfterInstall(details);
   // Whoever had SubPIP before it counted anything is told first, in the popup
-  if (details.reason === 'update' && parseFloat(details.previousVersion) < 4.8) chrome.storage.local.set({ [USAGE_NOTICE]: 'pending' });
+  // Part by part: 4.10 comes after 4.9
+  const [major, minor = 0] = String(details.previousVersion || '').split('.').map(Number);
+  if (details.reason === 'update' && (major < 4 || (major === 4 && minor < 8))) chrome.storage.local.set({ [USAGE_NOTICE]: 'pending' });
 });
 
 // Once per run of the extension - browser start, install, update, reload,

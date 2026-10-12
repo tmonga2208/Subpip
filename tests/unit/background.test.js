@@ -81,6 +81,18 @@ test('a fresh install from the store opens the first-steps page; an update does 
   assert.deepEqual(browser.opened, ['https://subpip.online/welcome.html']);
 });
 
+test('only an update from before 4.8, the first version that counts, brings the note about the counts', async () => {
+  const noticeAfter = async (previousVersion) => {
+    delete browser.local.subpipUsageNotice;
+    await fire('installed', { reason: 'update', previousVersion });
+    await settle();
+    return browser.local.subpipUsageNotice;
+  };
+  assert.deepEqual([await noticeAfter('4.7'), await noticeAfter('4.7.1'), await noticeAfter('3.12')], ['pending', 'pending', 'pending']);
+  // 4.10 comes after 4.9, not between 4.1 and 4.2
+  assert.deepEqual([await noticeAfter('4.8'), await noticeAfter('4.9'), await noticeAfter('4.10'), await noticeAfter('5.0')], [undefined, undefined, undefined, undefined]);
+});
+
 test('a copy loaded by hand, or put there by an administrator, opens nothing', async () => {
   for (const installType of ['development', 'admin', 'sideload']) {
     Object.assign(browser, { installType, opened: [] });
